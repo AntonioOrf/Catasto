@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>📜 Catasto Storico</h1>
+  <h1>📜 Catasto Fiorentino del 1427/29 </h1>
   <h3>Sistema Digitale di Consultazione dei Registri dei Fuochi</h3>
   <p>Un'applicazione Full-Stack per l'esplorazione, la ricerca e l'analisi di dati censuari storici.</p>
 
