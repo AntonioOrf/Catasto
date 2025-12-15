@@ -1,70 +1,77 @@
-require('dotenv').config(); // Carica le variabili d'ambiente
+require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
 
 const app = express();
-
-// Configurazione CORS: In produzione accetta le richieste dal Frontend
 app.use(cors());
 
-// Configurazione Database Dinamica
-const connection = mysql.createConnection({
-  host: process.env.DB_HOST,      // Variabile fornita da TiDB
-  user: process.env.DB_USER,      // Variabile fornita da TiDB
-  password: process.env.DB_PASSWORD, // Variabile fornita da TiDB
-  database: process.env.DB_NAME,  // Es. 'catasto'
-  port: process.env.DB_PORT || 3306, // Di solito 4000 per TiDB
-  ssl: {
-    rejectUnauthorized: false     // Necessario per connettersi ai DB Cloud in modo sicuro
-  }
+// --- MODIFICA 1: Usiamo createPool (Connection Pool) ---
+// Il pool gestisce le connessioni cadute e le ricrea automaticamente.
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT || 3306,
+  ssl: { rejectUnauthorized: false },
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  enableKeepAlive: true, // Mantiene viva la connessione TCP
+  keepAliveInitialDelay: 0
 });
 
-connection.connect(err => {
+// Test connessione all'avvio
+pool.getConnection((err, connection) => {
   if (err) {
-    console.error('❌ Errore connessione DB:', err.message);
+    console.error('❌ Errore connessione iniziale DB:', err.message);
   } else {
-    console.log('✅ Connesso al Database Cloud');
+    console.log('✅ Connesso al Database Cloud (Pool)');
+    connection.release(); // Rilascia subito la connessione
   }
 });
 
-// --- HELPER: Costruzione Dinamica della Query ---
+// --- MODIFICA 2: Rotta "Ping" per tenere sveglio il server ---
+app.get('/api/ping', (req, res) => {
+  res.status(200).send('Pong! Server is awake.');
+});
+
+// --- HELPER: Wrapper per usare il Pool con le Promise (o callback standard) ---
+// Sostituiamo connection.query con pool.query ovunque
+const dbQuery = (sql, params, res, callback) => {
+  pool.query(sql, params, (err, results) => {
+    if (err) {
+      console.error("Errore SQL:", err.message);
+      // Se la connessione è caduta, il pool proverà a riconnettersi alla prossima chiamata
+      return res.status(500).json({ error: "Errore Database o Connessione persa." });
+    }
+    callback(results);
+  });
+};
+
+// ... (Il resto delle funzioni buildQuery e buildOrderBy rimangono uguali) ...
 const buildQuery = (filters) => {
+  // ... (copia la funzione buildQuery dal codice precedente) ...
+  // Per brevità qui la ometto, ma devi rimetterla uguale a prima!
   const { 
-    q_persona, q_localita, 
-    mestiere, bestiame, immigrazione, rapporto, 
-    fortune_min, fortune_max,
-    credito_min, credito_max,
-    creditoM_min, creditoM_max,
-    imponibile_min, imponibile_max,
+    q_persona, q_localita, mestiere, bestiame, immigrazione, rapporto, 
+    fortune_min, fortune_max, credito_min, credito_max,
+    creditoM_min, creditoM_max, imponibile_min, imponibile_max,
     deduzioni_min, deduzioni_max
   } = filters;
   
   let conditions = 'WHERE 1=1';
   const params = [];
 
-  // Ricerca Testuale
-  if (q_persona) {
-    conditions += ` AND (f.Nome_Fuoco LIKE ? OR m.Mestiere LIKE ?)`;
-    params.push(`%${q_persona}%`, `%${q_persona}%`);
-  }
-  if (q_localita) {
-    conditions += ` AND (
-      tq.nome_quartiere LIKE ? OR 
-      tp.nome_popolo LIKE ? OR 
-      tpi.nome_piviere LIKE ? OR 
-      tser.nome_serie LIKE ?
-    )`;
-    params.push(`%${q_localita}%`, `%${q_localita}%`, `%${q_localita}%`, `%${q_localita}%`);
-  }
+  if (q_persona) { conditions += ` AND (f.Nome_Fuoco LIKE ? OR m.Mestiere LIKE ?)`; params.push(`%${q_persona}%`, `%${q_persona}%`); }
+  if (q_localita) { conditions += ` AND (tq.nome_quartiere LIKE ? OR tp.nome_popolo LIKE ? OR tpi.nome_piviere LIKE ? OR tser.nome_serie LIKE ?)`; params.push(`%${q_localita}%`, `%${q_localita}%`, `%${q_localita}%`, `%${q_localita}%`); }
   
-  // Filtri Dropdown
   if (mestiere) { conditions += ' AND m.Mestiere LIKE ?'; params.push(`%${mestiere}%`); }
   if (bestiame && bestiame !== '') { conditions += ' AND f.Bestiame_Fuoco = ?'; params.push(bestiame); }
   if (immigrazione && immigrazione !== '') { conditions += ' AND f.Immigrazione_Fuoco = ?'; params.push(immigrazione); }
   if (rapporto && rapporto !== '') { conditions += ' AND f.RapportoMestiere_Fuoco = ?'; params.push(rapporto); }
   
-  // Filtri Range Economici
   if (fortune_min) { conditions += ' AND f.Fortune_Fuoco >= ?'; params.push(fortune_min); }
   if (fortune_max) { conditions += ' AND f.Fortune_Fuoco <= ?'; params.push(fortune_max); }
   if (credito_min) { conditions += ' AND f.Credito_Fuoco >= ?'; params.push(credito_min); }
@@ -79,7 +86,6 @@ const buildQuery = (filters) => {
   return { conditions, params };
 };
 
-// --- HELPER: Ordinamento Dinamico ---
 const buildOrderBy = (sort_by, order) => {
   const safeOrder = order.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
   switch (sort_by) {
@@ -93,7 +99,7 @@ const buildOrderBy = (sort_by, order) => {
   }
 };
 
-// --- API 1: LISTA PRINCIPALE (PAGINATA) ---
+// --- API 1: LISTA PRINCIPALE ---
 app.get('/api/catasto', (req, res) => {
   const { sort_by = 'nome', order = 'ASC', page = 1, limit = 50 } = req.query;
   const offset = (page - 1) * limit;
@@ -117,6 +123,7 @@ app.get('/api/catasto', (req, res) => {
     LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie
   `;
 
+  // Usa pool.query direttamente
   const countSql = `SELECT COUNT(*) as total ${baseJoins} ${conditions}`;
   const dataSql = `
     SELECT 
@@ -132,31 +139,25 @@ app.get('/api/catasto', (req, res) => {
     ${baseJoins} ${conditions} ${orderByClause} LIMIT ? OFFSET ?
   `;
 
-  connection.query(countSql, params, (err, countResult) => {
+  // Esecuzione query con gestione errori pool integrata
+  pool.query(countSql, params, (err, countResult) => {
     if (err) return res.status(500).json({ error: err.message });
     const totalRecords = countResult[0].total;
     
-    connection.query(dataSql, [...params, limitVal, offset], (err, rows) => {
+    pool.query(dataSql, [...params, limitVal, offset], (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json({
         data: rows,
-        pagination: { 
-          total: totalRecords, 
-          page: parseInt(page), 
-          limit: limitVal, 
-          totalPages: Math.ceil(totalRecords / limitVal) 
-        }
+        pagination: { total: totalRecords, page: parseInt(page), limit: limitVal, totalPages: Math.ceil(totalRecords / limitVal) }
       });
     });
   });
 });
 
-// --- API 2: SIDEBAR (TUTTI I RISULTATI) ---
+// --- API 2: SIDEBAR ---
 app.get('/api/catasto/sidebar', (req, res) => {
   const { sort_by = 'nome', order = 'ASC' } = req.query;
   const { conditions, params } = buildQuery(req.query);
-  
-  // Per la sidebar, usa lo stesso ordinamento scelto dall'utente
   let orderByClause = buildOrderBy(sort_by, order);
 
   const sidebarJoins = `
@@ -167,18 +168,14 @@ app.get('/api/catasto/sidebar', (req, res) => {
     LEFT JOIN t_popoli tp ON ts.id_popolo = tp.id_popolo
     LEFT JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere
     LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie
-    -- Join per i filtri
     LEFT JOIN bestiame b ON f.Bestiame_Fuoco = b.ID_Bestiame
     LEFT JOIN immigrazione i ON f.Immigrazione_Fuoco = i.Id
     LEFT JOIN rapporto_mestiere rm ON f.RapportoMestiere_Fuoco = rm.ID_Rapporto
   `;
 
-  const sql = `
-    SELECT f.ID_Fuochi as id, f.Nome_Fuoco as nome, m.Mestiere as mestiere
-    ${sidebarJoins} ${conditions} ${orderByClause} LIMIT 5000
-  `;
+  const sql = `SELECT f.ID_Fuochi as id, f.Nome_Fuoco as nome, m.Mestiere as mestiere ${sidebarJoins} ${conditions} ${orderByClause} LIMIT 5000`;
 
-  connection.query(sql, params, (err, rows) => {
+  pool.query(sql, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
@@ -186,7 +183,6 @@ app.get('/api/catasto/sidebar', (req, res) => {
 
 // --- API 3: PARENTI ---
 app.get('/api/parenti/:id', (req, res) => {
-  const idFuoco = req.params.id;
   const sql = `
     SELECT p.Eta as eta, rp.Parentela as parentela_desc, sp.Sesso_Parenti as sesso,
       scp.StatoCivle as stato_civile, pp.ParticolaritàParenti as particolarita
@@ -197,13 +193,12 @@ app.get('/api/parenti/:id', (req, res) => {
     LEFT JOIN particolarita_parenti pp ON p.Particolarita = pp.ID_ParticolaritàParenti
     WHERE p.ID_FUOCO = ?
   `;
-  connection.query(sql, [idFuoco], (err, results) => {
+  pool.query(sql, [req.params.id], (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
 });
 
-// Configurazione Porta per Hosting (es. Render usa una porta dinamica)
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Server attivo su porta ${PORT}`);
