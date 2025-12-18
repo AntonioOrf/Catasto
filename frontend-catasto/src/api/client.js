@@ -1,5 +1,30 @@
 export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
+/**
+ * Constructs a URLSearchParams object from the provided filter criteria.
+ * This utility function maps front-end filter state to back-end query parameters.
+ *
+ * @param {Object} filters - The filter state object containing search terms and filter values.
+ * @param {string} [filters.searchPersona] - Search term for person name.
+ * @param {string} [filters.searchLocalita] - Search term for location.
+ * @param {string} [filters.filterMestiere] - Filter by job/craft.
+ * @param {string} [filters.filterBestiame] - Filter by livestock ownership.
+ * @param {string} [filters.filterImmigrazione] - Filter by immigration status.
+ * @param {string} [filters.filterRapporto] - Filter by relationship status.
+ * @param {number|string} [filters.filterFortuneMin] - Minimum fortune value.
+ * @param {number|string} [filters.filterFortuneMax] - Maximum fortune value.
+ * @param {number|string} [filters.filterCreditoMin] - Minimum credit value.
+ * @param {number|string} [filters.filterCreditoMax] - Maximum credit value.
+ * @param {number|string} [filters.filterCreditoMMin] - Minimum money credit value.
+ * @param {number|string} [filters.filterCreditoMMax] - Maximum money credit value.
+ * @param {number|string} [filters.filterImponibileMin] - Minimum taxable amount.
+ * @param {number|string} [filters.filterImponibileMax] - Maximum taxable amount.
+ * @param {number|string} [filters.filterDeduzioniMin] - Minimum deductions amount.
+ * @param {number|string} [filters.filterDeduzioniMax] - Maximum deductions amount.
+ * @param {string} [filters.sortBy] - Column key to sort by.
+ * @param {string} [filters.sortOrder] - Sort order ('ASC' or 'DESC').
+ * @returns {URLSearchParams} A URLSearchParams object ready to be appended to an API URL.
+ */
 export const buildParams = (filters) => {
   const params = new URLSearchParams();
 

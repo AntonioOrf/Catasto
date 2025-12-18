@@ -1,5 +1,12 @@
 import { useState, useCallback } from "react";
 
+/**
+ * Custom hook to manage all filter states for the Catasto application.
+ * Centralizes the state for search inputs, dropdown selects, range sliders/inputs, and sorting preferences.
+ *
+ * @returns {Object} An object containing all filter state variables (e.g., searchPersona, filterMestiere)
+ * and their corresponding setter functions (e.g., setSearchPersona), as well as sorting state and handlers.
+ */
 export function useCatastoFilters() {
   // Search
   const [searchPersona, setSearchPersona] = useState("");

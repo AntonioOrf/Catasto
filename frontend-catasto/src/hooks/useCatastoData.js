@@ -1,6 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fetchCatastoData, fetchParentiData } from "../api/catastoService";
 
+/**
+ * Custom hook to manage the main data fetching logic for the Catasto table.
+ * Handles pagination, error states, loading states, and fetching detailed "parenti" (relatives) data on row expansion.
+ *
+ * @param {Object} filters - The current active filters (search terms, ranges, etc.).
+ * @returns {Object} An object containing:
+ *  - data: Array of result records.
+ *  - loading: Boolean indicating if main data is loading.
+ *  - error: Error message string or null.
+ *  - page: Current page number.
+ *  - setPage: Function to update the current page.
+ *  - totalPages: Total number of pages available.
+ *  - totalRecords: Total number of records found.
+ *  - expandedId: ID of the currently expanded row (for details) or null.
+ *  - parentiData: Array of relatives data for the expanded row.
+ *  - loadingParenti: Boolean indicating if relatives data is loading.
+ *  - handleRowClick: Function to handle row expansion toggling.
+ *  - fetchData: Function to manually trigger a data fetch.
+ */
 export function useCatastoData(filters) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
