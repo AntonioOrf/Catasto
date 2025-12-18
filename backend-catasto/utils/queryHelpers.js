@@ -9,7 +9,7 @@ const buildQuery = (filters) => {
     let conditions = 'WHERE 1=1';
     const params = [];
 
-    if (q_persona) { conditions += ` AND (f.Nome_Fuoco LIKE ? OR m.Mestiere LIKE ?)`; params.push(`%${q_persona}%`, `%${q_persona}%`); }
+    if (q_persona) { conditions += ` AND (f.Nome_Fuoco LIKE ?)`; params.push(`%${q_persona}%`); }
     if (q_localita) { conditions += ` AND (tq.nome_quartiere LIKE ? OR tp.nome_popolo LIKE ? OR tpi.nome_piviere LIKE ? OR tser.nome_serie LIKE ?)`; params.push(`%${q_localita}%`, `%${q_localita}%`, `%${q_localita}%`, `%${q_localita}%`); }
 
     if (mestiere) { conditions += ' AND m.Mestiere LIKE ?'; params.push(`%${mestiere}%`); }
