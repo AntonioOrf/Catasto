@@ -6,8 +6,6 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// --- MODIFICA 1: Usiamo createPool (Connection Pool) ---
-// Il pool gestisce le connessioni cadute e le ricrea automaticamente.
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -37,23 +35,17 @@ app.get('/api/ping', (req, res) => {
   res.status(200).send('Pong! Server is awake.');
 });
 
-// --- HELPER: Wrapper per usare il Pool con le Promise (o callback standard) ---
-// Sostituiamo connection.query con pool.query ovunque
 const dbQuery = (sql, params, res, callback) => {
   pool.query(sql, params, (err, results) => {
     if (err) {
       console.error("Errore SQL:", err.message);
-      // Se la connessione è caduta, il pool proverà a riconnettersi alla prossima chiamata
       return res.status(500).json({ error: "Errore Database o Connessione persa." });
     }
     callback(results);
   });
 };
 
-// ... (Il resto delle funzioni buildQuery e buildOrderBy rimangono uguali) ...
 const buildQuery = (filters) => {
-  // ... (copia la funzione buildQuery dal codice precedente) ...
-  // Per brevità qui la ometto, ma devi rimetterla uguale a prima!
   const { 
     q_persona, q_localita, mestiere, bestiame, immigrazione, rapporto, 
     fortune_min, fortune_max, credito_min, credito_max,
