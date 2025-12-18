@@ -3,17 +3,14 @@
 @tailwind utilities;
 
 :root {
-  /* Impostiamo un font di base */
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   
-  /* Rimuoviamo il color-scheme dark che forza i colori scuri */
   color-scheme: light; 
   
-  /* Impostiamo lo sfondo uguale a quello del tuo sito (#f8f5f2) */
   background-color: #f8f5f2; 
-  color: #2c1810; /* Un colore scuro per il testo base */
+  color: #2c1810;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -24,12 +21,10 @@
 body {
   margin: 0;
   padding: 0;
-  /* IMPORTANTE: Rimuoviamo display: flex e place-items: center */
   width: 100%;
   min-height: 100vh;
 }
 
-/* Assicuriamo che il contenitore di React prenda tutto lo spazio */
 #root {
   width: 100%;
   margin: 0;
