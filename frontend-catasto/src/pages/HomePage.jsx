@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
 import FilterPanel from '../components/catasto/FilterPanel';
@@ -16,26 +16,8 @@ export default function HomePage() {
 
   // Custom Hooks
   const filters = useCatastoFilters();
-  const { 
-    data, loading, error, 
-    page, setPage, totalPages, totalRecords,
-    expandedId, parentiData, loadingParenti,
-    handleRowClick, fetchData 
-  } = useCatastoData(filters.getFilters()); // Ideally we pass the whole filter object, or the getFilters result.
-                                            // Since useCatastoData depends on filters...
-                                            // The hook useCatastoFilters returns state values.
-                                            // We should pass the individual values or an object composed of them.
-                                            // Actually, my implementation of useCatastoData takes 'filters' as an object.
-                                            // But useCatastoFilters returns separate states. Let's make sure we pass the object properly.
-                                            
-  // We need to pass the current values of the filters to useCatastoData, so it reacts to changes.
-  // The function filters.getFilters() returns the values at the time of call, but useCatastoData needs to react to state updates.
-  // So we should construct the filter object here to pass it, OR update useCatastoData to accept individual props.
-  // Passing an object created on every render might cause infinite loops if the hook has it in dependency array without deep comparison.
-  // Let's rely on individual props or refactor useCatastoData to take the hook result if possible.
-  
-  // Simplest fix: Just pass the filter values explicitly object.
-  const filterValues = {
+  // Memoize filter object to prevent infinite loops in hooks
+  const filterValues = useMemo(() => ({
       searchPersona: filters.searchPersona,
       searchLocalita: filters.searchLocalita,
       filterMestiere: filters.filterMestiere,
@@ -54,16 +36,21 @@ export default function HomePage() {
       filterDeduzioniMax: filters.filterDeduzioniMax,
       sortBy: filters.sortBy,
       sortOrder: filters.sortOrder
-  };
+  }), [
+      filters.searchPersona, filters.searchLocalita, filters.filterMestiere,
+      filters.filterBestiame, filters.filterImmigrazione, filters.filterRapporto,
+      filters.filterFortuneMin, filters.filterFortuneMax, filters.filterCreditoMin,
+      filters.filterCreditoMax, filters.filterCreditoMMin, filters.filterCreditoMMax,
+      filters.filterImponibileMin, filters.filterImponibileMax, filters.filterDeduzioniMin,
+      filters.filterDeduzioniMax, filters.sortBy, filters.sortOrder
+  ]);
 
-  // Re-connect data hooks with correct dependencies
-  // But wait, useCatastoData has a useEffect that triggers on [filters].
-  // If we pass a new object every time, it will trigger endlessly if we are not careful (useEffect compares references).
-  // Actually, I implemented useCatastoData using individual fields in dependency array:
-  /*
-    useEffect(() => { ... }, [filters.searchPersona, ...])
-  */
-  // So as long as properties are stable primitives, it's fine.
+  const { 
+    data, loading, error, 
+    page, setPage, totalPages, totalRecords,
+    expandedId, parentiData, loadingParenti,
+    handleRowClick, fetchData 
+  } = useCatastoData(filterValues);
 
   // Sidebar Hook
   const { sidebarData, sidebarLoading } = useCatastoSidebar(filterValues);
