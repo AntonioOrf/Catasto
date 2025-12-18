@@ -242,7 +242,7 @@ export default function App() {
             
             <Scroll className="h-6 w-6 md:h-8 md:w-8 text-[#e6c288]" />
             <div>
-              <h1 className="text-lg md:text-2xl font-bold tracking-wide font-serif leading-tight">Catasto Fiorentino del 1427/29</h1>
+              <h1 className="text-lg md:text-2xl font-bold tracking-wide font-serif leading-tight">Catasto Fiorentino del 1427/30</h1>
               <p className="text-[10px] md:text-xs text-[#e6c288] uppercase tracking-wider hidden sm:block">Sistema di Consultazione</p>
             </div>
           </div>
