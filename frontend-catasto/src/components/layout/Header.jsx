@@ -45,18 +45,6 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
           </div>
 
         </div>
-
-        <div className="flex items-center gap-4 pl-4 border-l-2 border-bg-header-border border-opacity-30">
-          <div className="flex items-center gap-2 text-[10px] md:text-xs bg-bg-header-accent px-3 py-1.5 rounded border border-bg-header-border shadow-sm text-text-inverted font-mono tracking-tight">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-            </span>
-            <span className="hidden sm:inline font-semibold opacity-80">SERVER</span>
-            <span className="font-bold text-green-400">LIVE</span>
-          </div>
-        </div>
-
       </div>
     </header>
   );
