@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, X, Scroll } from 'lucide-react';
+import { Menu, X, Scroll, Moon, Sun } from 'lucide-react';
 import useDarkMode from '../../hooks/useDarkMode';
 
 export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
