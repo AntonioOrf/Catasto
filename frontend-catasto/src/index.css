@@ -26,6 +26,7 @@ body {
   --color-text-main: #2c1810;
   --color-text-inverted: #f8f5f2;
   --color-text-accent: #4a4a4a;
+  --color-text-symbols: #e6c288;
 
   --color-border: #d3c4b1;
   --color-border-dark: #5d2e0c;
@@ -59,6 +60,7 @@ body {
   --color-text-main: #e6dbcf;
   --color-text-inverted: #e6dbcf;
   --color-text-accent: #e6c288;
+  --color-text-symbols: #e6c288;
 
   --color-border: #3e2b22;
   --color-border-dark: #5d4037;
@@ -79,6 +81,7 @@ body {
   --color-text-main: var(--color-text-main);
   --color-text-inverted: var(--color-text-inverted);
   --color-text-accent: var(--color-text-accent);
+  --color-text-symbols: var(--color-text-accent);
 
   --color-border-base: var(--color-border);
 
