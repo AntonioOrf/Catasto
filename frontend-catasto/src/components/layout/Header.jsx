@@ -21,11 +21,10 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
             )}
           </button>
 
-          <div className="h-8 w-[1px] bg-border-base mx-3 md:mx-4 opacity-50"></div>
+          <div className="h-8 w-px bg-border-base mx-3 md:mx-4 opacity-50"></div>
 
           <div className="flex items-center gap-3">
             <Scroll className="h-6 w-6 md:h-8 md:w-8 text-text-accent" />
-
             <div>
               <h1 className="text-lg md:text-2xl font-bold tracking-wide font-serif leading-tight text-text-inverted">
                 Catasto Fiorentino
@@ -35,12 +34,10 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
                 Sistema di Consultazione
               </p>
             </div>
-
           </div>
         </div>
       </div>
-      <div className="w-full h-1.5 bg-bg-header-accent border-t border-bg-header-border"></div>
-      <div className="p-4 md:p-6 pt-6 md:pt-8"></div>
+      <div className="w-full h-1.5 border-bg-header-border"></div>
     </header>
   );
 }
