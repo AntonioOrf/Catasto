@@ -24,21 +24,21 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
             title={isSidebarOpen ? "Chiudi Indice" : "Apri Indice"}
           >
             {isSidebarOpen ? (
-              <X className="h-6 w-6 bg-bg-header-symbols" />
+              <X className="h-6 w-6 text-text-accent" />
             ) : (
-              <Menu className="h-6 w-6 bg-bg-header-symbols" />
+              <Menu className="h-6 w-6 text-text-accent" />
             )}
           </button>
           <div className="h-8 w-[1px] bg-bg-header-border mx-3 md:mx-4 opacity-50"></div>
 
           <div className="flex items-center gap-3">
-            <Scroll className="h-6 w-6 md:h-8 md:w-8 bg-bg-header-symbols" />
+            <Scroll className="h-6 w-6 md:h-8 md:w-8 text-text-accent" />
             <div>
               <h1 className="text-lg md:text-2xl font-bold tracking-wide font-serif leading-tight text-text-inverted">
                 Catasto Fiorentino
                 <span className="hidden md:inline"> del 1427/30</span>
               </h1>
-              <p className="text-[10px] md:text-xs bg-bg-header-symbols uppercase tracking-wider font-medium hidden sm:block">
+              <p className="text-[10px] md:text-xs text-text-accent uppercase tracking-wider font-medium hidden sm:block">
                 Sistema di Consultazione
               </p>
             </div>
@@ -51,9 +51,9 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
             title={theme === 'dark' ? "Passa alla modalità chiara" : "Passa alla modalità scura"}
           >
             {theme === 'dark' ? (
-              <Sun key="sun" className="h-5 w-5 bg-bg-header-symbols animate-in spin-in-90 duration-300" />
+              <Sun key="sun" className="h-5 w-5 text-yellow-400 animate-in spin-in-90 duration-300" />
             ) : (
-              <Moon key="moon" className="h-5 w-5 bg-bg-header-symbols group-hover:text-white transition-colors animate-in slide-in-from-top-2 duration-300" />
+              <Moon key="moon" className="h-5 w-5 text-text-accent group-hover:text-white transition-colors animate-in slide-in-from-top-2 duration-300" />
             )}
           </button>
         </div>
