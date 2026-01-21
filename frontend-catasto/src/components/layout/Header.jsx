@@ -3,9 +3,11 @@ import { Menu, X, Scroll, Moon, Sun } from 'lucide-react';
 import useDarkMode from '../../hooks/useDarkMode';
 
 export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
-  const [theme, setTheme] = useDarkMode();
   const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
+    console.log("Tema attuale:", theme);
+    const nuovoTema = theme === 'light' ? 'dark' : 'light';
+    console.log("Cambio in:", nuovoTema);
+    setTheme(nuovoTema);
   };
   return (
     <header className="bg-bg-header text-text-inverted shadow-md border-b-4 border-bg-header-border flex-shrink-0 z-20 h-16 md:h-20 transition-all duration-300 relative">
