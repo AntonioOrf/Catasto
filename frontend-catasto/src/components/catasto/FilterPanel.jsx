@@ -71,7 +71,7 @@ export default function FilterPanel({
 
                     <button
                         onClick={() => fetchData(1)}
-                        className="w-full md:w-auto p-2 md:p-3 border bg-bg-header-border text-text-inverted hover:bg-bg-header-accent transition-all shadow-sm flex justify-center"
+                        className="bg-item-selected w-full md:w-auto p-2 md:p-3 border border-bg-header-border text-text-inverted hover:bg-bg-header-accent transition-all shadow-sm flex justify-center"
                         title="Aggiorna Ricerca"
                     >
 
