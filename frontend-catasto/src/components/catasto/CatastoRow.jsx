@@ -3,9 +3,6 @@ import { Briefcase, Layers, Coins, Home, Bookmark, FileText, ChevronDown, Chevro
 
 const CatastoRow = forwardRef(({ row, expanded, onRowClick, loadingParenti, parentiData }, ref) => {
 
-  // Classi dinamiche per gestire lo stato espanso/hover
-  // Espanso: Sfondo selezionato + Bordo laterale colorato
-  // Normale: Hover leggero
   const rowClasses = expanded
     ? 'bg-item-selected/10 border-l-4 border-l-item-selected'
     : 'hover:bg-item-hover/50 border-l-4 border-l-transparent';

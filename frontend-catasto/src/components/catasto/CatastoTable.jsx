@@ -33,7 +33,7 @@ export default function CatastoTable({
     };
 
     // Classi comuni per le intestazioni (TH)
-    const thClasses = "px-3 py-3 md:px-6 md:py-4 text-left text-xs font-bold text-text-accent uppercase tracking-wider font-sans cursor-pointer hover:bg-item-hover group transition-colors";
+    const thClasses = "px-3 py-3 md:px-6 md:py-4 text-left text-xs font-bold text-text-accent uppercase tracking-wider font-sans cursor-pointer hover:bg-item-hover/10 group transition-colors";
 
     return (
         <div className="space-y-4 pb-12">
