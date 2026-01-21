@@ -3,12 +3,9 @@ import { Menu, X, Scroll, Moon, Sun } from 'lucide-react';
 import useDarkMode from '../../hooks/useDarkMode';
 
 export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
-  console.log("HEADER CARICATO. Il tema è:", useDarkMode()[0]);
   const [theme, setTheme] = useDarkMode();
   const toggleTheme = () => {
-    console.log("Tema attuale:", theme);
     const nuovoTema = theme === 'light' ? 'dark' : 'light';
-    console.log("Cambio in:", nuovoTema);
     setTheme(nuovoTema);
   };
   return (
