@@ -33,18 +33,14 @@ export default function FilterPanel({
     const labelClasses = "block text-xs md:text-sm font-semibold text-item-selected mb-1 md:mb-2 uppercase tracking-wider";
 
     return (
-        // CONTENITORE PRINCIPALE
         <div className="bg-bg-sidebar rounded-sm shadow-md border border-border-base mb-6 relative overflow-hidden transition-colors duration-300">
 
-            {/* === BARRA DECORATIVA SUPERIORE (Linea Orizzontale) === */}
             <div className="absolute top-0 left-0 w-full h-1.5 bg-bg-header border-b border-bg-header-border"></div>
 
             <div className="p-4 md:p-6 pt-6 md:pt-8">
 
-                {/* --- RIGA DI RICERCA --- */}
                 <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-end mb-4">
 
-                    {/* Cerca Persona */}
                     <div className="flex-1 w-full">
                         <label className={labelClasses}>Cerca Persona</label>
                         <div className="relative">
@@ -59,7 +55,6 @@ export default function FilterPanel({
                         </div>
                     </div>
 
-                    {/* Cerca Località */}
                     <div className="flex-1 w-full">
                         <label className={labelClasses}>Cerca Località</label>
                         <div className="relative">
@@ -74,7 +69,6 @@ export default function FilterPanel({
                         </div>
                     </div>
 
-                    {/* Bottone Aggiorna */}
                     <button
                         onClick={() => fetchData(1)}
                         className="w-full md:w-auto p-2 md:p-3 border border-bg-header bg-bg-header text-text-inverted hover:bg-bg-header-accent transition-all shadow-sm flex justify-center"
@@ -84,7 +78,6 @@ export default function FilterPanel({
                     </button>
                 </div>
 
-                {/* --- TOGGLE FILTRI AVANZATI --- */}
                 <div className="flex justify-start mb-2">
                     <button
                         onClick={() => setIsFiltersOpen(!isFiltersOpen)}
@@ -96,7 +89,6 @@ export default function FilterPanel({
                     </button>
                 </div>
 
-                {/* --- PANNELLO A COMPARSA --- */}
                 {isFiltersOpen && (
                     <div className="bg-bg-main border border-border-base rounded p-3 md:p-4 mt-2 transition-all duration-300 animate-in slide-in-from-top-2">
 
@@ -163,7 +155,7 @@ export default function FilterPanel({
     );
 }
 
-// Helper per i range
+
 function RangeInput({ label, min, max, setMin, setMax }) {
     return (
         <div>

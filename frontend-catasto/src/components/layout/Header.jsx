@@ -7,10 +7,8 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
 
       <div className="w-full px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
 
-        {/* --- SEZIONE SINISTRA --- */}
         <div className="flex items-center h-full">
 
-          {/* 1. TASTO MENU */}
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="p-2 mr-1 bg-bg-header-accent/10 hover:bg-bg-header-border/20 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-text-accent bg-bg-header-accent"
@@ -41,7 +39,9 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
               </p>
             </div>
           </div>
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-bg-header border-b border-bg-header-border"></div>
 
+          <div className="p-4 md:p-6 pt-6 md:pt-8"></div>
         </div>
       </div>
     </header>
