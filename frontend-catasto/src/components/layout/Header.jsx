@@ -13,7 +13,7 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
           {/* 1. TASTO MENU */}
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 mr-1 bg-bg-header-accent/10 hover:bg-bg-header-border/20 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-text-accent"
+            className="p-2 mr-1 bg-bg-header-accent/10 hover:bg-bg-header-border/20 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-text-accent bg-bg-header-accent"
             title={isSidebarOpen ? "Chiudi Indice" : "Apri Indice"}
           >
             {isSidebarOpen ? (
@@ -43,23 +43,6 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
           </div>
 
         </div>
-
-        {/* --- SEZIONE DESTRA --- */}
-        <div className="flex items-center h-full">
-
-          {/* 4. DIVIDER DESTRO (Prima del server status) */}
-          <div className="h-8 w-[1px] bg-border-base mx-4 opacity-50 hidden sm:block"></div>
-
-          {/* STATUS SERVER */}
-          <div className="flex items-center gap-2 text-[10px] md:text-xs bg-bg-header-accent/10 px-3 py-1.5 rounded border border-border-base/30 text-text-accent font-mono">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-            </span>
-            <span className="hidden sm:inline opacity-80 uppercase tracking-wider">Server Live</span>
-          </div>
-        </div>
-
       </div>
     </header>
   );
