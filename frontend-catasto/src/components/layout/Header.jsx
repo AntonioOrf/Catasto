@@ -39,7 +39,7 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
           </div>
         </div>
       </div>
-      <div className="absolute bottom-0 left-0 w-full h-1.5 bg-bg-header border-t border-bg-header-border"></div>
+      <div className="absolute bottom-0 left-0 w-full h-1.5 bg-bg-header-accent border-t border-bg-header-border"></div>
       <div className="p-4 md:p-6 pt-6 md:pt-8"></div>
     </header>
   );
