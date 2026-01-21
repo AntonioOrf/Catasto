@@ -38,7 +38,7 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
                 Catasto Fiorentino
                 <span className="hidden md:inline"> del 1427/30</span>
               </h1>
-              <p className="text-[10px] md:text-xs text-text-accent uppercase tracking-wider font-medium hidden sm:block">
+              <p className="text-[10px] md:text-xs text-text-symbols uppercase tracking-wider font-medium hidden sm:block">
                 Sistema di Consultazione
               </p>
             </div>
