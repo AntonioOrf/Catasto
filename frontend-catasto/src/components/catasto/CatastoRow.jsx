@@ -5,7 +5,7 @@ const CatastoRow = forwardRef(({ row, expanded, onRowClick, loadingParenti, pare
 
   // Classi dinamiche per gestire lo stato espanso/hover
   // Espanso: Sfondo selezionato + Bordo laterale colorato
-  // Normale: Sfondo base + Hover leggero
+  // Normale: Hover leggero
   const rowClasses = expanded
     ? 'bg-item-selected/10 border-l-4 border-l-item-selected'
     : 'hover:bg-item-hover/50 border-l-4 border-l-transparent';
@@ -15,7 +15,9 @@ const CatastoRow = forwardRef(({ row, expanded, onRowClick, loadingParenti, pare
       <tr
         ref={ref}
         onClick={() => onRowClick(row.id)}
-        className={`cursor-pointer transition-colors border-b border-border-base ${rowClasses}`}
+        // 👇 MODIFICA QUI: Ho aggiunto 'bg-bg-main'.
+        // Questo forza la riga ad avere il colore del tema (scuro in dark, chiaro in light)
+        className={`cursor-pointer transition-colors border-b border-border-base bg-bg-main ${rowClasses}`}
       >
         {/* NOME E MESTIERE */}
         <td className="px-3 py-3 md:px-6 md:py-4">
@@ -176,7 +178,7 @@ const CatastoRow = forwardRef(({ row, expanded, onRowClick, loadingParenti, pare
   );
 });
 
-// Helper Components per pulire il codice
+// Helper Components
 const DetailItem = ({ label, value }) => (
   <div>
     <span className="text-[10px] md:text-xs text-text-accent uppercase block">{label}</span>

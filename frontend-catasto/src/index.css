@@ -50,54 +50,28 @@ body {
 }
 
 .dark {
-  /* --- SFONDI (Scala Slate di Tailwind) --- */
-  /* Sfondo principale: Un blu-grigio molto scuro e profondo, non nero assoluto */
   --color-bg-main: #0f172a;
-  /* Slate 950 */
 
-  /* Sidebar e Pannelli: Leggermente più chiari per creare livelli */
   --color-bg-sidebar: #1e293b;
-  /* Slate 800 */
 
-  /* Header: Lo uniformiamo alla sidebar per un look "flat" e pulito */
   --color-bg-header: #1e293b;
-  /* Slate 800 */
 
-  /* Elementi Header: Grigio neutro per i bottoni non attivi */
   --color-bg-header-accent: #334155;
-  /* Slate 700 */
   --color-bg-header-border: #020617;
-  /* Quasi nero, per staccare l'header */
 
-  /* --- TESTI (Alto Contrasto) --- */
-  /* Bianco sporco per la massima leggibilità */
   --color-text-main: #f8fafc;
-  /* Slate 50 */
   --color-text-inverted: #f8fafc;
-  /* Sempre chiaro su scuro */
   --color-text-symbols: #e6c288;
 
-  /* Testo secondario: Grigio medio, elegante */
   --color-text-accent: #94a3b8;
-  /* Slate 400 */
 
-  /* --- BORDI E UI --- */
-  /* I bordi sono sottili e poco invasivi */
   --color-border: #334155;
-  /* Slate 700 */
   --color-border-dark: #475569;
-  /* Slate 600 */
 
-  /* --- STATI INTERATTIVI --- */
-  /* Hover: Un grigio intermedio */
   --color-item-hover: #334155;
-  /* Slate 700 */
+  --color-item-selected: #334155;
 
-  /* IL TOCCO DI CLASSE: */
-  /* Manteniamo l'Arancione/Ambra per la selezione attiva. */
-  /* Questo collega la modernità della dashboard all'identità storica del sito */
   --color-item-selected: #f59e0b;
-  /* Amber 500 */
 }
 
 
