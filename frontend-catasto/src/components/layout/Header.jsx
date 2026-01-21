@@ -3,6 +3,8 @@ import { Menu, X, Scroll, Moon, Sun } from 'lucide-react';
 import useDarkMode from '../../hooks/useDarkMode';
 
 export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
+  console.log("HEADER CARICATO. Il tema è:", useDarkMode()[0]);
+  const [theme, setTheme] = useDarkMode();
   const toggleTheme = () => {
     console.log("Tema attuale:", theme);
     const nuovoTema = theme === 'light' ? 'dark' : 'light';
@@ -27,7 +29,6 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
               <Menu className="h-6 w-6 text-text-accent" />
             )}
           </button>
-
           <div className="h-8 w-[1px] bg-bg-header-border mx-3 md:mx-4 opacity-50"></div>
 
           <div className="flex items-center gap-3">
@@ -46,7 +47,7 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
         <div className="flex items-center h-full gap-3 md:gap-4">
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-full transition-all duration-300 bg-bg-header-accent/10 hover:bg-bg-header-border/30 border border-transparent hover:border-border-base/30 group"
+            className="relative z-50 cursor-pointer p-2 rounded-full transition-all duration-300 bg-bg-header-accent/10 hover:bg-bg-header-border/30 border border-transparent hover:border-border-base/30 group"
             title={theme === 'dark' ? "Passa alla modalità chiara" : "Passa alla modalità scura"}
           >{theme === 'dark' ? (
             <Sun className="h-5 w-5 text-yellow-400 animate-in spin-in-90 duration-300" />
