@@ -21,11 +21,8 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
             )}
           </button>
 
-          {/* 2. IL DIVIDER VERTICALE (La "barrettina") */}
-          {/* Usa bg-border-base per essere visibile sia su chiaro che su scuro */}
           <div className="h-8 w-[1px] bg-border-base mx-3 md:mx-4 opacity-50"></div>
 
-          {/* 3. ICONA + TITOLO */}
           <div className="flex items-center gap-3">
             <Scroll className="h-6 w-6 md:h-8 md:w-8 text-text-accent" />
 
@@ -39,7 +36,7 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
               </p>
             </div>
           </div>
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-bg-header border-b border-bg-header-border"></div>
+          <div className="absolute bottom-0 left-0 w-full h-1.5 bg-bg-header border-t border-bg-header-border"></div>
 
           <div className="p-4 md:p-6 pt-6 md:pt-8"></div>
         </div>
