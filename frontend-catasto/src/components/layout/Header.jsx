@@ -37,7 +37,7 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
           </div>
         </div>
       </div>
-      <div className="w-full h-1.5 bg-bg-header-accent border-t border-bg-header-border"></div>
+      <div className="w-full h-1.5 bg-bg-header-accent border-bg-header-border"></div>
     </header>
   );
 }
