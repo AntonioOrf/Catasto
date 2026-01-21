@@ -80,11 +80,12 @@ body {
   --color-bg-sidebar: var(--color-bg-sidebar);
   --color-bg-header: var(--color-bg-header);
   --color-bg-header-accent: var(--color-bg-header-accent);
+  --color-bg-header-border: var(--color-bg-header-border);
 
   --color-text-main: var(--color-text-main);
   --color-text-inverted: var(--color-text-inverted);
   --color-text-accent: var(--color-text-accent);
-  --color-text-symbols: var(--color-text-accent);
+  --color-text-symbols: var(--color-text-symbols);
 
   --color-border-base: var(--color-border);
 
