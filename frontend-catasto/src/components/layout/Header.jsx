@@ -36,6 +36,18 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
             </div>
           </div>
         </div>
+        <div className="flex items-center h-full gap-3 md:gap-4">
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-full transition-all duration-300 bg-bg-header-accent/10 hover:bg-bg-header-border/30 border border-transparent hover:border-border-base/30 group"
+            title={theme === 'dark' ? "Passa alla modalità chiara" : "Passa alla modalità scura"}
+          >{theme === 'dark' ? (
+            <Sun className="h-5 w-5 text-yellow-400 animate-in spin-in-90 duration-300" />
+          ) : (
+            <Moon className="h-5 w-5 text-text-accent group-hover:text-white transition-colors animate-in slide-in-from-top-2 duration-300" />
+          )}
+          </button>
+        </div>
       </div>
       <div className="w-full h-1.5 bg-bg-header-accent border-bg-header-border"></div>
     </header>
