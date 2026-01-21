@@ -49,11 +49,12 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
             onClick={toggleTheme}
             className="relative z-50 cursor-pointer p-2 rounded-full transition-all duration-300 bg-bg-header-accent/10 hover:bg-bg-header-border/30 border border-transparent hover:border-border-base/30 group"
             title={theme === 'dark' ? "Passa alla modalità chiara" : "Passa alla modalità scura"}
-          >{theme === 'dark' ? (
-            <Sun className="h-5 w-5 text-yellow-400 animate-in spin-in-90 duration-300" />
-          ) : (
-            <Moon className="h-5 w-5 text-text-accent group-hover:text-white transition-colors animate-in slide-in-from-top-2 duration-300" />
-          )}
+          >
+            {theme === 'dark' ? (
+              <Sun key="sun" className="h-5 w-5 text-yellow-400 animate-in spin-in-90 duration-300" />
+            ) : (
+              <Moon key="moon" className="h-5 w-5 text-text-accent group-hover:text-white transition-colors animate-in slide-in-from-top-2 duration-300" />
+            )}
           </button>
         </div>
       </div>
