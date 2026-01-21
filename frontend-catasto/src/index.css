@@ -2,6 +2,11 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+body {
+  background-color: var(--color-bg-main);
+  color: var(--color-text-main);
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 
@@ -12,32 +17,20 @@
 
   color-scheme: light;
 
-
   --color-bg-main: #f8f5f2;
-
   --color-bg-sidebar: #fffbf5;
-
   --color-bg-header: #8b4513;
-
   --color-bg-header-accent: #6e360f;
-
   --color-bg-header-border: #5d2e0c;
 
-
   --color-text-main: #2c1810;
-
   --color-text-inverted: #f8f5f2;
-
   --color-text-accent: #e6c288;
 
-
   --color-border: #d3c4b1;
-
   --color-border-dark: #5d2e0c;
 
-
   --color-item-hover: #e6dbcf;
-
   --color-item-selected: #8b4513;
 
 
