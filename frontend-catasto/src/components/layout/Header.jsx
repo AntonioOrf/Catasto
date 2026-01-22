@@ -1,20 +1,17 @@
-import React from 'react';
-import { Menu, X, Scroll, Moon, Sun } from 'lucide-react';
-import useDarkMode from '../../hooks/useDarkMode';
+import React from "react";
+import { Menu, X, Scroll, Moon, Sun } from "lucide-react";
+import useDarkMode from "../../hooks/useDarkMode";
 
 export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
   const [theme, setTheme] = useDarkMode();
   const toggleTheme = () => {
-    const nuovoTema = theme === 'light' ? 'dark' : 'light';
+    const nuovoTema = theme === "light" ? "dark" : "light";
     setTheme(nuovoTema);
   };
   return (
-    <header className="bg-bg-header text-text-inverted shadow-md border-b-4 border-bg-header-border flex-shrink-0 z-20 h-16 md:h-20 transition-all duration-300 relative">
-
+    <header className="bg-bg-header text-text-inverted shadow-md border-b-4 border-bg-header-border flex-shrink-0 sticky top-0 z-50 h-16 md:h-20 transition-all duration-300 relative">
       <div className="w-full px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
-
         <div className="flex items-center h-full">
-
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="p-2 mr-1 bg-bg-header-accent/10 hover:bg-bg-header-border/20 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-text-accent bg-bg-header-accent"
@@ -45,12 +42,22 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
           <button
             onClick={toggleTheme}
             className="relative z-50 cursor-pointer p-2 rounded-full transition-all duration-300 bg-bg-header-accent/10 hover:bg-bg-header-border/30 border border-transparent hover:border-border-base/30 group"
-            title={theme === 'dark' ? "Passa alla modalità chiara" : "Passa alla modalità scura"}
+            title={
+              theme === "dark"
+                ? "Passa alla modalità chiara"
+                : "Passa alla modalità scura"
+            }
           >
-            {theme === 'dark' ? (
-              <Sun key="sun" className="h-5 w-5 text-text-symbols animate-in spin-in-90 duration-300" />
+            {theme === "dark" ? (
+              <Sun
+                key="sun"
+                className="h-5 w-5 text-text-symbols animate-in spin-in-90 duration-300"
+              />
             ) : (
-              <Moon key="moon" className="h-5 w-5 text-text-symbols group-hover:text-white transition-colors animate-in slide-in-from-top-2 duration-300" />
+              <Moon
+                key="moon"
+                className="h-5 w-5 text-text-symbols group-hover:text-white transition-colors animate-in slide-in-from-top-2 duration-300"
+              />
             )}
           </button>
         </div>

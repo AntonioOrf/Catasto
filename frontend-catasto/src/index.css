@@ -9,12 +9,8 @@ body {
 
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-
   line-height: 1.5;
-
   font-weight: 400;
-
-
   color-scheme: light;
 
   --color-bg-main: #f8f5f2;
@@ -28,68 +24,59 @@ body {
   --color-text-accent: #4a4a4a;
   --color-text-symbols: #e6c288;
 
-  --color-border: #d3c4b1;
+  --color-border: #fd0000;
   --color-border-dark: #5d2e0c;
+  --color-border-selected: #5f5046;
 
-  --color-item-hover: #e6dbcf;
+  --color-item-hover: #c4bbb1;
   --color-item-selected: #8b4513;
 
-
   background-color: var(--color-bg-main);
-
   color: var(--color-text-main);
 
-
   font-synthesis: none;
-
   text-rendering: optimizeLegibility;
-
   -webkit-font-smoothing: antialiased;
-
   -moz-osx-font-smoothing: grayscale;
 }
 
 .dark {
   --color-bg-main: #0f172a;
-
   --color-bg-sidebar: #1e293b;
 
   --color-bg-header: #1e293b;
-
   --color-bg-header-accent: #334155;
   --color-bg-header-border: #020617;
 
   --color-text-main: #f8fafc;
   --color-text-inverted: #f8fafc;
   --color-text-symbols: #e6c288;
-
   --color-text-accent: #94a3b8;
 
-  --color-border: #334155;
+  --color-border: #475569;
   --color-border-dark: #475569;
+  --color-border-selected: #8b4513;
 
   --color-item-hover: #334155;
-  --color-item-selected: #334155;
-
   --color-item-selected: #f59e0b;
 }
-
 
 @theme {
   --color-bg-main: var(--color-bg-main);
   --color-bg-sidebar: var(--color-bg-sidebar);
   --color-bg-header: var(--color-bg-header);
   --color-bg-header-accent: var(--color-bg-header-accent);
-  --color-bg-header-border: var(--color-bg-header-border);
 
   --color-text-main: var(--color-text-main);
   --color-text-inverted: var(--color-text-inverted);
   --color-text-accent: var(--color-text-accent);
   --color-text-symbols: var(--color-text-symbols);
 
-  --color-border-base: var(--color-border);
-
-  --color-border-dark: var(--color-border-dark);
   --color-item-hover: var(--color-item-hover);
   --color-item-selected: var(--color-item-selected);
+
+  --color-border-base: var(--color-border);
+  --color-border-selected: var(--color-border-selected);
+  --color-header-border: var(--color-bg-header-border);
+  --color-border-dark: var(--color-border-dark);
 }
