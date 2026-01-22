@@ -1,4 +1,16 @@
 @import "tailwindcss";
+@layer base{ 
+ section, article, aside, nav, header, footer, div {
+    border-color: var(--color-border)!important;
+    input{
+      border-color: var(--color-border-base)!important;
+    }
+    select{
+      border-color: var(--color-border-base)!important;
+    }
+}
+}
+
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -18,18 +30,20 @@ body {
   --color-bg-header: #8b4513;
   --color-bg-header-accent: #6e360f;
   --color-bg-header-border: #5d2e0c;
+  --color-bg-header-final: #e6c288;
 
   --color-text-main: #2c1810;
   --color-text-inverted: #f8f5f2;
   --color-text-accent: #4a4a4a;
   --color-text-symbols: #e6c288;
 
-  --color-border: #fd0000;
+  --color-border: #c0c0c0;
   --color-border-dark: #5d2e0c;
   --color-border-selected: #5f5046;
 
   --color-item-hover: #c4bbb1;
   --color-item-selected: #8b4513;
+  --color-item-selected-open: #eae0d5;
 
   background-color: var(--color-bg-main);
   color: var(--color-text-main);
@@ -47,6 +61,7 @@ body {
   --color-bg-header: #1e293b;
   --color-bg-header-accent: #334155;
   --color-bg-header-border: #020617;
+  --color-bg-header-final: #31425c;
 
   --color-text-main: #f8fafc;
   --color-text-inverted: #f8fafc;
@@ -59,6 +74,7 @@ body {
 
   --color-item-hover: #334155;
   --color-item-selected: #f59e0b;
+  --color-item-selected-open: #37465a;
 }
 
 @theme {
@@ -66,6 +82,7 @@ body {
   --color-bg-sidebar: var(--color-bg-sidebar);
   --color-bg-header: var(--color-bg-header);
   --color-bg-header-accent: var(--color-bg-header-accent);
+  --color-bg-header-final: var(--color-bg-header-final);
 
   --color-text-main: var(--color-text-main);
   --color-text-inverted: var(--color-text-inverted);
@@ -74,9 +91,11 @@ body {
 
   --color-item-hover: var(--color-item-hover);
   --color-item-selected: var(--color-item-selected);
+  --color-item-selected-open: var(--color-item-selected-open);
 
   --color-border-base: var(--color-border);
   --color-border-selected: var(--color-border-selected);
-  --color-header-border: var(--color-bg-header-border);
+  --color-bg-header-border: var(--color-bg-header-border);
   --color-border-dark: var(--color-border-dark);
+
 }

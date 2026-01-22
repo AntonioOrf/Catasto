@@ -101,7 +101,7 @@ const CatastoRow = forwardRef(
 
         {/* --- DETTAGLI ESPANSI --- */}
         {expanded && (
-          <tr className="bg-bg-sidebar/50">
+          <tr className="bg-item-selected-open/50 border-l-4 border-l-[var(--color-item-selected)]">
             <td
               colSpan="5"
               className="px-4 py-4 md:px-6 md:py-6 border-b-2 border-text-accent/30"
@@ -184,7 +184,7 @@ const CatastoRow = forwardRef(
                   ) : parentiData.length > 0 ? (
                     <div className="overflow-hidden border border-border-base rounded-md bg-bg-main">
                       <table className="min-w-full divide-y divide-border-base">
-                        <thead className="bg-bg-sidebar">
+                        <thead className="bg-item-selected-open">
                           <tr>
                             <th className="px-2 py-2 text-left text-[10px] md:text-xs font-medium text-item-selected uppercase">
                               Parente

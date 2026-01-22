@@ -70,14 +70,14 @@ export default React.memo(function Sidebar({
             w-full text-left p-2 rounded text-sm transition-colors h-full flex flex-col justify-center
             ${
               isSelected
-                ? "bg-item-selected text-item-text-inverted border-r border-border-base"
-                : "hover:bg-item-hover text-item-text"
+                ? "bg-[var(--color-item-selected)] text-[var(--color-text-inverted)]"
+                : "hover:bg-item-selected/90 text-text-main"
             }
           `}
         >
           <div className="font-bold truncate font-serif">{row.nome}</div>
           <div
-            className={`text-xs truncate ${isSelected ? "text-item-text-accent" : "text-gray-500"}`}
+            className={`text-xs truncate ${isSelected ? "text-[var(--color-text-symbols)]" : "text-gray-500"}`}
           >
             {row.mestiere || "Nessun mestiere"}
           </div>
@@ -99,22 +99,22 @@ export default React.memo(function Sidebar({
       {/* SIDEBAR RESPONSIVE */}
       <aside
         className={`
-          bg-skin-sidebar border-r border-border-base flex flex-col 
+          bg-bg-sidebar border-r border-border-base flex flex-col 
           transition-all duration-300 ease-in-out
           absolute top-0 left-0 bottom-0 z-30 shadow-2xl md:shadow-none md:static
           ${isSidebarOpen ? "w-[80%] sm:w-72 translate-x-0" : "w-0 -translate-x-full opacity-0 md:w-0"}
         `}
       >
         <div
-          className="p-4 bg-skin-sidebar-header border-b border-border-base flex items-center justify-between whitespace-nowrap overflow-hidden flex-shrink-0"
+          className="p-4 bg-bg-sidebar border-b border-border-base flex items-center justify-between whitespace-nowrap overflow-hidden flex-shrink-0"
           style={{ height: "60px" }}
         >
-          <h3 className="font-bold text-skin-border-dark uppercase text-xs tracking-wider flex items-center gap-2">
+          <h3 className="font-bold text-text-main uppercase text-xs tracking-wider flex items-center gap-2">
             <List className="h-4 w-4 flex-shrink-0" /> Indice
           </h3>
           <button
             onClick={() => setIsSidebarOpen(false)}
-            className="text-skin-header hover:text-skin-header-border p-1"
+            className="text-text-inverted hover:text-bg-header-border p-1"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
