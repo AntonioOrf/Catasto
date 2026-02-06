@@ -77,7 +77,7 @@ export default React.memo(function Sidebar({
         >
           <div className="font-bold truncate font-serif">{row.nome}</div>
           <div
-            className={`text-xs truncate ${isSelected ? "text-[var(--color-text-symbols)]" : "text-gray-500"}`}
+            className={`text-xs truncate ${isSelected ? "text-[var(--color-text-sidebar-jobs)]" : "text-gray-500"}`}
           >
             {row.mestiere || "Nessun mestiere"}
           </div>

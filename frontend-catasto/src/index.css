@@ -37,6 +37,7 @@ body {
   --color-text-inverted: #f8f5f2;
   --color-text-accent: #4a4a4a;
   --color-text-symbols: #e6c288;
+  --color-text-sidebar-jobs: #e6c288;
 
   --color-border: #9a582c;
   --color-border-dark: #5d2e0c;
@@ -69,6 +70,7 @@ body {
   --color-text-inverted: #f8fafc;
   --color-text-symbols: #9a582c;
   --color-text-accent: #b7805d;
+  --color-text-sidebar-jobs: #c49477;
 
   --color-border: #443e3a;
   --color-border-dark: #443e3a;
@@ -91,6 +93,7 @@ body {
   --color-text-inverted: var(--color-text-inverted);
   --color-text-accent: var(--color-text-accent);
   --color-text-symbols: var(--color-text-symbols);
+  --color-text-sidebar-jobs: var(--color-text-sidebar-jobs);
 
   --color-item-hover: var(--color-item-hover);
   --color-item-selected: var(--color-item-selected);
