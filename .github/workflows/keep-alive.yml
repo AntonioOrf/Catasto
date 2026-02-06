@@ -1,0 +1,12 @@
+name: Keep Alive
+
+on:
+  schedule:
+    - cron: '*/14 * * * *'
+
+jobs:
+  cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend
+        run: curl -I ${{ secrets.RENDER_URL }}
