@@ -26,7 +26,7 @@ const CatastoRow = forwardRef(
         <tr
           ref={ref}
           onClick={() => onRowClick(row.id)}
-          className={`cursor-pointer transition-colors border-b border-border-base bg-bg-main ${rowClasses}`}
+          className={`cursor-pointer transition-colors border-b border-border-base bg-bg-table ${rowClasses}`}
         >
           {/* NOME E MESTIERE */}
           <td className="px-3 py-3 md:px-6 md:py-4">

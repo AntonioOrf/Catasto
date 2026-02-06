@@ -19,5 +19,4 @@ export const rapportoOptions = [
   { id: 1, label: "Maestro" },
   { id: 2, label: "Lavorante / Garzone" },
   { id: 3, label: "Apprendista" },
-  { id: 4, label: "Socio" },
 ];
