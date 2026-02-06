@@ -2,6 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
+app.get('/', (req, res) => {
+  res.send('Il server è attivo!');
+});
+
 // Routes
 const catastoRoutes = require('./routes/catasto.routes');
 const parentiRoutes = require('./routes/parenti.routes');
