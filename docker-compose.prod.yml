@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  # 1. IL DATABASE (MySQL)
+  db:
+    image: mysql:8.0
+    container_name: catasto-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      # Mappiamo i dati del DB in una cartella locale come richiesto
+      - ./docker/catasto/db:/var/lib/mysql
+      # Mappiamo la cartella di inizializzazione per i file .sql (eseguiti solo al primo avvio)
+      - ./docker/catasto/init:/docker-entrypoint-initdb.d
+    networks:
+      - catasto-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # 2. IL BACKEND (Node.js) - Pull da Docker Hub
+  backend:
+    image: ipavon/catasto1427-backend:latest
+    container_name: catasto-backend
+    restart: always
+    environment:
+      DB_HOST: db
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_NAME: ${MYSQL_DATABASE}
+      PORT: 5000
+      DB_SSL: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - catasto-net
+
+  # 3. IL FRONTEND (Nginx + React) - Pull da Docker Hub
+  frontend:
+    image: ipavon/catasto1427-frontend:latest
+    container_name: catasto-frontend
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - catasto-net
+
+networks:
+  catasto-net:
+    driver: bridge
