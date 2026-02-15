@@ -226,7 +226,7 @@ services:
     container_name: catasto-frontend
     restart: always
     ports:
-      - "8080:80"
+      - "1427:80"
     depends_on:
       - backend
     networks:
