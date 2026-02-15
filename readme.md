@@ -166,79 +166,6 @@ Assicurati di aggiornare le variabili d'ambiente nei rispettivi pannelli di cont
 
 ## 🐳 Deployment con Docker
 
-Per deployare l'applicazione con Docker, segui questi passaggi:
-
-1.  Crea un file `.env` nella root del progetto opzionalmente, ma le variabili principali sono già nel `docker-compose.yml`.
-2.  Crea un file `docker-compose.yml` nella root del progetto con il seguente contenuto (o usa quello fornito se presente):
-
-```yaml
-version: "3.8"
-
-services:
-  db:
-    image: mysql:8.0
-    container_name: catasto-db
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: password_segreta_root
-      MYSQL_DATABASE: catasto_db
-      MYSQL_USER: catasto_user
-      MYSQL_PASSWORD: catasto_password
-    volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - catasto-net
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
-
-  backend:
-    build: ./backend-catasto
-    container_name: catasto-backend
-    restart: always
-    environment:
-      DB_HOST: db
-      DB_USER: catasto_user
-      DB_PASSWORD: catasto_password
-      DB_NAME: catasto_db
-      PORT: 5000
-      DB_SSL: "false"
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - catasto-net
-
-  frontend:
-    build: ./frontend-catasto
-    container_name: catasto-frontend
-    restart: always
-    ports:
-      - "8080:80"
-    depends_on:
-      - backend
-    networks:
-      - catasto-net
-
-networks:
-  catasto-net:
-    driver: bridge
-
-volumes:
-  mysql_data:
-```
-
-3.  Avvia i servizi:
-    ```bash
-    docker-compose up -d --build
-    ```
-4.  Accedi all'applicazione su `http://localhost:8080`.
-
----
-
-### 🚀 Metodo Alternativo: Immagini Pre-compilate (Consigliato)
-
 Se non vuoi scaricare tutto il codice e compilare sul server, usa questo metodo.
 
 1.  **Crea una cartella** per il progetto (es. `catasto`) ed entraci.
@@ -255,8 +182,6 @@ Se non vuoi scaricare tutto il codice e compilare sul server, usa questo metodo.
 3.  **Crea il file `docker-compose.yml`** usando le variabili e il percorso locale per il DB:
 
 ```yaml
-version: "3.8"
-
 services:
   db:
     image: mysql:8.0
@@ -268,10 +193,10 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
-      # I dati persistenti verranno salvati qui
-      - ./docker/catasto/db:/var/lib/mysql
-      # Metti il tuo file .sql in ./docker/catasto/init per importarlo automaticamente al primo avvio!
-      - ./docker/catasto/init:/docker-entrypoint-initdb.d
+      # I dati persistenti verranno salvati nella cartella ./db
+      - ./db:/var/lib/mysql
+      # Metti il tuo file .sql nella cartella ./init per importarlo automaticamente!
+      - ./init:/docker-entrypoint-initdb.d
     networks:
       - catasto-net
     healthcheck:
@@ -333,65 +258,6 @@ Se qualcosa non funziona (es. il backend non risponde), controlla i log:
   ```bash
   docker logs -f catasto-frontend
   ```
-
----
-
-## ☁️ Configurazione Cloudflare Zero Trust (Tunnel)
-
-Per esporre l'applicazione in modo sicuro al mondo esterno usando Cloudflare Tunnel (**solo sul server**):
-
-1.  **Installa cloudflared** sul tuo server:
-
-    ```bash
-    # Esempio per Ubuntu/Debian
-    curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-    sudo dpkg -i cloudflared.deb
-    ```
-
-2.  **Autenticati**:
-
-    ```bash
-    cloudflared tunnel login
-    ```
-
-3.  **Crea un Tunnel**:
-
-    ```bash
-    cloudflared tunnel create catasto-tunnel
-    ```
-
-    (Copia l'ID del tunnel restituito)
-
-4.  **Configura il DNS**:
-    Associa il tunnel a un sottodominio (es. `catasto.iltuodominio.com`):
-
-    ```bash
-    cloudflared tunnel route dns catasto-tunnel catasto.iltuodominio.com
-    ```
-
-5.  **Crea il file di configurazione** `config.yml` (es. in `~/.cloudflared/config.yml`):
-
-    ```yaml
-    tunnel: <Tunnel-UUID>
-    credentials-file: /root/.cloudflared/<Tunnel-UUID>.json
-
-    ingress:
-      - hostname: catasto.iltuodominio.com
-        service: http://localhost:8080
-      - service: http_status:404
-    ```
-
-    _Nota: `http://localhost:8080` è dove gira il frontend Docker._
-
-6.  **Avvia il Tunnel**:
-    ```bash
-    cloudflared tunnel run catasto-tunnel
-    ```
-    Per eseguirlo come servizio systemd (consigliato):
-    ```bash
-    sudo cloudflared service install
-    sudo systemctl start cloudflared
-    ```
 
 ---
 

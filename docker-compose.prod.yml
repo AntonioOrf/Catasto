@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # 1. IL DATABASE (MySQL)
   db:
@@ -12,10 +10,10 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
-      # Mappiamo i dati del DB in una cartella locale come richiesto
-      - ./docker/catasto/db:/var/lib/mysql
-      # Mappiamo la cartella di inizializzazione per i file .sql (eseguiti solo al primo avvio)
-      - ./docker/catasto/init:/docker-entrypoint-initdb.d
+      # Mappiamo i dati del DB in una cartella locale (./db)
+      - ./db:/var/lib/mysql
+      # Mappiamo la cartella ./init per i file .sql di inizializzazione
+      - ./init:/docker-entrypoint-initdb.d
     networks:
       - catasto-net
     healthcheck:

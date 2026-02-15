@@ -1,4 +1,8 @@
-export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+// In produzione (Docker/Nginx), usiamo il path relativo "" per sfruttare il proxy /api.
+// In sviluppo locale, usiamo localhost:3001.
+export const API_URL = import.meta.env.PROD
+  ? ""
+  : import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 /**
  * Constructs a URLSearchParams object from the provided filter criteria.
