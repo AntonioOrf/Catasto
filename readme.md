@@ -32,8 +32,8 @@ L'applicazione offre due livelli di ricerca:
 - **Pannello Filtri Avanzati (Collassabile):** Un'area dedicata per affinare la ricerca tramite:
   - **Mestiere:** Ricerca per professione (es. Fabbro, Notaio).
   - **Rapporto Mestiere:** Filtro per ruolo lavorativo (Maestro, Garzone, Apprendista).
-  - **Bestiame:** Filtro per tipologia di animali posseduti (Bovini, animali da soma, ecc.).
-  - **Immigrazione:** Filtro per status di residenza (Cittadino, Forestiero, Contadino).
+  - **Bestiame:** Filtro per tipologia di animali posseduti (Bovini, animali da soma, ecc.) o tipologia di possessione (affittuario, proprietario ecc.).
+  - **Immigrazione:** Filtro per status di residenza (Cittadino, Forestiero, Abitante del contado).
 
 ### 💰 2. Analisi Economica Dettagliata
 
@@ -79,7 +79,7 @@ Il progetto è strutturato come un'applicazione **Monorepo** (Frontend e Backend
 ### ⚙️ Backend (`/backend-catasto`)
 
 - Server **Node.js** con framework **Express**.
-- Interazione con il database tramite **MySQL2**.
+- Interazione con il database tramite **MySQL**.
 - API RESTful che supportano paginazione, ordinamento lato server e filtri complessi.
 - Configurazione CORS e dotenv per la sicurezza in produzione.
 
