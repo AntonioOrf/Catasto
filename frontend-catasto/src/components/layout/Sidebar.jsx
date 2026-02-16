@@ -29,6 +29,20 @@ export default React.memo(function Sidebar({
     return () => window.removeEventListener("resize", handleResize);
   }, [isSidebarOpen]); // Remeasure when sidebar opens
 
+  // Scroll to expanded item
+  React.useEffect(() => {
+    if (expandedId && sidebarData.length > 0) {
+      const index = sidebarData.findIndex((item) => item.id === expandedId);
+      if (index !== -1 && containerRef.current) {
+        const targetScrollTop = index * ITEM_HEIGHT;
+        containerRef.current.scrollTo({
+          top: targetScrollTop,
+          behavior: "smooth",
+        });
+      }
+    }
+  }, [expandedId, sidebarData]);
+
   const onScroll = (e) => setScrollTop(e.currentTarget.scrollTop);
 
   const ITEM_HEIGHT = 68;
