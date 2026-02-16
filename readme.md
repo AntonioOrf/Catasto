@@ -76,12 +76,16 @@ Il progetto è strutturato come un'applicazione **Monorepo** (Frontend e Backend
 - Icone vettoriali tramite **Lucide React**.
 - Gestione Variabili d'Ambiente per URL API dinamici.
 
+Ulteriori informazioni nella [Documentazione Frontend](docs/frontend.md).
+
 ### ⚙️ Backend (`/backend-catasto`)
 
 - Server **Node.js** con framework **Express**.
 - Interazione con il database tramite **MySQL**.
 - API RESTful che supportano paginazione, ordinamento lato server e filtri complessi.
 - Configurazione CORS e dotenv per la sicurezza in produzione.
+
+Ulteriori informazioni nella [Documentazione Backend](docs/backend.md).
 
 ### 🗄️ Database
 
@@ -136,8 +140,6 @@ cd frontend-catasto
 npm install
 ```
 
-_(Nota: Assicurati che `package.json` usi Tailwind v3.4.1 per evitare conflitti)_
-
 Crea un file `.env` nella cartella `frontend-catasto`:
 
 ```env
@@ -150,114 +152,7 @@ Avvia l'interfaccia:
 npm run dev
 ```
 
----
-
-## ☁️ Deploy (Messa in Produzione)
-
-Il progetto è configurato per essere hostato gratuitamente utilizzando una combinazione di servizi cloud:
-
-1.  **Database:** TiDB Cloud o Aiven (MySQL Hosting).
-2.  **Backend:** Render o Railway (Node.js Hosting).
-3.  **Frontend:** Vercel o Netlify (Static Site Hosting).
-
-Assicurati di aggiornare le variabili d'ambiente nei rispettivi pannelli di controllo dei servizi cloud (es. `VITE_API_URL` su Vercel deve puntare all'URL di Render).
-
----
-
-## 🐳 Deployment con Docker
-
-Se non vuoi scaricare tutto il codice e compilare sul server, usa questo metodo.
-
-1.  **Crea una cartella** per il progetto (es. `catasto`) ed entraci.
-
-2.  **Crea un file `.env`** per le tue password (più sicuro):
-
-    ```env
-    MYSQL_ROOT_PASSWORD=la_tua_password_root_difficile
-    MYSQL_DATABASE=catasto_db
-    MYSQL_USER=catasto_user
-    MYSQL_PASSWORD=la_tua_password_utente
-    ```
-
-3.  **Crea il file `docker-compose.yml`** usando le variabili e il percorso locale per il DB:
-
-```yaml
-services:
-  db:
-    image: mysql:8.0
-    container_name: catasto-db
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    volumes:
-      # I dati persistenti verranno salvati nella cartella ./db
-      - ./db:/var/lib/mysql
-      # Metti il tuo file .sql nella cartella ./init per importarlo automaticamente!
-      - ./init:/docker-entrypoint-initdb.d
-    networks:
-      - catasto-net
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
-
-  backend:
-    image: ipavon/catasto1427-backend:latest
-    container_name: catasto-backend
-    restart: always
-    environment:
-      DB_HOST: db
-      DB_USER: ${MYSQL_USER}
-      DB_PASSWORD: ${MYSQL_PASSWORD}
-      DB_NAME: ${MYSQL_DATABASE}
-      PORT: 5000
-      DB_SSL: "false"
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - catasto-net
-
-  frontend:
-    image: ipavon/catasto1427-frontend:latest
-    container_name: catasto-frontend
-    restart: always
-    ports:
-      - "1427:80"
-    depends_on:
-      - backend
-    networks:
-      - catasto-net
-
-networks:
-  catasto-net:
-    driver: bridge
-```
-
-4.  **Avvia:**
-    ```bash
-    docker-compose up -d
-    ```
-
-### 🔍 Risoluzione Problemi
-
-Se qualcosa non funziona (es. il backend non risponde), controlla i log:
-
-- **Log Backend:**
-  ```bash
-  docker logs -f catasto-backend
-  ```
-- **Log Database:**
-  ```bash
-  docker logs -f catasto-db
-  ```
-- **Log Frontend:**
-  ```bash
-  docker logs -f catasto-frontend
-  ```
+Per una guida più dettagliata su come installare e avviare il progetto, consulta la [Guida all'Installazione](docs/guides.md).
 
 ---
 
