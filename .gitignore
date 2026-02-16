@@ -27,3 +27,4 @@ docker-compose.prod.yml
 publish_images.bat
 backend-catasto/.env
 frontend-catasto/.env
+db/*
