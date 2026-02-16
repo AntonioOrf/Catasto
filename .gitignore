@@ -25,3 +25,5 @@ dist-ssr
 docker-compose.yml
 docker-compose.prod.yml
 publish_images.bat
+backend-catasto/.env
+frontend-catasto/.env
