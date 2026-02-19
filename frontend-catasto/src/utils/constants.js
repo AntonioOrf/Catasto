@@ -16,7 +16,18 @@ export const immigrazioneOptions = [
 
 export const rapportoOptions = [
   { id: 0, label: "Non specificato" },
-  { id: 1, label: "Maestro" },
-  { id: 2, label: "Lavorante / Garzone" },
-  { id: 3, label: "Apprendista" },
+  {
+    id: 1,
+    label:
+      "Impiegato, apprendista, garzone, fattore di un padrone che esercita il mestiere indicato",
+  },
+  {
+    id: 2,
+    label:
+      "Vedova o orfano minorenne di un defunto che esercitava il mestiere indicato",
+  },
+  {
+    id: 3,
+    label: "Mestiere esercitato in precedenza e abbandonato",
+  },
 ];
