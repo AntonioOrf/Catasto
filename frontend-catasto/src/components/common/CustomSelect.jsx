@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, Check } from "lucide-react";
+import { ChevronDown, ChevronUp, Check,} from "lucide-react";
 
 /**
  * Custom Select component that supports text wrapping for options.
@@ -55,7 +55,7 @@ export default function CustomSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="block w-full text-left pl-8 pr-8 py-2 border-[1px] border-solid border-border-base bg-bg-main text-text-main focus:outline-none focus:ring-1 focus:ring-bg-header text-sm relative transition-colors"
+        className="block w-full text-left pl-8 pr-8 py-2 border-[1px] border-[var(--color-border)] bg-bg-main text-text-main focus:outline-none focus:ring-1 focus:ring-bg-header text-sm relative transition-colors"
       >
         {icon && (
           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-text-accent pointer-events-none">
