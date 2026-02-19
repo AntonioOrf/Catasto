@@ -70,7 +70,7 @@ export default function CustomSelect({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-bg-main border border-border-base shadow-lg max-h-60 overflow-y-auto rounded-sm animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute z-50 w-full mt-1 bg-bg-main border border-border-base shadow-lg max-h-[60vh] overflow-y-auto rounded-sm animate-in fade-in zoom-in-95 duration-100">
           <div
             className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-bg-header-accent hover:text-text-inverted text-sm ${
               value === "" ? "font-semibold bg-bg-sidebar" : ""
