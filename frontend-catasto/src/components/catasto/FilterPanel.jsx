@@ -12,11 +12,9 @@ import {
   Flag,
   Calculator,
 } from "lucide-react";
-import {
-  rapportoOptions,
-  bestiameOptions,
-  immigrazioneOptions,
-} from "../../utils/constants";
+
+import CustomSelect from "../common/CustomSelect";
+
 
 export default function FilterPanel({
   searchPersona,
@@ -56,6 +54,7 @@ export default function FilterPanel({
   setFilterDeduzioniMin,
   filterDeduzioniMax,
   setFilterDeduzioniMax,
+  filterOptions = { bestiame: [], rapporto: [], immigrazione: [] },
 }) {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
@@ -150,19 +149,12 @@ export default function FilterPanel({
                   Rapporto Mestiere
                 </label>
                 <div className="relative">
-                  <Hammer className="absolute left-2 top-2.5 h-4 w-4 text-text-accent" />
-                  <select
+                  <CustomSelect
                     value={filterRapporto}
                     onChange={(e) => setFilterRapporto(e.target.value)}
-                    className={`${smallInputClasses} appearance-none`}
-                  >
-                    <option value="">Tutti</option>
-                    {rapportoOptions.map((opt) => (
-                      <option key={opt.id} value={opt.id}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={filterOptions.rapporto}
+                    placeholder="Tutti"
+                  />
                 </div>
               </div>
               <div className="col-span-1">
@@ -170,19 +162,12 @@ export default function FilterPanel({
                   Bestiame
                 </label>
                 <div className="relative">
-                  <PawPrint className="absolute left-2 top-2.5 h-4 w-4 text-text-accent" />
-                  <select
+                  <CustomSelect
                     value={filterBestiame}
                     onChange={(e) => setFilterBestiame(e.target.value)}
-                    className={`${smallInputClasses} appearance-none`}
-                  >
-                    <option value="">Tutti</option>
-                    {bestiameOptions.map((opt) => (
-                      <option key={opt.id} value={opt.id}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={filterOptions.bestiame}
+                    placeholder="Tutti"
+                  />
                 </div>
               </div>
               <div className="col-span-1">
@@ -190,19 +175,12 @@ export default function FilterPanel({
                   Immigrazione
                 </label>
                 <div className="relative">
-                  <Flag className="absolute left-2 top-2.5 h-4 w-4 text-text-accent" />
-                  <select
+                  <CustomSelect
                     value={filterImmigrazione}
                     onChange={(e) => setFilterImmigrazione(e.target.value)}
-                    className={`${smallInputClasses} appearance-none`}
-                  >
-                    <option value="">Tutti</option>
-                    {immigrazioneOptions.map((opt) => (
-                      <option key={opt.id} value={opt.id}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={filterOptions.immigrazione}
+                    placeholder="Tutti"
+                  />
                 </div>
               </div>
             </div>
@@ -259,6 +237,8 @@ export default function FilterPanel({
   );
 }
 
+import CustomNumberInput from "../common/CustomNumberInput";
+
 function RangeInput({ label, min, max, setMin, setMax }) {
   return (
     <div>
@@ -266,20 +246,18 @@ function RangeInput({ label, min, max, setMin, setMax }) {
         {label}
       </label>
       <div className="flex items-center gap-2">
-        <input
-          type="number"
-          placeholder="Min"
-          className="w-full px-2 py-2 border border-border-base bg-bg-main text-text-main focus:outline-none focus:ring-1 focus:ring-bg-header text-sm"
+        <CustomNumberInput
           value={min}
           onChange={(e) => setMin(e.target.value)}
+          placeholder="Min"
+          className="w-full"
         />
         <span className="text-text-accent">-</span>
-        <input
-          type="number"
-          placeholder="Max"
-          className="w-full px-2 py-2 border border-border-base bg-bg-main text-text-main focus:outline-none focus:ring-1 focus:ring-bg-header text-sm"
+        <CustomNumberInput
           value={max}
           onChange={(e) => setMax(e.target.value)}
+          placeholder="Max"
+          className="w-full"
         />
       </div>
     </div>

@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useCallback,
 } from "react";
+import { fetchFilterOptions } from "../api/catastoService";
 import Header from "../components/layout/Header";
 import Sidebar from "../components/layout/Sidebar";
 import FilterPanel from "../components/catasto/FilterPanel";
@@ -21,6 +22,26 @@ export default function HomePage() {
   const tableRowsRef = useRef({});
   const mainContentRef = useRef(null);
   const [targetScrolledId, setTargetScrolledId] = useState(null);
+
+  // Filter Options State
+  const [filterOptions, setFilterOptions] = useState({
+    bestiame: [],
+    rapporto: [],
+    immigrazione: [],
+  });
+
+  // Fetch filter options on mount
+  useEffect(() => {
+    const loadFilters = async () => {
+      try {
+        const options = await fetchFilterOptions();
+        setFilterOptions(options);
+      } catch (err) {
+        console.error("Failed to load filter options", err);
+      }
+    };
+    loadFilters();
+  }, []);
 
   // Custom Hooks
   const filters = useCatastoFilters();
@@ -158,6 +179,7 @@ export default function HomePage() {
             {...filters} // Pass all filter states and setters
             loading={loading}
             fetchData={fetchData}
+            filterOptions={filterOptions}
           />
 
           <CatastoTable

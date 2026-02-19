@@ -28,7 +28,7 @@ export const fetchCatastoData = async (filters, page, limit) => {
 export const fetchSidebarData = async (filters) => {
   const params = buildParams(filters);
   const response = await fetch(
-    `${API_URL}/api/catasto/sidebar?${params.toString()}`
+    `${API_URL}/api/catasto/sidebar?${params.toString()}`,
   );
   if (!response.ok) throw new Error("Errore sidebar");
   return await response.json();
@@ -43,5 +43,16 @@ export const fetchSidebarData = async (filters) => {
 export const fetchParentiData = async (idFuoco) => {
   const response = await fetch(`${API_URL}/api/parenti/${idFuoco}`);
   if (!response.ok) throw new Error("Errore parenti");
+  return await response.json();
+};
+
+/**
+ * Fetches dynamic filter options from the database.
+ * @returns {Promise<Object>} A promise resolving to an object containing filter arrays (bestiame, rapport, immigrazione).
+ * @throws {Error} If the fetch fails.
+ */
+export const fetchFilterOptions = async () => {
+  const response = await fetch(`${API_URL}/api/filters`);
+  if (!response.ok) throw new Error("Errore caricamento filtri");
   return await response.json();
 };
