@@ -25,8 +25,10 @@ export const fetchCatastoData = async (filters, page, limit) => {
  * @returns {Promise<Array>} A promise resolving to an array of aggregate data points.
  * @throws {Error} If the sidebar data fetch fails.
  */
-export const fetchSidebarData = async (filters) => {
+export const fetchSidebarData = async (filters, page = 1, limit = 1000) => {
   const params = buildParams(filters);
+  params.append("page", page);
+  params.append("limit", limit);
   const response = await fetch(
     `${API_URL}/api/catasto/sidebar?${params.toString()}`,
   );
