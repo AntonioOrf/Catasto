@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ZoomIn, ZoomOut, Maximize, AlertCircle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { API_URL } from '../../api/client';
 
 const SPLIT_VOLUMES = {
   18: { part1: { max: 1187, id: '2722381' }, part2: { min: 1188, id: '2722382' } },
@@ -60,8 +61,7 @@ const ArchivioViewerModal = ({ isOpen, onClose, codiceArchivio, foglio, volume, 
          }
       }
 
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-      const manifestUrl = `${API_URL}/catasto/manifest/${activeCodice}`;
+      const manifestUrl = `${API_URL}/api/catasto/manifest/${activeCodice}`;
       const response = await fetch(manifestUrl);
       
       if (!response.ok) {
