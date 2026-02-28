@@ -9,6 +9,8 @@ export default React.memo(function Sidebar({
   expandedId,
   targetScrolledId,
   handleSidebarClick,
+  loadMoreSidebar,
+  hasMore,
 }) {
   // Custom Virtualization Logic
   const containerRef = React.useRef(null);
@@ -43,7 +45,15 @@ export default React.memo(function Sidebar({
     }
   }, [expandedId, sidebarData]);
 
-  const onScroll = (e) => setScrollTop(e.currentTarget.scrollTop);
+  const onScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    setScrollTop(scrollTop);
+
+    // Infinite scroll trigger: load more when near the bottom
+    if (hasMore && !sidebarLoading && scrollHeight - scrollTop - clientHeight < 200) {
+      loadMoreSidebar();
+    }
+  };
 
   const ITEM_HEIGHT = 68;
   const totalHeight = sidebarData.length * ITEM_HEIGHT;
@@ -139,13 +149,23 @@ export default React.memo(function Sidebar({
           ref={containerRef}
           onScroll={onScroll}
         >
-          {sidebarLoading ? (
-            <div className="p-4 text-center text-sm text-gray-500 italic">
-              Caricamento indice...
-            </div>
-          ) : sidebarData.length > 0 ? (
+          {sidebarData.length > 0 ? (
             <div style={{ height: totalHeight, position: "relative" }}>
               {visibleItems}
+              
+              {/* Spinner di caricamento per Infinite Scroll */}
+              {sidebarLoading && hasMore && (
+                <div 
+                  className="absolute w-full flex justify-center py-4" 
+                  style={{ top: totalHeight - ITEM_HEIGHT }}
+                >
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-item-selected"></div>
+                </div>
+              )}
+            </div>
+          ) : sidebarLoading ? (
+            <div className="p-4 text-center text-sm text-gray-500 italic">
+              Caricamento indice...
             </div>
           ) : (
             <div className="p-4 text-center text-sm text-gray-400">

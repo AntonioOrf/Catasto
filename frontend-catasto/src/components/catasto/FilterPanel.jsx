@@ -11,6 +11,7 @@ import {
   PawPrint,
   Flag,
   Calculator,
+  BookOpen,
 } from "lucide-react";
 
 import CustomSelect from "../common/CustomSelect";
@@ -33,6 +34,8 @@ export default function FilterPanel({
   setFilterBestiame,
   filterImmigrazione,
   setFilterImmigrazione,
+  filterVolume,
+  setFilterVolume,
 
   filterFortuneMin,
   setFilterFortuneMin,
@@ -128,7 +131,7 @@ export default function FilterPanel({
         {isFiltersOpen && (
           <div className="bg-bg-main border border-border-base rounded p-3 md:p-4 mt-2 transition-all duration-300 animate-in slide-in-from-top-2">
             {/* Griglia Mestieri e Status */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
               <div className="col-span-1">
                 <label className="block text-xs font-semibold text-text-main mb-1">
                   Mestiere
@@ -183,6 +186,21 @@ export default function FilterPanel({
                     onChange={(e) => setFilterImmigrazione(e.target.value)}
                     options={filterOptions.immigrazione}
                     placeholder="Tutti"
+                  />
+                </div>
+              </div>
+              <div className="col-span-1">
+                <label className="block text-xs font-semibold text-text-main mb-1">
+                  Volume
+                </label>
+                <div className="relative">
+                  <BookOpen className="absolute left-2 top-2.5 h-4 w-4 text-text-accent" />
+                  <input
+                    type="text"
+                    className={smallInputClasses}
+                    placeholder="Es. 15"
+                    value={filterVolume}
+                    onChange={(e) => setFilterVolume(e.target.value)}
                   />
                 </div>
               </div>

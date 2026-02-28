@@ -1,4 +1,4 @@
-import React, { forwardRef } from "react";
+import React, { forwardRef, useState } from "react";
 import {
   Briefcase,
   Layers,
@@ -13,10 +13,14 @@ import {
   PawPrint,
   Flag,
   Hammer,
+  ExternalLink
 } from "lucide-react";
+import ArchivioViewerModal from "./ArchivioViewerModal";
 
 const CatastoRow = forwardRef(
   ({ row, expanded, onRowClick, loadingParenti, parentiData }, ref) => {
+    const [viewerOpen, setViewerOpen] = useState(false);
+
     const rowClasses = expanded
       ? "bg-item-selected/10 border-l-4 border-l-[var(--color-item-selected)]"
       : "hover:bg-item-hover/50 border-l-4 border-l-transparent";
@@ -69,22 +73,45 @@ const CatastoRow = forwardRef(
               </div>
               {/* Mobile Volume Info */}
               <div className="md:hidden flex items-center gap-2 text-[10px] text-text-main font-mono bg-bg-sidebar px-1 rounded w-fit border border-border-base mt-1">
-                <span>Vol. {row.volume}</span>
-                <span>c. {row.foglio}</span>
+                {row.codice_archivio ? (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setViewerOpen(true); }}
+                    className="flex items-center gap-1 text-item-selected hover:underline hover:brightness-110 active:scale-95 transition-all"
+                    title="Visualizza Manoscritto"
+                  >
+                    <span>Vol. {row.volume}</span>
+                    <span>c. {row.foglio}</span>
+                    <ExternalLink className="h-3 w-3 ml-1" />
+                  </button>
+                ) : (
+                  <>
+                    <span>Vol. {row.volume}</span>
+                    <span>c. {row.foglio}</span>
+                  </>
+                )}
               </div>
             </div>
           </td>
 
           {/* RIFERIMENTI (Desktop only) */}
           <td className="hidden md:table-cell px-6 py-4">
-            <div className="flex flex-col gap-1 text-sm text-text-main font-mono bg-bg-sidebar p-2 rounded w-fit border border-border-base">
+            <div className={`flex flex-col gap-1 text-sm text-text-main font-mono p-2 rounded w-fit border ${row.codice_archivio ? 'border-item-selected/50 bg-item-selected/5 hover:bg-item-selected/10 cursor-pointer transition-colors shadow-sm' : 'border-border-base bg-bg-sidebar'}`}
+                 onClick={(e) => { 
+                   if (row.codice_archivio) {
+                     e.stopPropagation(); setViewerOpen(true); 
+                   }
+                 }}
+                 title={row.codice_archivio ? "Visualizza Manoscritto Originale" : undefined}
+            >
               <div className="flex items-center gap-2">
                 <Bookmark className="h-3 w-3 text-item-selected" />
-                <span className="font-bold">Vol.</span> {row.volume || "?"}
+                <span className="font-bold">Vol.</span> 
+                <span className={row.codice_archivio ? 'text-item-selected underline underline-offset-2' : ''}>{row.volume || "?"}</span>
               </div>
               <div className="flex items-center gap-2">
                 <FileText className="h-3 w-3 text-item-selected" />
-                <span className="font-bold">c.</span> {row.foglio || "?"}
+                <span className="font-bold">c.</span> 
+                <span className={row.codice_archivio ? 'text-item-selected underline underline-offset-2' : ''}>{row.foglio || "?"}</span>
               </div>
             </div>
           </td>
@@ -237,9 +264,19 @@ const CatastoRow = forwardRef(
             </td>
           </tr>
         )}
+        
+        {/* Modale Visualizazione Archivio di Stato */}
+        <ArchivioViewerModal 
+           isOpen={viewerOpen} 
+           onClose={() => setViewerOpen(false)}
+           codiceArchivio={row.codice_archivio}
+           foglio={row.foglio}
+           volume={row.volume}
+           nome={row.nome}
+        />
       </>
     );
-  },
+  }
 );
 
 // Helper Components

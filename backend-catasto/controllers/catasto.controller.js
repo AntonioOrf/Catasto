@@ -1,15 +1,16 @@
-const pool = require('../config/db');
-const { buildQuery, buildOrderBy } = require('../utils/queryHelpers');
+const pool = require("../config/db");
+const { buildQuery, buildOrderBy } = require("../utils/queryHelpers");
+const https = require("https");
 
 exports.getAll = (req, res) => {
-    const { sort_by = 'nome', order = 'ASC', page = 1, limit = 50 } = req.query;
-    const offset = (page - 1) * limit;
-    const limitVal = parseInt(limit);
+  const { sort_by = "nome", order = "ASC", page = 1, limit = 50 } = req.query;
+  const offset = (page - 1) * limit;
+  const limitVal = parseInt(limit);
 
-    const { conditions, params } = buildQuery(req.query);
-    const orderByClause = buildOrderBy(sort_by, order);
+  const { conditions, params } = buildQuery(req.query);
+  const orderByClause = buildOrderBy(sort_by, order);
 
-    const baseJoins = `
+  const baseJoins = `
     FROM fuochi f
     LEFT JOIN mestieri m ON f.Mestiere_Fuoco = m.id
     LEFT JOIN casa c ON f.Casa_Fuoco = c.Id_casa
@@ -22,10 +23,11 @@ exports.getAll = (req, res) => {
     LEFT JOIN t_popoli tp ON ts.id_popolo = tp.id_popolo
     LEFT JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere
     LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie
+    LEFT JOIN t_archivio_volumi tav ON f.Volume_Fuoco = tav.volume
   `;
 
-    const countSql = `SELECT COUNT(*) as total ${baseJoins} ${conditions}`;
-    const dataSql = `
+  const countSql = `SELECT COUNT(*) as total ${baseJoins} ${conditions}`;
+  const dataSql = `
     SELECT 
       f.ID_Fuochi as id, f.Nome_Fuoco as nome, 
       f.Imponibile_Fuoco as imponibile, f.Credito_Fuoco as credito, 
@@ -35,30 +37,38 @@ exports.getAll = (req, res) => {
       b.Bestiame as bestiame, i.Immigrazione as immigrazione, rm.RapportoLavoro as rapporto_mestiere,
       m.Mestiere as mestiere, c.Casa as casa, 
       tq.nome_quartiere as quartiere, tp.nome_popolo as popolo, 
-      tpi.nome_piviere as piviere, tser.nome_serie as serie
+      tpi.nome_piviere as piviere, tser.nome_serie as serie,
+      tav.codice_archivio
     ${baseJoins} ${conditions} ${orderByClause} LIMIT ? OFFSET ?
   `;
 
-    pool.query(countSql, params, (err, countResult) => {
-        if (err) return res.status(500).json({ error: err.message });
-        const totalRecords = countResult[0].total;
+  pool.query(countSql, params, (err, countResult) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const totalRecords = countResult[0].total;
 
-        pool.query(dataSql, [...params, limitVal, offset], (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({
-                data: rows,
-                pagination: { total: totalRecords, page: parseInt(page), limit: limitVal, totalPages: Math.ceil(totalRecords / limitVal) }
-            });
-        });
+    pool.query(dataSql, [...params, limitVal, offset], (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({
+        data: rows,
+        pagination: {
+          total: totalRecords,
+          page: parseInt(page),
+          limit: limitVal,
+          totalPages: Math.ceil(totalRecords / limitVal),
+        },
+      });
     });
+  });
 };
 
 exports.getSidebar = (req, res) => {
-    const { sort_by = 'nome', order = 'ASC' } = req.query;
-    const { conditions, params } = buildQuery(req.query);
-    let orderByClause = buildOrderBy(sort_by, order);
+  const { sort_by = "nome", order = "ASC", page = 1, limit = 1000 } = req.query;
+  const offset = (page - 1) * limit;
+  const limitVal = parseInt(limit);
+  const { conditions, params } = buildQuery(req.query);
+  let orderByClause = buildOrderBy(sort_by, order);
 
-    const sidebarJoins = `
+  const sidebarJoins = `
     FROM fuochi f
     LEFT JOIN mestieri m ON f.Mestiere_Fuoco = m.id
     LEFT JOIN t_struttura_catastale ts ON f.id_registrazione = ts.id_registrazione
@@ -71,10 +81,41 @@ exports.getSidebar = (req, res) => {
     LEFT JOIN rapporto_mestiere rm ON f.RapportoMestiere_Fuoco = rm.ID_Rapporto
   `;
 
-    const sql = `SELECT f.ID_Fuochi as id, f.Nome_Fuoco as nome, m.Mestiere as mestiere ${sidebarJoins} ${conditions} ${orderByClause} LIMIT 5000`;
+  const sql = `SELECT f.ID_Fuochi as id, f.Nome_Fuoco as nome, m.Mestiere as mestiere ${sidebarJoins} ${conditions} ${orderByClause} LIMIT ? OFFSET ?`;
 
-    pool.query(sql, params, (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+  pool.query(sql, [...params, limitVal, offset], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ data: rows });
+  });
+};
+
+exports.getManifest = (req, res) => {
+  const { id } = req.params;
+  const targetUrl = `https://archiviodigitale-icar.cultura.gov.it/metadata/${id}/manifest.json?type=archive`;
+
+  https
+    .get(targetUrl, (apiRes) => {
+      let rawData = "";
+      apiRes.on("data", (chunk) => {
+        rawData += chunk;
+      });
+      apiRes.on("end", () => {
+        try {
+          const parsedData = JSON.parse(rawData);
+          // Explicitly set CORS headers so the frontend can read it
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.setHeader("Content-Type", "application/json");
+          res.send(parsedData);
+        } catch (e) {
+          console.error("Error parsing manifest JSON:", e.message);
+          res.status(500).json({ error: "Failed to parse manifest." });
+        }
+      });
+    })
+    .on("error", (e) => {
+      console.error("Error fetching manifest:", e.message);
+      res
+        .status(500)
+        .json({ error: "Failed to fetch from Archivio Digitale." });
     });
 };

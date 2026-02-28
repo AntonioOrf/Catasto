@@ -17,6 +17,7 @@ export function useCatastoFilters() {
   const [filterBestiame, setFilterBestiame] = useState("");
   const [filterImmigrazione, setFilterImmigrazione] = useState("");
   const [filterRapporto, setFilterRapporto] = useState("");
+  const [filterVolume, setFilterVolume] = useState("");
 
   // Range Filters
   const [filterFortuneMin, setFilterFortuneMin] = useState("");
@@ -43,7 +44,7 @@ export function useCatastoFilters() {
         setSortOrder("ASC");
       }
     },
-    [sortBy]
+    [sortBy],
   );
 
   const getFilters = () => ({
@@ -53,6 +54,7 @@ export function useCatastoFilters() {
     filterBestiame,
     filterImmigrazione,
     filterRapporto,
+    filterVolume,
     filterFortuneMin,
     filterFortuneMax,
     filterCreditoMin,
@@ -85,6 +87,8 @@ export function useCatastoFilters() {
     setFilterImmigrazione,
     filterRapporto,
     setFilterRapporto,
+    filterVolume,
+    setFilterVolume,
     filterFortuneMin,
     setFilterFortuneMin,
     filterFortuneMax,

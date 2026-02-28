@@ -41,6 +41,7 @@ export const buildParams = (filters) => {
   if (filters.filterImmigrazione)
     params.append("immigrazione", filters.filterImmigrazione);
   if (filters.filterRapporto) params.append("rapporto", filters.filterRapporto);
+  if (filters.filterVolume) params.append("volume", filters.filterVolume);
 
   if (filters.filterFortuneMin)
     params.append("fortune_min", filters.filterFortuneMin);

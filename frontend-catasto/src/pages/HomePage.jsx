@@ -54,6 +54,7 @@ export default function HomePage() {
       filterBestiame: filters.filterBestiame,
       filterImmigrazione: filters.filterImmigrazione,
       filterRapporto: filters.filterRapporto,
+      filterVolume: filters.filterVolume,
       filterFortuneMin: filters.filterFortuneMin,
       filterFortuneMax: filters.filterFortuneMax,
       filterCreditoMin: filters.filterCreditoMin,
@@ -74,6 +75,7 @@ export default function HomePage() {
       filters.filterBestiame,
       filters.filterImmigrazione,
       filters.filterRapporto,
+      filters.filterVolume,
       filters.filterFortuneMin,
       filters.filterFortuneMax,
       filters.filterCreditoMin,
@@ -105,7 +107,7 @@ export default function HomePage() {
   } = useCatastoData(filterValues);
 
   // Sidebar Hook
-  const { sidebarData, sidebarLoading } = useCatastoSidebar(filterValues);
+  const { sidebarData, sidebarLoading, loadMoreSidebar, hasMore, syncSidebarToPage } = useCatastoSidebar(filterValues);
 
   // Scroll to row logic
   useEffect(() => {
@@ -123,10 +125,11 @@ export default function HomePage() {
     (newPage) => {
       if (newPage >= 1 && newPage <= totalPages) {
         setPage(newPage);
+        syncSidebarToPage(newPage); // Sincronizza la Sidebar con il salto di pagina
         if (mainContentRef.current) mainContentRef.current.scrollTop = 0;
       }
     },
-    [totalPages, setPage],
+    [totalPages, setPage, syncSidebarToPage],
   );
 
   const handleSidebarClick = useCallback(
@@ -169,6 +172,8 @@ export default function HomePage() {
           expandedId={expandedId}
           targetScrolledId={targetScrolledId}
           handleSidebarClick={handleSidebarClick}
+          loadMoreSidebar={loadMoreSidebar}
+          hasMore={hasMore}
         />
 
         <div
