@@ -91,20 +91,20 @@ exports.getSidebar = (req, res) => {
 
 exports.getManifest = (req, res) => {
   const { id } = req.params;
-  const targetUrlString = `https://archiviodigitale-icar.cultura.gov.it/metadata/${id}/manifest.json?type=archive`;
-  const url = new URL(targetUrlString);
-
   
+  const originalUrl = `https://archiviodigitale-icar.cultura.gov.it/metadata/${id}/manifest.json?type=archive`;
+  
+  const proxyUrlString = `https://api.allorigins.win/raw?url=${encodeURIComponent(originalUrl)}`;
+  const url = new URL(proxyUrlString);
+
   const options = {
     hostname: url.hostname,
     path: url.pathname + url.search,
     method: 'GET',
-    timeout: 10000,
+    timeout: 10000, 
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
       'Accept': 'application/json, text/plain, */*',
-      'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Connection': 'keep-alive'
     }
   };
 
