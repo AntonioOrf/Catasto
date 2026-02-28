@@ -83,7 +83,7 @@ const ArchivioViewerModal = ({ isOpen, onClose, codiceArchivio, foglio, volume, 
         const foglioStr = String(foglio).trim();
         const paddedFoglio = foglioStr.padStart(4, '0'); // es. "130" -> "0130"
         
-        targetCanvas = canvases.find(c => {
+        const matches = canvases.filter(c => {
           // Puliamo la stringa da eventuali estensioni finali e mettiamo in minuscolo
           let lbl = (c.label || '').toLowerCase().replace(/\.[a-z]{3,4}$/, '').trim();
           
@@ -94,6 +94,13 @@ const ArchivioViewerModal = ({ isOpen, onClose, codiceArchivio, foglio, volume, 
                  lbl.endsWith('_' + foglioStr) ||
                  lbl.endsWith(foglioStr);
         });
+
+        if (matches.length > 0) {
+          // Se ci sono più match, preferiamo il "registro" per evitare di prendere le pagine di "repertorio" o "indice"
+          targetCanvas = matches.find(c => (c.label || '').toLowerCase().includes('registro')) || 
+                         matches.find(c => !(c.label || '').toLowerCase().includes('repertorio') && !(c.label || '').toLowerCase().includes('indice')) || 
+                         matches[0];
+        }
       }
 
       // Se non trova il foglio esatto, prova col primo o mostra un messaggio generico ma apre comunque il primo
