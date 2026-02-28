@@ -89,8 +89,6 @@ exports.getSidebar = (req, res) => {
   });
 };
 
-const https = require("https");
-
 exports.getManifest = (req, res) => {
   const { id } = req.params;
   const targetUrlString = `https://archiviodigitale-icar.cultura.gov.it/metadata/${id}/manifest.json?type=archive`;
