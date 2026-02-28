@@ -88,66 +88,42 @@ exports.getSidebar = (req, res) => {
     res.json({ data: rows });
   });
 };
-
-exports.getManifest = (req, res) => {
+exports.getManifest = async (req, res) => {
   const { id } = req.params;
   
-  const originalUrl = `https://archiviodigitale-icar.cultura.gov.it/metadata/${id}/manifest.json?type=archive`;
+  const targetUrl = `https://archiviodigitale-icar.cultura.gov.it/metadata/${id}/manifest.json?type=archive`;
   
-  const proxyUrlString = `https://api.allorigins.win/raw?url=${encodeURIComponent(originalUrl)}`;
-  const url = new URL(proxyUrlString);
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
-  const options = {
-    hostname: url.hostname,
-    path: url.pathname + url.search,
-    method: 'GET',
-    timeout: 10000, 
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-      'Accept': 'application/json, text/plain, */*',
-    }
-  };
+  try {
 
-  const httpsReq = https.request(options, (apiRes) => {
-    let rawData = "";
-
-    apiRes.on("data", (chunk) => {
-      rawData += chunk;
+    const response = await fetch(proxyUrl, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+      },
+  
+      signal: AbortSignal.timeout(10000) 
     });
 
-    apiRes.on("end", () => {
-      try {
-        const parsedData = JSON.parse(rawData);
-        
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        res.setHeader("Content-Type", "application/json");
-        
-        if (!res.headersSent) {
-          res.send(parsedData);
-        }
-      } catch (e) {
-        console.error("Error parsing manifest JSON:", e.message);
-        if (!res.headersSent) {
-          res.status(500).json({ error: "Failed to parse manifest JSON." });
-        }
-      }
-    });
-  });
-
-  httpsReq.on("error", (e) => {
-    console.error(`Error fetching manifest (${id}):`, e.message);
-    if (!res.headersSent) {
-      res.status(500).json({ error: "Failed to fetch from Archivio Digitale." });
+    if (!response.ok) {
+      throw new Error(`Il server ha risposto con uno stato HTTP: ${response.status}`);
     }
-  });
 
-  httpsReq.on("timeout", () => {
-    console.error(`Timeout di 10s superato per il manifest ID: ${id}`);
-    httpsReq.destroy();
-    if (!res.headersSent) {
-      res.status(504).json({ error: "Il server dell'Archivio di Stato non risponde (Timeout)." });
+    const data = await response.json();
+
+
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Content-Type", "application/json");
+    return res.status(200).json(data);
+
+  } catch (error) {
+    console.error(`Errore fetch manifest (${id}):`, error.message);
+
+    if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+      return res.status(504).json({ error: "Timeout: Il proxy o l'Archivio non hanno risposto in tempo." });
     }
-  });
 
-  httpsReq.end();
+    return res.status(500).json({ error: "Impossibile scaricare il manifest dell'Archivio." });
+  }
 };
