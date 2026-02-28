@@ -182,7 +182,7 @@ const ArchivioViewerModal = ({ isOpen, onClose, codiceArchivio, foglio, volume, 
             </h2>
             {nome && (
               <p className="text-sm text-text-main font-semibold mt-1">
-                Intestatario: {nome}
+                Fuoco: {nome}
               </p>
             )}
             <p className="text-[10px] md:text-xs text-text-accent font-mono mt-1 opacity-80">
@@ -266,7 +266,7 @@ const ArchivioViewerModal = ({ isOpen, onClose, codiceArchivio, foglio, volume, 
                     setCurrentIndex(currentIndex - 1);
                     handleResetZoom();
                   }}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-bg-sidebar/80 hover:bg-item-selected text-text-main hover:text-bg-main p-3 rounded-full shadow-lg backdrop-blur-sm transition-colors z-20 pointer-events-auto"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-item-selected text-white p-3 rounded-full shadow-lg backdrop-blur-sm transition-colors z-20 pointer-events-auto"
                   title="Pagina Precedente"
                 >
                   <ChevronLeft className="h-8 w-8" />
@@ -281,7 +281,7 @@ const ArchivioViewerModal = ({ isOpen, onClose, codiceArchivio, foglio, volume, 
                     setCurrentIndex(currentIndex + 1);
                     handleResetZoom();
                   }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-bg-sidebar/80 hover:bg-item-selected text-text-main hover:text-bg-main p-3 rounded-full shadow-lg backdrop-blur-sm transition-colors z-20 pointer-events-auto"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-item-selected text-white p-3 rounded-full shadow-lg backdrop-blur-sm transition-colors z-20 pointer-events-auto"
                   title="Pagina Successiva"
                 >
                   <ChevronRight className="h-8 w-8" />
