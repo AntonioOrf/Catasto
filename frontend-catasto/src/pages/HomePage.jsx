@@ -176,7 +176,7 @@ export default function HomePage() {
           hasMore={hasMore}
         />
 
-        <div
+        <main
           ref={mainContentRef}
           className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-8 relative w-full"
         >
@@ -204,7 +204,7 @@ export default function HomePage() {
             totalPages={totalPages}
             handlePageChange={handlePageChange}
           />
-        </div>
+        </main>
       </div>
     </div>
   );
