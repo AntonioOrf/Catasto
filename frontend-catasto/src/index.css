@@ -1,24 +1,29 @@
 @import "tailwindcss";
-@layer base{ 
- section, article, aside, nav, header, footer, div {
-    border-color: var(--color-border)!important;
-    input{
-      border-color: var(--color-border-base)!important;
+@layer base {
+  section,
+  article,
+  aside,
+  nav,
+  header,
+  footer,
+  div {
+    border-color: var(--color-border) !important;
+    input {
+      border-color: var(--color-border-base) !important;
     }
-    select{
-      border-color: var(--color-border-base)!important;
+    select {
+      border-color: var(--color-border-base) !important;
     }
+  }
 }
-}
-
 
 /* Nascondi frecce input number */
-input[type=number]::-webkit-inner-spin-button, 
-input[type=number]::-webkit-outer-spin-button { 
-  -webkit-appearance: none; 
-  margin: 0; 
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
-input[type=number] {
+input[type="number"] {
   -moz-appearance: textfield;
 }
 
@@ -35,27 +40,27 @@ body {
   font-weight: 400;
   color-scheme: light;
 
-  --color-bg-main: #f8f5f2;
-  --color-bg-table: #f8f5f2;
-  --color-bg-sidebar: #fffbf5;
-  --color-bg-header: #8b4513;
-  --color-bg-header-accent: #6e360f;
-  --color-bg-header-border: #5d2e0c;
-  --color-bg-header-final: #e6c288;
+  --color-bg-main: #f4f6fc;
+  --color-bg-table: #f4f6fc;
+  --color-bg-sidebar: #ffffff;
+  --color-bg-header: #1a3d7f;
+  --color-bg-header-accent: #153166;
+  --color-bg-header-border: #0d1e40;
+  --color-bg-header-final: #7a9bde;
 
-  --color-text-main: #2c1810;
-  --color-text-inverted: #f8f5f2;
-  --color-text-accent: #4a4a4a;
-  --color-text-symbols: #e6c288;
-  --color-text-sidebar-jobs: #e6c288;
+  --color-text-main: #0d1e40;
+  --color-text-inverted: #f8fafc;
+  --color-text-accent: #4a5b7d;
+  --color-text-symbols: #7a9bde;
+  --color-text-sidebar-jobs: #7a9bde;
 
-  --color-border: #9a582c;
-  --color-border-dark: #5d2e0c;
-  --color-border-selected: #5f5046;
+  --color-border: #2351a8;
+  --color-border-dark: #0d1e40;
+  --color-border-selected: #4a5b7d;
 
-  --color-item-hover: #c4bbb1;
-  --color-item-selected: #8b4513;
-  --color-item-selected-open: #eae0d5;
+  --color-item-hover: #d9e2f5;
+  --color-item-selected: #1a3d7f;
+  --color-item-selected-open: #eaf0fa;
 
   background-color: var(--color-bg-main);
   color: var(--color-text-main);
@@ -67,28 +72,28 @@ body {
 }
 
 .dark {
-  --color-bg-main: #19110b;
-  --color-bg-table: #19110b;
-  --color-bg-sidebar: #2d2723;
+  --color-bg-main: #181a26;
+  --color-bg-table: #181a26;
+  --color-bg-sidebar: #2d2f3a;
 
-  --color-bg-header: #2d2723;
-  --color-bg-header-accent: #443e3a;
-  --color-bg-header-border: #020617;
-  --color-bg-header-final: #8b4513;
+  --color-bg-header: #2d2f3a;
+  --color-bg-header-accent: #444550;
+  --color-bg-header-border: #121212;
+  --color-bg-header-final: #1a3d7f;
 
   --color-text-main: #f8fafc;
   --color-text-inverted: #f8fafc;
-  --color-text-symbols: #9a582c;
-  --color-text-accent: #b7805d;
-  --color-text-sidebar-jobs: #c49477;
+  --color-text-symbols: #54639b;
+  --color-text-accent: #848db7;
+  --color-text-sidebar-jobs: #9da3c5;
 
-  --color-border: #443e3a;
-  --color-border-dark: #443e3a;
-  --color-border-selected: #a96c45;
+  --color-border: #444550;
+  --color-border-dark: #444550;
+  --color-border-selected: #6c78a9;
 
-  --color-item-hover: #443e3a;
-  --color-item-selected: #9a582c;
-  --color-item-selected-open: #2d2723;
+  --color-item-hover: #444550;
+  --color-item-selected: #3a508d;
+  --color-item-selected-open: #2d2f3a;
 }
 
 @theme {
@@ -113,5 +118,4 @@ body {
   --color-border-selected: var(--color-border-selected);
   --color-bg-header-border: var(--color-bg-header-border);
   --color-border-dark: var(--color-border-dark);
-
 }
