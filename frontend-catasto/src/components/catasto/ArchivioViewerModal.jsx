@@ -178,7 +178,7 @@ const ArchivioViewerModal = ({ isOpen, onClose, codiceArchivio, foglio, volume, 
           <div className="flex flex-col">
             <h2 className="text-xl font-serif font-bold text-item-selected flex items-center gap-2">
               <BookOpenIcon strokeWidth={2} className="h-5 w-5" />
-              Archivio di Stato - Volume {volume || '?'}, Foglio {foglio || '?'}
+              Archivio di Stato di Firenze - Volume {volume || '?'}, Foglio {foglio || '?'}
             </h2>
             {nome && (
               <p className="text-sm text-text-main font-semibold mt-1">
