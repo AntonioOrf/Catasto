@@ -104,7 +104,7 @@ export default function FilterPanel({
 
           <button
             onClick={() => fetchData(1)}
-            className="w-full md:w-auto p-2 md:p-3 border bg-bg-header-border text-text-inverted hover:bg-bg-header-accent transition-all shadow-sm flex justify-center"
+            className="w-full md:w-auto p-2 md:p-3 border bg-item-selected dark:bg-bg-main text-text-inverted dark:text-text-accent dark:border-border-dark hover:bg-bg-header-border transition-all shadow-sm flex justify-center"
             title="Aggiorna Ricerca"
           >
             <RefreshCw
@@ -152,7 +152,7 @@ export default function FilterPanel({
                   Rapporto Mestiere
                 </label>
                 <div className="relative">
-                  <Hammer className="absolute left-2 top-2.5 h-4 w-4 text-text-accent" />
+                  <Hammer className="absolute left-2 top-2.5 h-4 w-4 text-text-accent z-[1]" />
                   <CustomSelect
                     value={filterRapporto}
                     onChange={(e) => setFilterRapporto(e.target.value)}
@@ -166,7 +166,7 @@ export default function FilterPanel({
                   Bestiame
                 </label>
                 <div className="relative">
-                  <PawPrint className="absolute left-2 top-2.5 h-4 w-4 text-text-accent" />
+                  <PawPrint className="absolute left-2 top-2.5 h-4 w-4 text-text-accent z-[1]" />
                   <CustomSelect
                     value={filterBestiame}
                     onChange={(e) => setFilterBestiame(e.target.value)}
@@ -180,7 +180,7 @@ export default function FilterPanel({
                   Immigrazione
                 </label>
                 <div className="relative">
-                  <Flag className="absolute left-2 top-2.5 h-4 w-4 text-text-accent" />
+                  <Flag className="absolute left-2 top-2.5 h-4 w-4 text-text-accent z-[1]" />
                   <CustomSelect
                     value={filterImmigrazione}
                     onChange={(e) => setFilterImmigrazione(e.target.value)}
