@@ -15,22 +15,6 @@ import {
   Hammer,
   ExternalLink
 } from "lucide-react";
-import {
-  Briefcase,
-  Layers,
-  Coins,
-  Home,
-  Bookmark,
-  FileText,
-  ChevronDown,
-  ChevronRight,
-  Info,
-  Users,
-  PawPrint,
-  Flag,
-  Hammer,
-  ExternalLink
-} from "lucide-react";
 
 const CatastoRow = forwardRef(
   ({ row, expanded, onRowClick, loadingParenti, parentiData, onViewArchivio }, ref) => {
