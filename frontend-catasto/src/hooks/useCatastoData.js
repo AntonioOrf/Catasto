@@ -88,7 +88,7 @@ export function useCatastoData(filters) {
         setLoading(false);
       }
     },
-    [filters]
+    [filters],
   );
 
   const handleRowClick = useCallback(
@@ -111,7 +111,7 @@ export function useCatastoData(filters) {
         setLoadingParenti(false);
       }
     },
-    [expandedId]
+    [expandedId],
   );
 
   return {
