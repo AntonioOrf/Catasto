@@ -21,12 +21,14 @@ const buildQuery = (filters) => {
 
   let conditions = "WHERE 1=1";
   const params = [];
+  const usedTables = new Set(["f"]);
 
   if (q_persona) {
     conditions += ` AND (f.Nome_Fuoco LIKE ?)`;
     params.push(`%${q_persona}%`);
   }
   if (q_localita) {
+    usedTables.add("tq").add("tp").add("tpi").add("tser");
     conditions += ` AND (tq.nome_quartiere LIKE ? OR tp.nome_popolo LIKE ? OR tpi.nome_piviere LIKE ? OR tser.nome_serie LIKE ?)`;
     params.push(
       `%${q_localita}%`,
@@ -41,6 +43,7 @@ const buildQuery = (filters) => {
   }
 
   if (mestiere) {
+    usedTables.add("m");
     conditions += " AND m.Mestiere LIKE ?";
     params.push(`%${mestiere}%`);
   }
@@ -98,26 +101,32 @@ const buildQuery = (filters) => {
     params.push(deduzioni_max);
   }
 
-  return { conditions, params };
+  return { conditions, params, usedTables };
 };
 
 const buildOrderBy = (sort_by, order) => {
   const safeOrder = order && order.toUpperCase() === "DESC" ? "DESC" : "ASC";
+  const usedTables = new Set();
+
   switch (sort_by) {
     case "fortune":
-      return `ORDER BY f.Fortune_Fuoco ${safeOrder}`;
+      return { clause: `ORDER BY f.Fortune_Fuoco ${safeOrder}`, usedTables };
     case "credito":
-      return `ORDER BY f.Credito_Fuoco ${safeOrder}`;
+      return { clause: `ORDER BY f.Credito_Fuoco ${safeOrder}`, usedTables };
     case "creditoM":
-      return `ORDER BY f.CreditoM_Fuoco ${safeOrder}`;
+      return { clause: `ORDER BY f.CreditoM_Fuoco ${safeOrder}`, usedTables };
     case "imponibile":
-      return `ORDER BY f.Imponibile_Fuoco ${safeOrder}`;
+      return { clause: `ORDER BY f.Imponibile_Fuoco ${safeOrder}`, usedTables };
     case "deduzioni":
-      return `ORDER BY f.Deduzioni_Fuoco ${safeOrder}`;
+      return { clause: `ORDER BY f.Deduzioni_Fuoco ${safeOrder}`, usedTables };
     case "localita":
-      return `ORDER BY tq.nome_quartiere ${safeOrder}, tp.nome_popolo ${safeOrder}`;
+      usedTables.add("tq").add("tp");
+      return {
+        clause: `ORDER BY tq.nome_quartiere ${safeOrder}, tp.nome_popolo ${safeOrder}`,
+        usedTables,
+      };
     default:
-      return `ORDER BY f.Nome_Fuoco ${safeOrder}`;
+      return { clause: `ORDER BY f.Nome_Fuoco ${safeOrder}`, usedTables };
   }
 };
 

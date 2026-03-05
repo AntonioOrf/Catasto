@@ -15,11 +15,9 @@ import {
   Hammer,
   ExternalLink
 } from "lucide-react";
-import ArchivioViewerModal from "./ArchivioViewerModal";
 
 const CatastoRow = forwardRef(
-  ({ row, expanded, onRowClick, loadingParenti, parentiData }, ref) => {
-    const [viewerOpen, setViewerOpen] = useState(false);
+  ({ row, expanded, onRowClick, loadingParenti, parentiData, onViewArchivio }, ref) => {
 
     const rowClasses = expanded
       ? "bg-item-selected/10 border-l-4 border-l-[var(--color-item-selected)]"
@@ -75,7 +73,7 @@ const CatastoRow = forwardRef(
               <div className="md:hidden flex items-center gap-2 text-[10px] text-text-main font-mono bg-bg-sidebar px-1 rounded w-fit border border-border-base mt-1">
                 {row.codice_archivio ? (
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setViewerOpen(true); }}
+                    onClick={(e) => { e.stopPropagation(); if(onViewArchivio) onViewArchivio(row); }}
                     className="flex items-center gap-1 text-item-selected hover:underline hover:brightness-110 active:scale-95 transition-all"
                     title="Visualizza Manoscritto"
                   >
@@ -97,8 +95,8 @@ const CatastoRow = forwardRef(
           <td className="hidden md:table-cell px-6 py-4">
             <div className={`flex flex-col gap-1 text-sm text-text-main font-mono p-2 rounded w-fit border ${row.codice_archivio ? 'border-item-selected/50 bg-item-selected/5 hover:bg-item-selected/10 cursor-pointer transition-colors shadow-sm' : 'border-border-base bg-bg-sidebar'}`}
                  onClick={(e) => { 
-                   if (row.codice_archivio) {
-                     e.stopPropagation(); setViewerOpen(true); 
+                   if (row.codice_archivio && onViewArchivio) {
+                     e.stopPropagation(); onViewArchivio(row); 
                    }
                  }}
                  title={row.codice_archivio ? "Visualizza Manoscritto Originale" : undefined}
@@ -265,15 +263,6 @@ const CatastoRow = forwardRef(
           </tr>
         )}
         
-        {/* Modale Visualizazione Archivio di Stato */}
-        <ArchivioViewerModal 
-           isOpen={viewerOpen} 
-           onClose={() => setViewerOpen(false)}
-           codiceArchivio={row.codice_archivio}
-           foglio={row.foglio}
-           volume={row.volume}
-           nome={row.nome}
-        />
       </>
     );
   }
