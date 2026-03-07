@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { fetchCatastoData, fetchParentiData } from "../api/catastoService";
 
 /**
@@ -21,32 +22,37 @@ import { fetchCatastoData, fetchParentiData } from "../api/catastoService";
  *  - fetchData: Function to manually trigger a data fetch.
  */
 export function useCatastoData(filters) {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
-
   const [expandedId, setExpandedId] = useState(null);
-  const [parentiData, setParentiData] = useState([]);
-  const [loadingParenti, setLoadingParenti] = useState(false);
 
-  // Trigger fetch when filters or page changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchData(page);
-    }, 500);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line
-  }, [filters, page]);
+  // 1. Fetch main table data with caching
+  const {
+    data: queryResult,
+    isLoading: loading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ["catastoData", filters, page],
+    queryFn: () => fetchCatastoData(filters, page, 50),
+    keepPreviousData: true, // keeps old data on screen while fetching new page
+  });
 
-  // Reset page when filters change (except sorting which usually keeps page, but here we simplify)
-  // Actually, usually when filter changes we want to reset to page 1.
-  // We can handle this by letting the component calling this hook decide when to setPage(1).
-  // For now, let's watch filters in the component or here.
-  // To match original behavior which resets to page 1 on filter change:
+  const data = queryResult?.data || [];
+  const totalPages = queryResult?.pagination?.totalPages || 1;
+  const totalRecords = queryResult?.pagination?.total || 0;
+  const error = isError ? "Impossibile connettersi al Server." : null;
+
+  // 2. Fetch Parenti data with caching (enabled only when a row is clicked)
+  const { data: parentiResult, isLoading: loadingParenti } = useQuery({
+    queryKey: ["parenti", expandedId],
+    queryFn: () => fetchParentiData(expandedId),
+    enabled: !!expandedId, // only run when expandedId is set
+    staleTime: 10 * 60 * 1000, // cache for 10 mins
+  });
+
+  const parentiData = parentiResult || [];
+
+  // Reset page to 1 when filters change natively
   useEffect(() => {
     setPage(1);
   }, [
@@ -56,59 +62,31 @@ export function useCatastoData(filters) {
     filters.filterBestiame,
     filters.filterImmigrazione,
     filters.filterRapporto,
+    filters.filterVolume,
     filters.filterFortuneMin,
     filters.filterFortuneMax,
     filters.filterCreditoMin,
-    filters.filterCreditoMax, // etc.. simplified for now, relying on dependency array of fetch effect if we didn't split
+    filters.filterCreditoMax,
+    filters.filterCreditoMMin,
+    filters.filterCreditoMMax,
+    filters.filterImponibileMin,
+    filters.filterImponibileMax,
+    filters.filterDeduzioniMin,
+    filters.filterDeduzioniMax,
+    filters.sortBy,
+    filters.sortOrder,
   ]);
-  // UseEffect above might conflict with the main fetch effect if we aren't careful.
-  // In original code:
-  // useEffect(() => { ... fetchData(1); ... }, [filters...]);
-  // So it resets to 1.
 
-  // Let's refactor: The hook shouldn't automatically fetch on mount if we want to precise control,
-  // but for this refactor we want to mimic original behavior.
-
-  const fetchData = useCallback(
-    async (pageNum = 1) => {
-      setLoading(true);
-      setError(null);
-      setExpandedId(null);
-
-      try {
-        const result = await fetchCatastoData(filters, pageNum, 50);
-        setData(result.data);
-        setTotalPages(result.pagination.totalPages);
-        setTotalRecords(result.pagination.total);
-        setPage(pageNum);
-      } catch (err) {
-        console.error(err);
-        setError("Impossibile connettersi al Server.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [filters],
-  );
+  const fetchData = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   const handleRowClick = useCallback(
-    async (idFuoco) => {
+    (idFuoco) => {
       if (expandedId === idFuoco) {
         setExpandedId(null);
-        setParentiData([]);
-        return;
-      }
-      setExpandedId(idFuoco);
-      setLoadingParenti(true);
-      setParentiData([]);
-
-      try {
-        const result = await fetchParentiData(idFuoco);
-        setParentiData(result);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingParenti(false);
+      } else {
+        setExpandedId(idFuoco);
       }
     },
     [expandedId],
