@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
+import { API_URL } from '../api/client';
 
 export default function MestieriPage() {
   const [mestieri, setMestieri] = useState([]);
@@ -9,7 +10,7 @@ export default function MestieriPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/mestieri') // Assuming local dev URL for now, will adopt existing methods if needed
+    fetch(`${API_URL}/api/mestieri`)
       .then(res => {
         if (!res.ok) throw new Error("Errore nel caricamento dei mestieri");
         return res.json();
