@@ -15,11 +15,13 @@ const catastoRoutes = require("./routes/catasto.routes");
 const parentiRoutes = require("./routes/parenti.routes");
 const systemRoutes = require("./routes/system.routes");
 const filtersRoutes = require("./routes/filters.routes");
+const mestieriRoutes = require("./routes/mestieri.routes"); // Add mestieri routes
 
 app.use("/api", systemRoutes);
 app.use("/api/catasto", catastoRoutes);
 app.use("/api/parenti", parentiRoutes);
 app.use("/api/filters", filtersRoutes);
+app.use("/api/mestieri", mestieriRoutes); // Register new API
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

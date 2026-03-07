@@ -1,8 +1,9 @@
 import React from "react";
-import { Menu, X, Scroll, Moon, Sun } from "lucide-react";
+import { Menu, X, Scroll, Moon, Sun, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 import useDarkMode from "../../hooks/useDarkMode";
 
-export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
+export default function Header({ isSidebarOpen, setIsSidebarOpen, showHomeLink = false }) {
   const [theme, setTheme] = useDarkMode();
   const toggleTheme = () => {
     const nuovoTema = theme === "light" ? "dark" : "light";
@@ -12,17 +13,23 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
     <header className="bg-bg-header text-text-inverted shadow-md border-b-4 border-bg-header-border flex-shrink-0 sticky top-0 z-50 h-16 md:h-20 transition-all duration-300 relative">
       <div className="w-full px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
         <div className="flex items-center h-full">
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 mr-1 bg-bg-header-accent/10 hover:bg-bg-header-border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-text-accent"
-            title={isSidebarOpen ? "Chiudi Indice" : "Apri Indice"}
-          >
-            {isSidebarOpen ? (
-              <X className="h-6 w-6 text-text-symbols" />
-            ) : (
-              <Menu className="h-6 w-6 text-text-symbols" />
-            )}
-          </button>
+          {setIsSidebarOpen ? (
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 mr-1 bg-bg-header-accent/10 hover:bg-bg-header-border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-text-accent"
+              title={isSidebarOpen ? "Chiudi Indice" : "Apri Indice"}
+            >
+              {isSidebarOpen ? (
+                <X className="h-6 w-6 text-text-symbols" />
+              ) : (
+                <Menu className="h-6 w-6 text-text-symbols" />
+              )}
+            </button>
+          ) : showHomeLink ? (
+            <Link to="/" className="p-2 mr-1 bg-bg-header-accent/10 hover:bg-bg-header-border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-text-accent" title="Torna alla Home">
+              <ArrowLeft className="h-6 w-6 text-text-symbols" />
+            </Link>
+          ) : null}
           <div className="h-8 w-[1px] bg-bg-header-border mx-3 md:mx-4 opacity-50"></div>
 
           <div className="flex items-center gap-3">
@@ -39,6 +46,20 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen }) {
           </div>
         </div>
         <div className="flex items-center h-full gap-3 md:gap-4">
+          <nav className="hidden md:flex items-center gap-6 mr-4 border-r border-bg-header-border pr-6">
+            <Link to="/" className="text-sm font-semibold text-text-symbols hover:text-white uppercase tracking-wider transition-colors">
+              Ricerca
+            </Link>
+            {/* Link temporaneamente nascosto
+            <Link to="/mappa" className="text-sm font-semibold text-text-symbols hover:text-white uppercase tracking-wider transition-colors">
+              Mappa
+            </Link>
+            */}
+            <Link to="/mestieri" className="text-sm font-semibold text-text-symbols hover:text-white uppercase tracking-wider transition-colors">
+              Mestieri
+            </Link>
+          </nav>
+
           <button
             onClick={toggleTheme}
             className="relative z-50 cursor-pointer p-2 rounded-full transition-all duration-300 bg-bg-header-accent/10 hover:bg-bg-header-border/30 border border-transparent hover:border-border-base/30 group"

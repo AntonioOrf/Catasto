@@ -3,15 +3,13 @@ import { BookOpen, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import CatastoRow from "./CatastoRow";
 import Pagination from "./Pagination";
 import ArchivioViewerModal from "./ArchivioViewerModal";
+import { useFilters } from "../../context/FilterContext";
 
 export default function CatastoTable({
   data,
   totalRecords,
   loading,
   error,
-  sortBy,
-  sortOrder,
-  handleSort,
   tableRowsRef,
   handleRowClick,
   expandedId,
@@ -21,6 +19,7 @@ export default function CatastoTable({
   totalPages,
   handlePageChange,
 }) {
+  const { sortBy, sortOrder, handleSort } = useFilters();
   const [viewerData, setViewerData] = useState({
     isOpen: false,
     codiceArchivio: null,
