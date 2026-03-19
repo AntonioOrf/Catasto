@@ -120,60 +120,43 @@ exports.getManifest = async (req, res) => {
   }
 
   const targetUrl = `https://archiviodigitale-icar.cultura.gov.it/metadata/${id}/manifest.json?type=archive`;
-  
-  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
-  https
-    .get(targetUrl, (apiRes) => {
-      let rawData = "";
-      apiRes.on("data", (chunk) => {
-        rawData += chunk;
-      });
-      apiRes.on("end", () => {
-        try {
-          const parsedData = JSON.parse(rawData);
-
-          // Save to cache
-          manifestCache[id] = {
-            data: parsedData,
-            timestamp: now,
-          };
-
-          // Explicitly set CORS headers so the frontend can read it
-          res.setHeader("Access-Control-Allow-Origin", "*");
-          res.setHeader("Content-Type", "application/json");
-          res.send(parsedData);
-        } catch (e) {
-          console.error("Error parsing manifest JSON:", e.message);
-          res.status(500).json({ error: "Failed to parse manifest." });
-        }
-      });
-    })
-    .on("error", (e) => {
-      console.error("Error fetching manifest:", e.message);
-      res
-        .status(500)
-        .json({ error: "Failed to fetch from Archivio Digitale." });
+  try {
+    // Usiamo fetch con un timeout di 10 secondi per evitare code bloccanti
+    const response = await fetch(targetUrl, {
+      signal: AbortSignal.timeout(10000),
     });
 
     if (!response.ok) {
-      throw new Error(`Il server ha risposto con uno stato HTTP: ${response.status}`);
+      throw new Error(
+        `Il server ha risposto con uno stato HTTP: ${response.status}`,
+      );
     }
 
     const data = await response.json();
 
+    // Save to cache
+    manifestCache[id] = {
+      data,
+      timestamp: now,
+    };
 
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Content-Type", "application/json");
     return res.status(200).json(data);
-
   } catch (error) {
     console.error(`Errore fetch manifest (${id}):`, error.message);
 
-    if (error.name === 'TimeoutError' || error.name === 'AbortError') {
-      return res.status(504).json({ error: "Timeout: Il proxy o l'Archivio non hanno risposto in tempo." });
+    if (error.name === "TimeoutError" || error.name === "AbortError") {
+      return res
+        .status(504)
+        .json({
+          error: "Timeout: Il proxy o l'Archivio non hanno risposto in tempo.",
+        });
     }
 
-    return res.status(500).json({ error: "Impossibile scaricare il manifest dell'Archivio." });
+    return res
+      .status(500)
+      .json({ error: "Impossibile scaricare il manifest dell'Archivio." });
   }
 };
