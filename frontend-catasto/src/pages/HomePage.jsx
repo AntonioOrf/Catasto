@@ -10,8 +10,9 @@ import Header from "../components/layout/Header";
 import Sidebar from "../components/layout/Sidebar";
 import FilterPanel from "../components/catasto/FilterPanel";
 import CatastoTable from "../components/catasto/CatastoTable";
+import Footer from "../components/layout/Footer";
 
-import { useCatastoFilters } from "../hooks/useCatastoFilters";
+import { useFilters } from "../context/FilterContext";
 import { useCatastoData } from "../hooks/useCatastoData";
 import { useCatastoSidebar } from "../hooks/useCatastoSidebar";
 
@@ -44,7 +45,7 @@ export default function HomePage() {
   }, []);
 
   // Custom Hooks
-  const filters = useCatastoFilters();
+  const filters = useFilters();
   // Memoize filter object to prevent infinite loops in hooks
   const filterValues = useMemo(
     () => ({
@@ -178,33 +179,32 @@ export default function HomePage() {
 
         <main
           ref={mainContentRef}
-          className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-8 relative w-full"
+          className="flex-1 overflow-y-auto relative w-full flex flex-col"
         >
-          <FilterPanel
-            {...filters} // Pass all filter states and setters
-            loading={loading}
-            fetchData={fetchData}
-            filterOptions={filterOptions}
-          />
+          <div className="p-3 sm:p-4 md:p-8 flex-1">
+            <FilterPanel
+              loading={loading}
+              fetchData={fetchData}
+              filterOptions={filterOptions}
+            />
 
-          <CatastoTable
-            data={data}
-            totalRecords={totalRecords}
-            loading={loading}
-            error={error}
-            sortBy={filters.sortBy}
-            sortOrder={filters.sortOrder}
-            handleSort={filters.handleSort}
-            tableRowsRef={tableRowsRef}
-            handleRowClick={handleRowClick}
-            expandedId={expandedId}
-            loadingParenti={loadingParenti}
-            parentiData={parentiData}
-            page={page}
-            totalPages={totalPages}
-            handlePageChange={handlePageChange}
-          />
-        </main>
+            <CatastoTable
+              data={data}
+              totalRecords={totalRecords}
+              loading={loading}
+              error={error}
+              tableRowsRef={tableRowsRef}
+              handleRowClick={handleRowClick}
+              expandedId={expandedId}
+              loadingParenti={loadingParenti}
+              parentiData={parentiData}
+              page={page}
+              totalPages={totalPages}
+              handlePageChange={handlePageChange}
+            />
+          </div>
+          <Footer />
+        </div>
       </div>
     </div>
   );

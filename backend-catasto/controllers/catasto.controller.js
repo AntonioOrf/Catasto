@@ -2,14 +2,33 @@ const pool = require("../config/db");
 const { buildQuery, buildOrderBy } = require("../utils/queryHelpers");
 const https = require("https");
 
+// In-memory cache for manifests
+// Structure: { [id]: { data: Object, timestamp: Number } }
+const manifestCache = {};
+const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 exports.getAll = (req, res) => {
   const { sort_by = "nome", order = "ASC", page = 1, limit = 50 } = req.query;
   const offset = (page - 1) * limit;
   const limitVal = parseInt(limit);
 
-  const { conditions, params } = buildQuery(req.query);
-  const orderByClause = buildOrderBy(sort_by, order);
+  const { conditions, params, usedTables: queryTables } = buildQuery(req.query);
+  const { clause: orderByClause, usedTables: orderTables } = buildOrderBy(
+    sort_by,
+    order,
+  );
 
+  const allUsedTables = new Set([...queryTables, ...orderTables]);
+
+  const countJoins = `
+    FROM fuochi f
+    ${allUsedTables.has("m") ? "LEFT JOIN mestieri m ON f.Mestiere_Fuoco = m.id" : ""}
+    ${allUsedTables.has("tq") ? "LEFT JOIN t_struttura_catastale ts ON f.id_registrazione = ts.id_registrazione LEFT JOIN t_quartieri tq ON ts.id_quartiere = tq.id_quartiere" : ""}
+    ${allUsedTables.has("tp") ? (allUsedTables.has("tq") ? "" : "LEFT JOIN t_struttura_catastale ts ON f.id_registrazione = ts.id_registrazione ") + "LEFT JOIN t_popoli tp ON ts.id_popolo = tp.id_popolo" : ""}
+    ${allUsedTables.has("tpi") ? (allUsedTables.has("tq") || allUsedTables.has("tp") ? "" : "LEFT JOIN t_struttura_catastale ts ON f.id_registrazione = ts.id_registrazione ") + "LEFT JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere" : ""}
+    ${allUsedTables.has("tser") ? (allUsedTables.has("tq") || allUsedTables.has("tp") || allUsedTables.has("tpi") ? "" : "LEFT JOIN t_struttura_catastale ts ON f.id_registrazione = ts.id_registrazione ") + "LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie" : ""}
+  `;
+
+  // For data we need everything
   const baseJoins = `
     FROM fuochi f
     LEFT JOIN mestieri m ON f.Mestiere_Fuoco = m.id
@@ -26,7 +45,7 @@ exports.getAll = (req, res) => {
     LEFT JOIN t_archivio_volumi tav ON f.Volume_Fuoco = tav.volume
   `;
 
-  const countSql = `SELECT COUNT(*) as total ${baseJoins} ${conditions}`;
+  const countSql = `SELECT COUNT(*) as total ${countJoins} ${conditions}`;
   const dataSql = `
     SELECT 
       f.ID_Fuochi as id, f.Nome_Fuoco as nome, 
@@ -66,7 +85,7 @@ exports.getSidebar = (req, res) => {
   const offset = (page - 1) * limit;
   const limitVal = parseInt(limit);
   const { conditions, params } = buildQuery(req.query);
-  let orderByClause = buildOrderBy(sort_by, order);
+  const { clause: orderByClause } = buildOrderBy(sort_by, order);
 
   const sidebarJoins = `
     FROM fuochi f
@@ -90,20 +109,51 @@ exports.getSidebar = (req, res) => {
 };
 exports.getManifest = async (req, res) => {
   const { id } = req.params;
-  
+
+  // Check cache first
+  const cached = manifestCache[id];
+  const now = Date.now();
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Content-Type", "application/json");
+    return res.send(cached.data);
+  }
+
   const targetUrl = `https://archiviodigitale-icar.cultura.gov.it/metadata/${id}/manifest.json?type=archive`;
   
   const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
-  try {
+  https
+    .get(targetUrl, (apiRes) => {
+      let rawData = "";
+      apiRes.on("data", (chunk) => {
+        rawData += chunk;
+      });
+      apiRes.on("end", () => {
+        try {
+          const parsedData = JSON.parse(rawData);
 
-    const response = await fetch(proxyUrl, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-      },
-  
-      signal: AbortSignal.timeout(10000) 
+          // Save to cache
+          manifestCache[id] = {
+            data: parsedData,
+            timestamp: now,
+          };
+
+          // Explicitly set CORS headers so the frontend can read it
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.setHeader("Content-Type", "application/json");
+          res.send(parsedData);
+        } catch (e) {
+          console.error("Error parsing manifest JSON:", e.message);
+          res.status(500).json({ error: "Failed to parse manifest." });
+        }
+      });
+    })
+    .on("error", (e) => {
+      console.error("Error fetching manifest:", e.message);
+      res
+        .status(500)
+        .json({ error: "Failed to fetch from Archivio Digitale." });
     });
 
     if (!response.ok) {

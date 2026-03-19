@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Search,
   MapPin,
@@ -15,50 +16,49 @@ import {
 } from "lucide-react";
 
 import CustomSelect from "../common/CustomSelect";
-
+import { useFilters } from "../../context/FilterContext";
 
 export default function FilterPanel({
-  searchPersona,
-  setSearchPersona,
-  searchLocalita,
-  setSearchLocalita,
   loading,
   fetchData,
-
-  // Filter State & Setters
-  filterMestiere,
-  setFilterMestiere,
-  filterRapporto,
-  setFilterRapporto,
-  filterBestiame,
-  setFilterBestiame,
-  filterImmigrazione,
-  setFilterImmigrazione,
-  filterVolume,
-  setFilterVolume,
-
-  filterFortuneMin,
-  setFilterFortuneMin,
-  filterFortuneMax,
-  setFilterFortuneMax,
-  filterCreditoMin,
-  setFilterCreditoMin,
-  filterCreditoMax,
-  setFilterCreditoMax,
-  filterCreditoMMin,
-  setFilterCreditoMMin,
-  filterCreditoMMax,
-  setFilterCreditoMMax,
-  filterImponibileMin,
-  setFilterImponibileMin,
-  filterImponibileMax,
-  setFilterImponibileMax,
-  filterDeduzioniMin,
-  setFilterDeduzioniMin,
-  filterDeduzioniMax,
-  setFilterDeduzioniMax,
   filterOptions = { bestiame: [], rapporto: [], immigrazione: [] },
 }) {
+  const {
+    searchPersona,
+    setSearchPersona,
+    searchLocalita,
+    setSearchLocalita,
+    filterMestiere,
+    setFilterMestiere,
+    filterRapporto,
+    setFilterRapporto,
+    filterBestiame,
+    setFilterBestiame,
+    filterImmigrazione,
+    setFilterImmigrazione,
+    filterVolume,
+    setFilterVolume,
+    filterFortuneMin,
+    setFilterFortuneMin,
+    filterFortuneMax,
+    setFilterFortuneMax,
+    filterCreditoMin,
+    setFilterCreditoMin,
+    filterCreditoMax,
+    setFilterCreditoMax,
+    filterCreditoMMin,
+    setFilterCreditoMMin,
+    filterCreditoMMax,
+    setFilterCreditoMMax,
+    filterImponibileMin,
+    setFilterImponibileMin,
+    filterImponibileMax,
+    setFilterImponibileMax,
+    filterDeduzioniMin,
+    setFilterDeduzioniMin,
+    filterDeduzioniMax,
+    setFilterDeduzioniMax,
+  } = useFilters();
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Classi riutilizzabili per pulizia codice
@@ -104,7 +104,7 @@ export default function FilterPanel({
 
           <button
             onClick={() => fetchData(1)}
-            className="w-full md:w-auto p-2 md:p-3 border bg-bg-header-border text-text-inverted hover:bg-bg-header-accent transition-all shadow-sm flex justify-center"
+            className="w-full md:w-auto p-2 md:p-3 border bg-item-selected dark:bg-bg-main text-text-inverted dark:text-text-accent dark:border-border-dark hover:bg-bg-header-border transition-all shadow-sm flex justify-center"
             title="Aggiorna Ricerca"
           >
             <RefreshCw
@@ -133,8 +133,11 @@ export default function FilterPanel({
             {/* Griglia Mestieri e Status */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
               <div className="col-span-1">
-                <label className="block text-xs font-semibold text-text-main mb-1">
-                  Mestiere
+                <label className="flex items-center justify-between text-xs font-semibold text-text-main mb-1">
+                  <span>Mestiere</span>
+                  <Link to="/mestieri" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-normal text-[10px] ml-1 shrink-0">
+                    più informazioni
+                  </Link>
                 </label>
                 <div className="relative">
                   <Briefcase className="absolute left-2 top-2.5 h-4 w-4 text-text-accent" />
