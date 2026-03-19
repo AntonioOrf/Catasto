@@ -13,11 +13,15 @@ exports.getFilters = async (req, res) => {
     const [immigrazione] = await promisePool.query(
       "SELECT Id as id, Immigrazione as label FROM immigrazione",
     );
+    const [mestieri] = await promisePool.query(
+      "SELECT id, Mestiere as label FROM mestieri ORDER BY Mestiere ASC",
+    );
 
     res.json({
       bestiame,
       rapporto,
       immigrazione,
+      mestieri,
     });
   } catch (err) {
     console.error("Error fetching filters:", err);

@@ -21,7 +21,7 @@ import { useFilters } from "../../context/FilterContext";
 export default function FilterPanel({
   loading,
   fetchData,
-  filterOptions = { bestiame: [], rapporto: [], immigrazione: [] },
+  filterOptions = { bestiame: [], rapporto: [], immigrazione: [], mestieri: [] },
 }) {
   const {
     searchPersona,
@@ -143,11 +143,17 @@ export default function FilterPanel({
                   <Briefcase className="absolute left-2 top-2.5 h-4 w-4 text-text-accent" />
                   <input
                     type="text"
+                    list="mestieri-list"
                     className={smallInputClasses}
                     placeholder="Es. Fabbro"
                     value={filterMestiere}
                     onChange={(e) => setFilterMestiere(e.target.value)}
                   />
+                  <datalist id="mestieri-list">
+                    {filterOptions.mestieri?.map(m => (
+                      <option key={m.id} value={m.label} />
+                    ))}
+                  </datalist>
                 </div>
               </div>
               <div className="col-span-1">
