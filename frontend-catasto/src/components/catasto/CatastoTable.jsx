@@ -163,7 +163,7 @@ export default function CatastoTable({
             handlePageChange={handlePageChange}
           />
         </div>
-      )}
+
 
       {/* Modale Visualizzazione Archivio di Stato (Singolo per tutta la tabella) */}
       <ArchivioViewerModal 
