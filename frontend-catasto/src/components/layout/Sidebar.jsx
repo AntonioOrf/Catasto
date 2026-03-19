@@ -133,11 +133,12 @@ export default React.memo(function Sidebar({
           className="p-4 bg-bg-sidebar border-b border-border-base flex items-center justify-between whitespace-nowrap overflow-hidden flex-shrink-0"
           style={{ height: "60px" }}
         >
-          <h3 className="font-bold text-text-main uppercase text-xs tracking-wider flex items-center gap-2">
+          <h2 className="font-bold text-text-main uppercase text-xs tracking-wider flex items-center gap-2">
             <List className="h-4 w-4 flex-shrink-0" /> Indice
-          </h3>
+          </h2>
           <button
             onClick={() => setIsSidebarOpen(false)}
+            aria-label="Chiudi Indice"
             className="text-text-inverted hover:text-bg-header-border p-1"
           >
             <ChevronLeft className="h-5 w-5" />

@@ -107,8 +107,7 @@ exports.getSidebar = (req, res) => {
     res.json({ data: rows });
   });
 };
-
-exports.getManifest = (req, res) => {
+exports.getManifest = async (req, res) => {
   const { id } = req.params;
 
   // Check cache first
@@ -121,6 +120,8 @@ exports.getManifest = (req, res) => {
   }
 
   const targetUrl = `https://archiviodigitale-icar.cultura.gov.it/metadata/${id}/manifest.json?type=archive`;
+  
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
   https
     .get(targetUrl, (apiRes) => {
@@ -154,4 +155,25 @@ exports.getManifest = (req, res) => {
         .status(500)
         .json({ error: "Failed to fetch from Archivio Digitale." });
     });
+
+    if (!response.ok) {
+      throw new Error(`Il server ha risposto con uno stato HTTP: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Content-Type", "application/json");
+    return res.status(200).json(data);
+
+  } catch (error) {
+    console.error(`Errore fetch manifest (${id}):`, error.message);
+
+    if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+      return res.status(504).json({ error: "Timeout: Il proxy o l'Archivio non hanno risposto in tempo." });
+    }
+
+    return res.status(500).json({ error: "Impossibile scaricare il manifest dell'Archivio." });
+  }
 };

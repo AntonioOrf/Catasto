@@ -74,16 +74,10 @@ export default function CatastoTable({
         </span>
       </div>
 
-      {error ? (
-        <div className="bg-red-900/20 border-l-4 border-red-800 p-4 text-red-900 dark:text-red-200 font-serif">
-          <p className="font-bold">Errore Server</p>
-          <p>{error}</p>
-        </div>
-      ) : (
-        <div className="bg-bg-main shadow-lg border border-border-base rounded-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border-base">
-              {/* THEAD: Usa bg-bg-sidebar per staccare dal corpo tabella */}
+      <div className="bg-bg-main shadow-lg border border-border-base rounded-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-border-base">
+            {/* THEAD: Usa bg-bg-sidebar per staccare dal corpo tabella */}
               <thead className="bg-bg-sidebar">
                 <tr>
                   <th onClick={() => handleSort("nome")} className={thClasses}>
@@ -116,12 +110,21 @@ export default function CatastoTable({
 
               {/* TBODY: Usa bg-bg-main */}
               <tbody className="bg-bg-main divide-y divide-border-base">
-                {loading ? (
+                {error ? (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center text-red-900 dark:text-red-200 font-serif bg-red-900/10 border-l-4 border-red-800">
+                      <p className="font-bold text-lg mb-2">Errore Server</p>
+                      <p>{error}</p>
+                    </td>
+                  </tr>
+                ) : loading ? (
                   // SKELETON LOADER ADATTIVO
                   [...Array(5)].map((_, i) => (
                     <tr key={i} className="animate-pulse">
                       <td className="px-6 py-4" colSpan="5">
-                        <div className="h-8 bg-bg-sidebar rounded opacity-50"></div>
+                        <div className="h-8 bg-bg-sidebar rounded opacity-50 flex items-center px-4">
+                          {i === 0 && <span className="text-text-accent font-serif text-sm">Caricamento dati in corso...</span>}
+                        </div>
                       </td>
                     </tr>
                   ))

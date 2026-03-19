@@ -177,7 +177,7 @@ export default function HomePage() {
           hasMore={hasMore}
         />
 
-        <div
+        <main
           ref={mainContentRef}
           className="flex-1 overflow-y-auto relative w-full flex flex-col"
         >
