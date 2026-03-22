@@ -26,7 +26,7 @@ export default function InfoPage() {
         <div className="bg-bg-dark border border-border-color rounded-lg p-6 shadow-lg">
           <h3 className="text-xl font-bold mb-4 text-text-muted">Crediti</h3>
           <ul className="list-disc list-inside space-y-2 text-text-main">
-            <li><strong>Sviluppo:</strong> Antonio Orf</li>
+            <li><strong>Sviluppo:</strong> Antonio Orfitelli, Pasquale Ruotolo</li>
             <li><strong>Digitalizzazione:</strong> Team di archivisti e ricercatori</li>
             <li><strong>Tecnologie utilizzate:</strong> React, TailwindCSS, Node.js, Express, MySQL</li>
           </ul>
