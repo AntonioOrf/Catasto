@@ -120,10 +120,16 @@ exports.getManifest = async (req, res) => {
   }
 
   const targetUrl = `https://archiviodigitale-icar.cultura.gov.it/metadata/${id}/manifest.json?type=archive`;
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
   try {
     // Usiamo fetch con un timeout di 10 secondi per evitare code bloccanti
-    const response = await fetch(targetUrl, {
+    const response = await fetch(proxyUrl, {
+      method: "GET",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      },
       signal: AbortSignal.timeout(10000),
     });
 
@@ -148,11 +154,9 @@ exports.getManifest = async (req, res) => {
     console.error(`Errore fetch manifest (${id}):`, error.message);
 
     if (error.name === "TimeoutError" || error.name === "AbortError") {
-      return res
-        .status(504)
-        .json({
-          error: "Timeout: Il proxy o l'Archivio non hanno risposto in tempo.",
-        });
+      return res.status(504).json({
+        error: "Timeout: Il proxy o l'Archivio non hanno risposto in tempo.",
+      });
     }
 
     return res
