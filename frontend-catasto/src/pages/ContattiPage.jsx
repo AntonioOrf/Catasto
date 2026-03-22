@@ -26,28 +26,26 @@ export default function ContattiPage() {
               <div className="flex items-start gap-4">
                 <Mail className="h-6 w-6 text-primary mt-1" />
                 <div>
-                  <h4 className="font-semibold">Email Principale</h4>
-                  <p className="text-text-muted mt-1">info@tua-email.com</p>
-                  <p className="text-sm text-text-symbols italic mt-1">(Supporto generale e informazioni)</p>
+                  <h4 className="font-semibold"></h4>
+                  <p className="text-text-muted mt-1"></p>
+                  <p className="text-sm text-text-symbols italic mt-1"></p>
                 </div>
               </div>
 
               <div className="flex items-start gap-4">
                 <Phone className="h-6 w-6 text-primary mt-1" />
                 <div>
-                  <h4 className="font-semibold">Telefono</h4>
-                  <p className="text-text-muted mt-1">+39 012 345 6789</p>
-                  <p className="text-sm text-text-symbols italic mt-1">(Disponibile dal Lunedì al Venerdì, 9:00 - 17:00)</p>
+                  <h4 className="font-semibold"></h4>
+                  <p className="text-text-muted mt-1"></p>
+                  <p className="text-sm text-text-symbols italic mt-1"></p>
                 </div>
               </div>
 
               <div className="flex items-start gap-4">
                 <MapPin className="h-6 w-6 text-primary mt-1" />
                 <div>
-                  <h4 className="font-semibold">Sede Operativa</h4>
+                  <h4 className="font-semibold"></h4>
                   <p className="text-text-muted mt-1">
-                    Via dell'Archivio Storico, 42<br />
-                    50100 Firenze (FI) - Italia
                   </p>
                 </div>
               </div>
@@ -58,7 +56,7 @@ export default function ContattiPage() {
                 Richiedi Informazioni
               </h3>
               <p className="text-sm text-text-muted leading-relaxed">
-                Per richieste specifiche in merito all'accesso ai database, all'utilizzo tecnico delle mappe Nodegoat, o 
+                Per richieste specifiche in merito all'accesso ai database, o 
                 per segnalazioni di migliorie, ti invitiamo a mandare un'email direttamente ai responsabili del progetto.
               </p>
               
