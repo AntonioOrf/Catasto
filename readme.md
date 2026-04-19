@@ -51,7 +51,7 @@ L'applicazione offre due livelli di ricerca:
 
 - **Tabella Interattiva:** Mostra i dati sintetici (Nome, Localizzazione, Dati Economici, Riferimenti Archivistici).
 - **Ordinamento Cliccabile:** È possibile ordinare i risultati (Crescente/Decrescente) cliccando sulle intestazioni delle colonne: _Capofamiglia_, _Località_, _Dati Sintetici (Fortune, Credito, ecc.)_.
-- **Riferimenti Archivistici:** Ogni riga mostra chiaramente il **Volume** e il **Foglio** del campione catastale originale per facilitare la consultazione sia fisica che, nel caso di alcuni volumi, digitale tramite il [sito](https://archiviodigitale-icar.cultura.gov.it/it/185/ricerca/detail/2722310).
+- **Riferimenti Archivistici:** Ogni riga mostra chiaramente il **Volume** e il **Foglio** del campione catastale originale per facilitare la consultazione sia fisica che, nel caso di alcuni volumi, digitale tramite il visualizzatore integrato oppure il [sito](https://archiviodigitale-icar.cultura.gov.it/it/185/ricerca/detail/2722310).
 
 ### 👨‍👩‍👧‍👦 4. Dettagli Espandibili (Drill-Down)
 
