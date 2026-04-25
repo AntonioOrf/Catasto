@@ -34,7 +34,7 @@ RUN npm ci --omit=dev
 COPY --from=build /app/backend-catasto/dist ./backend-catasto/dist
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 
-EXPOSE 3001
+EXPOSE 3005
 
 # Avviamo il server puntando al file compilato nel workspace del backend
 CMD ["node", "backend-catasto/dist/server.js"]

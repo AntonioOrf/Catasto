@@ -10,6 +10,7 @@ export function useCatastoData(filters: any) {
   const {
     data: queryResult,
     isLoading: loading,
+    error: queryError,
     isError,
     refetch,
   } = useQuery({
@@ -22,7 +23,7 @@ export function useCatastoData(filters: any) {
   const data = queryResult?.data || [];
   const totalPages = queryResult?.pagination?.totalPages || 1;
   const totalRecords = queryResult?.pagination?.total || 0;
-  const error = isError ? "Impossibile connettersi al Server." : null;
+  const error = isError ? (queryError?.message || "Impossibile connettersi al Server.") : null;
 
   // 2. Fetch Parenti data
   const { data: parentiResult, isLoading: loadingParenti } = useQuery({

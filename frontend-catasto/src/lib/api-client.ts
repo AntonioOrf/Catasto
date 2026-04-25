@@ -1,6 +1,7 @@
 import { ApiResponse } from "@catasto/shared";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+const BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? "" : "http://localhost:3005/api/");
 
 export const apiClient = {
   async get<T>(path: string, params?: Record<string, string>): Promise<T> {

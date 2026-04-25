@@ -38,7 +38,7 @@ export class FuocoModel {
         f.Imponibile_Fuoco as imponibile, f.Credito_Fuoco as credito, 
         f.CreditoM_Fuoco as credito_m, f.Fortune_Fuoco as fortune, f.Deduzioni_Fuoco as deduzioni,
         f.Volume_Fuoco as volume, f.Foglio_Fuoco as foglio, 
-        pf.Particolarità as particolarita_fuoco,
+        pf.Particolarita as particolarita_fuoco,
         b.Bestiame as bestiame, i.Immigrazione as immigrazione, rm.RapportoLavoro as rapporto_mestiere,
         m.Mestiere as mestiere, c.Casa as casa, 
         tq.nome_quartiere as quartiere, tp.nome_popolo as popolo, 

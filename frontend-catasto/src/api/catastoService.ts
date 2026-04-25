@@ -6,7 +6,14 @@ export const fetchCatastoData = async (filters: any, page: number, limit: number
   params.append("limit", limit.toString());
 
   const response = await fetch(`${API_URL}/api/catasto?${params.toString()}`);
-  if (!response.ok) throw new Error("Errore server");
+  if (!response.ok) {
+    let errorMsg = `Errore server (${response.status} ${response.statusText})`;
+    try {
+      const errorData = await response.json();
+      errorMsg = errorData.error || errorMsg;
+    } catch (e) {}
+    throw new Error(errorMsg);
+  }
   return await response.json();
 };
 
