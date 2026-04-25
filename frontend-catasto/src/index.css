@@ -43,6 +43,7 @@ body {
   --color-bg-main: #f4f6fc;
   --color-bg-table: #f4f6fc;
   --color-bg-sidebar: #ffffff;
+  --color-bg-card: #ffffff;
   --color-bg-header: #1a3d7f;
   --color-bg-header-accent: #153166;
   --color-bg-header-border: #0d1e40;
@@ -62,6 +63,9 @@ body {
   --color-item-selected: #1a3d7f;
   --color-item-selected-open: #eaf0fa;
 
+  --primary: #1a3d7f;
+  --accent: #7a9bde;
+
   background-color: var(--color-bg-main);
   color: var(--color-text-main);
 
@@ -75,6 +79,7 @@ body {
   --color-bg-main: #181a26;
   --color-bg-table: #181a26;
   --color-bg-sidebar: #2d2f3a;
+  --color-bg-card: #2d2f3a;
   --color-bg-header: #2d2f3a;
   --color-bg-header-accent: #444550;
   --color-bg-header-border: #121212;
@@ -82,8 +87,8 @@ body {
 
   --color-text-main: #f8fafc;
   --color-text-inverted: #f8fafc;
-  --color-text-symbols: #54639b;
-  --color-text-accent: #848db7;
+  --color-text-symbols: #7a9bde;
+  --color-text-accent: #a3b3d9;
   --color-text-sidebar-jobs: #9da3c5;
 
   --color-border: #444550;
@@ -93,12 +98,16 @@ body {
   --color-item-hover: #444550;
   --color-item-selected: #3a508d;
   --color-item-selected-open: #2d2f3a;
+
+  --primary: #7a9bde;
+  --accent: #a3b3d9;
 }
 
 @theme {
   --color-bg-main: var(--color-bg-main);
   --color-bg-table: var(--color-bg-table);
   --color-bg-sidebar: var(--color-bg-sidebar);
+  --color-bg-card: var(--color-bg-card);
   --color-bg-header: var(--color-bg-header);
   --color-bg-header-accent: var(--color-bg-header-accent);
   --color-bg-header-final: var(--color-bg-header-final);
@@ -108,6 +117,9 @@ body {
   --color-text-accent: var(--color-text-accent);
   --color-text-symbols: var(--color-text-symbols);
   --color-text-sidebar-jobs: var(--color-text-sidebar-jobs);
+
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
 
   --color-item-hover: var(--color-item-hover);
   --color-item-selected: var(--color-item-selected);
