@@ -1,0 +1,44 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: catasto-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: catasto
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/Catasto.sql:/docker-entrypoint-initdb.d/Catasto.sql
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend-catasto/Dockerfile
+    container_name: catasto-backend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: catasto
+      PORT: 3001
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend-catasto/Dockerfile
+    container_name: catasto-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
