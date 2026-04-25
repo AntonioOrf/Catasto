@@ -61,5 +61,5 @@ DB_USER=root
 DB_PASSWORD=your_password
 DB_NAME=catasto
 DB_PORT=3306
-PORT=3001
+PORT=3005
 ```
