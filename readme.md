@@ -1,164 +1,100 @@
 <div align="center">
-  <h1>📜 Catasto Fiorentino del 1427/30 </h1>
-  <h3>Sistema Digitale di Consultazione dei Registri dei Fuochi</h3>
-  <p>Un'applicazione Full-Stack per l'esplorazione, la ricerca e l'analisi di dati censuari storici.</p>
+  <h1>📜 Catasto Fiorentino 1427</h1>
+  <h3>Archivio Digitale e Sistema di Esplorazione</h3>
+  <p>Una piattaforma full-stack moderna per esplorare, cercare e analizzare i dati storici del catasto della Repubblica di Firenze.</p>
 
   <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px; margin-bottom: 20px;">
-    <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
-    <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
-    <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind" />
+    <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/React_18-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+    <img src="https://img.shields.io/badge/Vite_5-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+    <img src="https://img.shields.io/badge/Tailwind_CSS_v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind" />
     <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
-    <img src="https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
     <img src="https://img.shields.io/badge/MySQL-005C84?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
   </div>
 
-![screenshot](https://cdn.imgchest.com/files/bab7c9a2309e.png)
-  
+  <img src="https://cdn.imgchest.com/files/bab7c9a2309e.png" alt="Screenshot del Progetto" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-width: 100%;" />
 </div>
 
 ---
 
-## 📖 Descrizione del Progetto
+## Panoramica del Progetto
 
-Questo progetto web si propone di rendere accessibili in modo più fluido e semplice i dati del Catasto Fiorentino del 1427/29 raccolti da Klapisch-Zuber nel suo noto volume "Tuscans and Their Families: A Study of the Florentine Catasto of 1427"
-e digitalizzati in formato excel dalla stessa presso questo [link](https://journals.openedition.org/acrh/7458)
+Il progetto **Catasto Fiorentino 1427** è un portale digitale progettato per rendere i dati storici del censimento della Firenze del XV secolo accessibili, ricercabili e visivamente accattivanti. Basata sulla monumentale ricerca di Klapisch-Zuber e sugli sforzi di digitalizzazione di [ACRH](https://journals.openedition.org/acrh/7458), questa applicazione offre a studiosi e appassionati di storia un'interfaccia potente per navigare nel tessuto sociale ed economico del Rinascimento.
 
----
+## Funzionalità Principali
 
-## ✨ Funzionalità Principali
-
-### 🔍 1. Sistema di Ricerca Avanzato
-
-L'applicazione offre due livelli di ricerca:
-
-- **Ricerca Rapida:** Barre di ricerca testuale per **Capofamiglia** e **Località** (Quartiere, Popolo, Piviere), sempre visibili in alto.
-- **Pannello Filtri Avanzati (Collassabile):** Un'area dedicata per affinare la ricerca tramite:
-  - **Mestiere:** Ricerca per professione (es. Fabbro, Notaio).
-  - **Rapporto Mestiere:** Filtro per ruolo lavorativo (Maestro, Garzone, Apprendista).
-  - **Bestiame:** Filtro per tipologia di animali posseduti (Bovini, animali da soma, ecc.) o tipologia di possessione (affittuario, proprietario ecc.).
-  - **Immigrazione:** Filtro per status di residenza (Cittadino, Forestiero, Abitante del contado).
-
-### 💰 2. Analisi Economica Dettagliata
-
-È possibile filtrare i risultati basandosi su **4 range economici** distinti, inserendo valori Minimi e Massimi in Fiorini:
-
-- **Fortune:** Patrimonio complessivo.
-- **Credito & Credito del Monte:** Analisi dei crediti finanziari differenziati tra crediti personali e crediti pubblici.
-- **Imponibile Totale:** La base tassabile del nucleo.
-- **Deduzioni:** Le deduzioni fiscali applicati al fuoco.
-
-### 📊 3. Visualizzazione Dati & Ordinamento
-
-- **Tabella Interattiva:** Mostra i dati sintetici (Nome, Localizzazione, Dati Economici, Riferimenti Archivistici).
-- **Ordinamento Cliccabile:** È possibile ordinare i risultati (Crescente/Decrescente) cliccando sulle intestazioni delle colonne: _Capofamiglia_, _Località_, _Dati Sintetici (Fortune, Credito, ecc.)_.
-- **Riferimenti Archivistici:** Ogni riga mostra chiaramente il **Volume** e il **Foglio** del campione catastale originale per facilitare la consultazione sia fisica che, nel caso di alcuni volumi, digitale tramite il visualizzatore integrato oppure il [sito](https://archiviodigitale-icar.cultura.gov.it/it/185/ricerca/detail/2722310).
-
-### 👨‍👩‍👧‍👦 4. Dettagli Espandibili (Drill-Down)
-
-Cliccando su una riga, questa si espande mostrando una scheda di dettaglio completa:
-
-- **Quadro Economico Completo:** Valori esatti di Imponibile, Deduzioni, Crediti e note specifiche.
-- **Composizione Familiare:** Tabella dinamica che elenca tutti i membri del fuoco, con età, ruolo parentale (Moglie, Figlio/a), sesso e stato civile.
-
-### 🚀 5. Navigazione Veloce & Sidebar Intelligente
-
-- **Sidebar "Indice Totale":** Una colonna laterale (collassabile) carica **tutti** i risultati della query corrente (anche migliaia), permettendo una visione d'insieme immediata.
-- **Salto Pagina Automatico:** Cliccando un nome nella sidebar che si trova in una pagina diversa della tabella, l'app calcola automaticamente la pagina corretta, la carica e scrolla fino alla riga selezionata aprendone i dettagli.
-- **Paginazione a Tendina:** Selezione rapida della pagina tramite menu dropdown in basso.
+- **Sistema di Ricerca Avanzata**: Filtraggio multi-livello per capofamiglia, località (Quartiere, Popolo, Piviere), professione e stato di immigrazione.
+- **Analisi Economica**: Approfondimento sulla ricchezza storica con filtri precisi per _Fortune_, _Credito_, _Imponibile_ e _Deduzioni_.
+- **Strutture Familiari**: "Fuochi" (nuclei familiari) esplorabili con elenchi dettagliati di membri, età e relazioni.
+- **Visualizzatore di Manoscritti IIIF**: Visualizzatore integrato per i documenti d'archivio originali (Archivio di Stato di Firenze) con funzionalità di zoom e navigazione.
+- **Alte Prestazioni**: Costruito come un monorepo TypeScript con paginazione lato server ottimizzata e un frontend Tailwind v4 fulmineo.
+- **Interfaccia Elegante**: Un'estetica raffinata "Blue Archive" con supporto completo per la modalità scura e design responsivo.
 
 ---
 
-## 🛠️ Architettura del Progetto
+## Stack Tecnologico
 
-Il progetto è strutturato come un'applicazione **Monorepo** (Frontend e Backend nella stessa repository) ma separati logicamente.
+### Frontend
 
-### 🖥️ Frontend (`/frontend-catasto`)
+- **React 18** con **Vite** per build ottimizzate.
+- **TypeScript** per la sicurezza dei tipi e uno sviluppo robusto.
+- **Tailwind CSS v4** che utilizza variabili CSS avanzate per la gestione dei temi.
+- **Lucide React** per un'iconografia coerente e di alta qualità.
 
-- Sviluppato con **React 18** e **Vite**.
-- Styling con **Tailwind CSS v3** per un design responsivo e performante.
-- Icone vettoriali tramite **Lucide React**.
-- Gestione Variabili d'Ambiente per URL API dinamici.
+### Backend
 
-Ulteriori informazioni nella [Documentazione Frontend](docs/frontend.md).
+- **Node.js** & **Express** che forniscono una robusta API RESTful.
+- **TSX/TSUP** per l'esecuzione e il bundling moderno di TypeScript.
+- **MySQL** per l'archiviazione di dati relazionali ad alte prestazioni.
 
-### ⚙️ Backend (`/backend-catasto`)
+### Architettura Monorepo
 
-- Server **Node.js** con framework **Express**.
-- Interazione con il database tramite **MySQL**.
-- API RESTful che supportano paginazione, ordinamento lato server e filtri complessi.
-- Configurazione CORS e dotenv per la sicurezza in produzione.
-
-Ulteriori informazioni nella [Documentazione Backend](docs/backend.md).
-
-### 🗄️ Database
-
-- Database Relazionale **MySQL**.
-- Schema complesso con tabelle correlate per _Fuochi, Parenti, Mestieri, Toponomastica (Quartieri, Popoli), Dati Economici_.
+- **Pacchetto Condiviso**: Tipi e interfacce centralizzati in `@catasto/shared`.
+- **Strumentazione Integrata**: Script di sviluppo e build unificati dalla root.
 
 ---
 
-## 🚀 Installazione e Avvio Locale
-
-Segui questi passaggi per avviare il progetto sul tuo computer.
+## Avvio Rapido
 
 ### Prerequisiti
 
-- Node.js installato.
-- MySQL Server installato e attivo.
+- [Node.js](https://nodejs.org/) (v18+)
+- [MySQL Server](https://www.mysql.com/)
 
-### 1. Configurazione Database
+### 1. Configurazione del Database
 
-Importa il file `.sql` (dump del database) nel tuo server MySQL locale. Assicurati che il database si chiami `catasto` (o aggiorna il file `.env`).
+Importa lo schema del database che si trova in `/db/Catasto.sql` nella tua istanza MySQL.
 
-### 2. Configurazione Backend
+### 2. Installazione
+
+Installa le dipendenze per l'intero monorepo dalla root:
 
 ```bash
-cd backend-catasto
 npm install
 ```
 
-Crea un file `.env` nella cartella `backend-catasto`:
+### 3. Configurazione
 
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=la_tua_password
-DB_NAME=catasto
-DB_PORT=3306
-PORT=3001
-```
+Configura le tue variabili d'ambiente sia in `backend-catasto/.env` che in `frontend-catasto/.env` (fai riferimento ai file `.env.example` in ogni cartella).
 
-Avvia il server:
+### 4. Avvio Sviluppo
 
-```bash
-node server.js
-```
-
-### 3. Configurazione Frontend
-
-In un nuovo terminale:
-
-```bash
-cd frontend-catasto
-npm install
-```
-
-Crea un file `.env` nella cartella `frontend-catasto`:
-
-```env
-VITE_API_URL=http://localhost:3001
-```
-
-Avvia l'interfaccia:
+Avvia l'intero stack (frontend + backend) con un unico comando:
 
 ```bash
 npm run dev
 ```
 
-Per una guida più dettagliata su come installare e avviare il progetto, consulta la [Guida all'Installazione](docs/guides.md).
+---
+
+## Documentazione
+
+- [Guida Dettagliata Backend](docs/backend.md) - Endpoint API, modelli e logica dei servizi.
+- [Documentazione Frontend](docs/frontend.md) - Struttura dei componenti, gestione dello stato e stile.
+- [Installazione e Distribuzione](docs/guides.md) - Guida completa alla configurazione e istruzioni Docker.
 
 ---
 
 <div align="center">
-<p>Sviluppato con passione per la storia e la tecnologia.</p>
+  <p>Creato con passione per la storia e la tecnologia.</p>
 </div>

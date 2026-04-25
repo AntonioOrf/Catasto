@@ -1,83 +1,64 @@
-# Documentazione Backend
+# Backend Documentation - Catasto Fiorentino
 
-Questo documento fornisce una guida completa all'architettura backend, agli endpoint API e alla configurazione dell'applicazione Catasto.
+The backend for the Catasto project is a modern **TypeScript** application built on **Node.js** and **Express**. It provides a robust API for querying historical data with advanced filtering and pagination.
 
-## Panoramica
+## Architecture
 
-Il backend è realizzato con **Node.js** ed **Express**, e funge da API RESTful per interrogare i dati del Catasto Fiorentino del 1427. Si connette a un database **MySQL** e gestisce filtraggi complessi, paginazione e aggregazione dei dati.
+The backend follows a **Controller-Service-Model** pattern, fully implemented in TypeScript to ensure data consistency and developer productivity.
 
-## Architettura
+### Directory Structure (`/backend-catasto/src`)
 
-Il progetto segue un pattern modulare **Controller-Service-Route** (principalmente Controller-Route in questa implementazione) per separare le responsabilità.
+- **`server.ts`**: Entry point. Configures Express, global middlewares, and initializes the API routes.
+- **`config/`**:
+  - `db.ts`: MySQL pool configuration using environment variables.
+- **`controllers/`**: Request handling logic.
+  - `catasto.controller.ts`: Main logic for households, search, and IIIF manifest proxying.
+  - `parenti.controller.ts`: Handles family member data.
+  - `mestieri.controller.ts`: Handles professional categories.
+- **`services/`**: Business logic layer.
+  - `catasto.service.ts`: Complex query orchestration, filtering logic, and external API integrations (e.g., ICAR).
+- **`models/`**: Direct database interaction.
+  - `fuoco.model.ts`: Data access for household records.
+  - `common.model.ts`: Shared data access for support tables.
+- **`routes/`**: API route definitions.
+- **`middlewares/`**: Global error handling and validation.
+- **`utils/`**: Helper functions (e.g., SQL query builders).
 
-### Struttura delle Directory
+## Development & Build
 
-- **`server.js`**: Punto di ingresso dell'applicazione. Inizializza Express, i middleware (CORS, parsing JSON) e monta le rotte.
-- **`config/`**: File di configurazione.
-  - `db.js`: Gestisce il pool di connessioni MySQL e le variabili d'ambiente.
-- **`controllers/`**: Logica principale. Gestisce le richieste, interagisce con il DB e invia le risposte.
-  - `catasto.controller.js`: Logica principale per il recupero e il filtraggio dei dati del censimento.
-  - `parenti.controller.js`: Logica per recuperare i membri della famiglia ("bocche") per uno specifico "fuoco".
-  - `system.controller.js`: Utility di sistema (es. health checks).
-- **`routes/`**: Definizioni delle rotte API.
-  - `catasto.routes.js`: Rotte per il recupero dei dati principali.
-  - `parenti.routes.js`: Rotte per i dettagli della famiglia.
-  - `system.routes.js`: Rotte di sistema.
-- **`utils/`**: Funzioni di supporto.
-  - `queryHelpers.js`: Funzioni per costruire dinamicamente le clausole SQL `WHERE` e `ORDER BY` basate sui filtri del frontend.
+### Scripts
 
-## Endpoint API
+- `npm run dev`: Runs the server in development mode with `tsx watch`.
+- `npm run build`: Compiles the project to `dist/` using `tsup`.
+- `npm start`: Runs the compiled production server from `dist/server.js`.
 
-### Dati Catasto
+## API Endpoints
 
-#### `GET /api/catasto`
+### Catasto Data
 
-Recupera una lista paginata di record del censimento basata sui filtri.
+- `GET /api/catasto`: Main search endpoint. Supports extensive query parameters for filtering and sorting.
+- `GET /api/catasto/sidebar`: Optimized endpoint for the sidebar index.
+- `GET /api/catasto/manifest/:id`: Proxy for the IIIF manifest from Archivio di Stato.
 
-**Parametri Query:**
+### Supporting Data
 
-- `page` (int): Numero di pagina (default: 1).
-- `limit` (int): Risultati per pagina (default: 50).
-- `sort_by` (string): Campo per l'ordinamento (es. `famiglia`, `imponibile`).
-- `order` (string): Direzione dell'ordinamento (`ASC` o `DESC`).
-- **Filtri**:
-  - `persona`: Ricerca per nome del capofamiglia (corrispondenza parziale).
-  - `localita`: Ricerca per località (corrispondenza parziale).
-  - `quartiere`, `gonfalone`: Filtri specifici per località.
-  - `mestiere`: Filtro per professione.
-  - `imponibile_min/max`: Filtro per range di ricchezza imponibile.
-  - `...` (vari altri filtri economici e demografici).
+- `GET /api/parenti/:id`: Family members for a specific household ID.
+- `GET /api/filters`: Dynamic options for the search panel (professions, locations, etc.).
 
-#### `GET /api/catasto/sidebar`
+## Database
 
-Recupera dati aggregati o una lista completa di ID/Nomi per la navigazione laterale, rispettando i filtri correnti.
+The system interacts with a **MySQL** database. All queries are optimized using `mysql2/promise` and a dynamic query builder located in `src/utils/query-builder.ts`.
 
-### Dettagli Famiglia
+---
 
-#### `GET /api/parenti/:id`
+## Environment Variables
 
-Recupera la lista dei membri della famiglia per uno specifico ID famiglia (`id_fuoco`).
-
-**Parametri:**
-
-- `id` (int): L'identificativo unico del nucleo familiare.
-
-### Sistema
-
-#### `GET /api/system/ping`
-
-Endpoint di controllo salute (Health check). Restituisce `{ status: "ok" }`.
-
-## Configurazione
-
-Il backend si basa su variabili d'ambiente memorizzate nel file `.env` nella directory `backend-catasto`.
-
-### Variabili Richieste
+Required variables in `.env`:
 
 ```env
 DB_HOST=localhost
 DB_USER=root
-DB_PASSWORD=tua_password
+DB_PASSWORD=your_password
 DB_NAME=catasto
 DB_PORT=3306
 PORT=3001
