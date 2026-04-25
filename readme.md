@@ -54,39 +54,6 @@ Il progetto **Catasto Fiorentino 1427** è un portale digitale progettato per re
 
 ---
 
-## Avvio Rapido
-
-### Prerequisiti
-
-- [Node.js](https://nodejs.org/) (v18+)
-- [MySQL Server](https://www.mysql.com/)
-
-### 1. Configurazione del Database
-
-Importa lo schema del database che si trova in `/db/Catasto.sql` nella tua istanza MySQL.
-
-### 2. Installazione
-
-Installa le dipendenze per l'intero monorepo dalla root:
-
-```bash
-npm install
-```
-
-### 3. Configurazione
-
-Configura le tue variabili d'ambiente sia in `backend-catasto/.env` che in `frontend-catasto/.env` (fai riferimento ai file `.env.example` in ogni cartella).
-
-### 4. Avvio Sviluppo
-
-Avvia l'intero stack (frontend + backend) con un unico comando:
-
-```bash
-npm run dev
-```
-
----
-
 ## Documentazione
 
 - [Guida Dettagliata Backend](docs/backend.md) - Endpoint API, modelli e logica dei servizi.
