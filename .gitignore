@@ -13,11 +13,9 @@ tsup.config.ts.timestamp-*
 
 # --- Environment Variables ---
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.prod
+.env.*
+!.env.example
+!.env.prod.example
 
 # --- IDEs and Editors ---
 .vscode/
@@ -27,15 +25,13 @@ tsup.config.ts.timestamp-*
 .DS_Store
 
 # --- Docker ---
-docker-compose.yml
-docker-compose.prod.yml
+# docker-compose.yml  <-- Tracciamo la configurazione dello stack
+docker-compose.override.yml
 *.dockerignore
+
+# --- Scripts Personalizzati (Ignorati come richiesto) ---
 build-docker.bat
 start-dev.bat
-
-# --- Database & Scripts ---
-# Schema is tracked, but large data dumps should be ignored if they are separate
-# db/*.sql  # Uncomment if you want to ignore all SQL files in db/
 
 # --- OS Specific ---
 Thumbs.db
