@@ -13,9 +13,14 @@ import {
   Flag,
   Calculator,
   BookOpen,
+  Globe,
+  Map,
+  Navigation,
+  Users,
 } from "lucide-react";
 
 import CustomSelect from "../../../components/common/CustomSelect";
+import CustomAutocomplete from "../../../components/common/CustomAutocomplete";
 import CustomNumberInput from "../../../components/common/CustomNumberInput";
 import { useFilters } from "../../../context/FilterContext";
 
@@ -23,17 +28,21 @@ interface FilterPanelProps {
   loading: boolean;
   fetchData: (page: number) => void;
   filterOptions?: {
-    bestiame: any[];
-    rapporto: any[];
     immigrazione: any[];
     mestieri: any[];
+    serie: any[];
+    quartieri: any[];
+    pivieri: any[];
+    popoli: any[];
+    particolaritaParente: any[];
+    casa: any[];
   };
 }
 
 export default function FilterPanel({
   loading,
   fetchData,
-  filterOptions = { bestiame: [], rapporto: [], immigrazione: [], mestieri: [] },
+  filterOptions = { bestiame: [], rapporto: [], immigrazione: [], mestieri: [], serie: [], quartieri: [], pivieri: [], popoli: [], particolaritaParente: [], casa: [] },
 }: FilterPanelProps) {
   const filters: any = useFilters();
   const {
@@ -71,6 +80,18 @@ export default function FilterPanel({
     setFilterDeduzioniMin,
     filterDeduzioniMax,
     setFilterDeduzioniMax,
+    filterParticolaritaParente,
+    setFilterParticolaritaParente,
+    filterCasa,
+    setFilterCasa,
+    filterSerie,
+    setFilterSerie,
+    filterQuartiere,
+    setFilterQuartiere,
+    filterPiviere,
+    setFilterPiviere,
+    filterPopolo,
+    setFilterPopolo,
   } = filters;
   
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -116,9 +137,23 @@ export default function FilterPanel({
             </div>
           </div>
 
+          <div className="flex-1 w-full md:max-w-[150px]">
+            <label className={labelClasses}>Volume</label>
+            <div className="relative">
+              <BookOpen className="absolute left-3 top-3 md:top-3.5 h-4 w-4 md:h-5 md:w-5 text-text-accent" />
+              <input
+                type="text"
+                className={inputClasses}
+                placeholder="Es. 15"
+                value={filterVolume}
+                onChange={(e) => setFilterVolume(e.target.value)}
+              />
+            </div>
+          </div>
+
           <button
             onClick={() => fetchData(1)}
-            className="w-full md:w-auto p-2 md:p-3 border bg-primary text-white hover:bg-primary/90 transition-all shadow-sm flex justify-center"
+            className="w-full md:w-auto p-2 md:p-3 border bg-primary text-white hover:bg-primary/90 transition-all shadow-sm flex justify-center h-[42px] md:h-[54px] items-center"
             title="Aggiorna Ricerca"
           >
             <RefreshCw
@@ -145,29 +180,19 @@ export default function FilterPanel({
         {isFiltersOpen && (
           <div className="bg-bg-main border border-border-base rounded p-3 md:p-4 mt-2 transition-all duration-300">
             {/* Griglia Mestieri e Status */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
               <div className="col-span-1">
                 <label className="flex items-center justify-between text-xs font-semibold text-text-main mb-1">
                   <span>Mestiere</span>
-                  <Link to="/mestieri" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-normal text-[10px] ml-1 shrink-0">
-                    più informazioni
-                  </Link>
                 </label>
                 <div className="relative">
-                  <Briefcase className="absolute left-2 top-2.5 h-4 w-4 text-text-accent" />
-                  <input
-                    type="text"
-                    list="mestieri-list"
-                    className={smallInputClasses}
-                    placeholder="Es. Fabbro"
+                  <CustomAutocomplete
                     value={filterMestiere}
-                    onChange={(e) => setFilterMestiere(e.target.value)}
+                    onChange={(e: any) => setFilterMestiere(e.target.value)}
+                    options={filterOptions.mestieri}
+                    placeholder="Es. Fabbro"
+                    icon={<Briefcase size={14} />}
                   />
-                  <datalist id="mestieri-list">
-                    {filterOptions.mestieri?.map((m: any) => (
-                      <option key={m.id} value={m.label} />
-                    ))}
-                  </datalist>
                 </div>
               </div>
               <div className="col-span-1">
@@ -175,12 +200,12 @@ export default function FilterPanel({
                   Rapporto Mestiere
                 </label>
                 <div className="relative">
-                  <Hammer className="absolute left-2 top-2.5 h-4 w-4 text-text-accent z-[1]" />
-                  <CustomSelect
+                  <CustomAutocomplete
                     value={filterRapporto}
                     onChange={(e: any) => setFilterRapporto(e.target.value)}
                     options={filterOptions.rapporto}
-                    placeholder="Tutti"
+                    placeholder="Seleziona..."
+                    icon={<Hammer size={14} />}
                   />
                 </div>
               </div>
@@ -189,12 +214,12 @@ export default function FilterPanel({
                   Bestiame
                 </label>
                 <div className="relative">
-                  <PawPrint className="absolute left-2 top-2.5 h-4 w-4 text-text-accent z-[1]" />
-                  <CustomSelect
+                  <CustomAutocomplete
                     value={filterBestiame}
                     onChange={(e: any) => setFilterBestiame(e.target.value)}
                     options={filterOptions.bestiame}
-                    placeholder="Tutti"
+                    placeholder="Seleziona..."
+                    icon={<PawPrint size={14} />}
                   />
                 </div>
               </div>
@@ -203,27 +228,89 @@ export default function FilterPanel({
                   Immigrazione
                 </label>
                 <div className="relative">
-                  <Flag className="absolute left-2 top-2.5 h-4 w-4 text-text-accent z-[1]" />
-                  <CustomSelect
+                  <CustomAutocomplete
                     value={filterImmigrazione}
                     onChange={(e: any) => setFilterImmigrazione(e.target.value)}
                     options={filterOptions.immigrazione}
-                    placeholder="Tutti"
+                    placeholder="Seleziona..."
+                    icon={<Flag size={14} />}
                   />
                 </div>
               </div>
               <div className="col-span-1">
                 <label className="block text-xs font-semibold text-text-main mb-1">
-                  Volume
+                  Particolarità Parente
                 </label>
                 <div className="relative">
-                  <BookOpen className="absolute left-2 top-2.5 h-4 w-4 text-text-accent" />
-                  <input
-                    type="text"
-                    className={smallInputClasses}
-                    placeholder="Es. 15"
-                    value={filterVolume}
-                    onChange={(e) => setFilterVolume(e.target.value)}
+                  <CustomAutocomplete
+                    value={filterParticolaritaParente}
+                    onChange={(e: any) => setFilterParticolaritaParente(e.target.value)}
+                    options={filterOptions.particolaritaParente}
+                    placeholder="Seleziona..."
+                    icon={<Users size={14} />}
+                  />
+                </div>
+              </div>
+              <div className="col-span-1">
+                <label className="block text-xs font-semibold text-text-main mb-1">
+                  Casa
+                </label>
+                <div className="relative">
+                  <CustomAutocomplete
+                    value={filterCasa}
+                    onChange={(e: any) => setFilterCasa(e.target.value)}
+                    options={filterOptions.casa}
+                    placeholder="Seleziona..."
+                    icon={<BookOpen size={14} />}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Sezione Filtri Geografici */}
+            <div className="border-t border-border-base pt-4 mb-6">
+              <div className="text-primary font-bold text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Globe className="h-4 w-4" /> Filtri Geografici
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="col-span-1">
+                  <label className={labelClasses.replace("md:text-sm", "text-[10px]")}>Serie</label>
+                  <CustomAutocomplete
+                    value={filterSerie}
+                    onChange={(e: any) => setFilterSerie(e.target.value)}
+                    options={filterOptions.serie}
+                    placeholder="Seleziona Serie..."
+                    icon={<Map size={14} />}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label className={labelClasses.replace("md:text-sm", "text-[10px]")}>Quartiere</label>
+                  <CustomAutocomplete
+                    value={filterQuartiere}
+                    onChange={(e: any) => setFilterQuartiere(e.target.value)}
+                    options={filterOptions.quartieri}
+                    placeholder="Seleziona Quartiere..."
+                    icon={<Navigation size={14} />}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label className={labelClasses.replace("md:text-sm", "text-[10px]")}>Piviere (Gonfalone)</label>
+                  <CustomAutocomplete
+                    value={filterPiviere}
+                    onChange={(e: any) => setFilterPiviere(e.target.value)}
+                    options={filterOptions.pivieri}
+                    placeholder="Seleziona Piviere..."
+                    icon={<Navigation size={14} />}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label className={labelClasses.replace("md:text-sm", "text-[10px]")}>Popolo</label>
+                  <CustomAutocomplete
+                    value={filterPopolo}
+                    onChange={(e: any) => setFilterPopolo(e.target.value)}
+                    options={filterOptions.popoli}
+                    placeholder="Cerca Popolo..."
+                    icon={<Users size={14} />}
                   />
                 </div>
               </div>

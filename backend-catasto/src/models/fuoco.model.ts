@@ -6,17 +6,18 @@ export class FuocoModel {
     const countJoins = `
       FROM fuochi f
       ${usedTables.has("m") ? "LEFT JOIN mestieri m ON f.Mestiere_Fuoco = m.id" : ""}
-      ${usedTables.has("tq") ? "LEFT JOIN t_struttura_catastale ts ON f.id_registrazione = ts.id_registrazione LEFT JOIN t_quartieri tq ON ts.id_quartiere = tq.id_quartiere" : ""}
-      ${usedTables.has("tp") ? (usedTables.has("tq") ? "" : "LEFT JOIN t_struttura_catastale ts ON f.id_registrazione = ts.id_registrazione ") + "LEFT JOIN t_popoli tp ON ts.id_popolo = tp.id_popolo" : ""}
-      ${usedTables.has("tpi") ? (usedTables.has("tq") || usedTables.has("tp") ? "" : "LEFT JOIN t_struttura_catastale ts ON f.id_registrazione = ts.id_registrazione ") + "LEFT JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere" : ""}
-      ${usedTables.has("tser") ? (usedTables.has("tq") || usedTables.has("tp") || usedTables.has("tpi") ? "" : "LEFT JOIN t_struttura_catastale ts ON f.id_registrazione = ts.id_registrazione ") + "LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie" : ""}
+      ${usedTables.has("tq") || usedTables.has("tp") || usedTables.has("tpi") || usedTables.has("tser") ? "LEFT JOIN t_struttura_catastale ts ON f.id_registrazione = ts.id_registrazione" : ""}
+      ${usedTables.has("tq") ? "LEFT JOIN t_quartieri tq ON ts.id_quartiere = tq.id_quartiere" : ""}
+      ${usedTables.has("tp") ? "LEFT JOIN t_popoli tp ON ts.id_popolo = tp.id_popolo" : ""}
+      ${usedTables.has("tpi") ? "LEFT JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere" : ""}
+      ${usedTables.has("tser") ? "LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie" : ""}
     `;
     const sql = `SELECT COUNT(*) as total ${countJoins} ${conditions}`;
     const [rows]: any = await pool.query(sql, params);
     return rows[0].total;
   }
 
-  static async findAll(conditions: string, params: any[], orderByClause: string, limit: number, offset: number): Promise<Fuoco[]> {
+  static async findAll(conditions: string, params: any[], orderByClause: string, limit: number, offset: number, usedTables: Set<string>): Promise<Fuoco[]> {
     const baseJoins = `
       FROM fuochi f
       LEFT JOIN mestieri m ON f.Mestiere_Fuoco = m.id
@@ -30,7 +31,7 @@ export class FuocoModel {
       LEFT JOIN t_popoli tp ON ts.id_popolo = tp.id_popolo
       LEFT JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere
       LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie
-      LEFT JOIN t_archivio_volumi tav ON f.Volume_Fuoco = tav.volume
+      LEFT JOIN t_archivio_volumi tav ON f.Volume_Fuoco = CAST(tav.volume AS UNSIGNED)
     `;
     const sql = `
       SELECT 
@@ -50,15 +51,15 @@ export class FuocoModel {
     return rows as Fuoco[];
   }
 
-  static async getSidebar(conditions: string, params: any[], orderByClause: string, limit: number, offset: number): Promise<SidebarItem[]> {
+  static async getSidebar(conditions: string, params: any[], orderByClause: string, limit: number, offset: number, usedTables: Set<string>): Promise<SidebarItem[]> {
     const sidebarJoins = `
       FROM fuochi f
       LEFT JOIN mestieri m ON f.Mestiere_Fuoco = m.id
-      LEFT JOIN t_struttura_catastale ts ON f.id_registrazione = ts.id_registrazione
-      LEFT JOIN t_quartieri tq ON ts.id_quartiere = tq.id_quartiere
-      LEFT JOIN t_popoli tp ON ts.id_popolo = tp.id_popolo
-      LEFT JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere
-      LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie
+      ${usedTables.has("tq") || usedTables.has("tp") || usedTables.has("tpi") || usedTables.has("tser") ? "LEFT JOIN t_struttura_catastale ts ON f.id_registrazione = ts.id_registrazione" : ""}
+      ${usedTables.has("tq") ? "LEFT JOIN t_quartieri tq ON ts.id_quartiere = tq.id_quartiere" : ""}
+      ${usedTables.has("tp") ? "LEFT JOIN t_popoli tp ON ts.id_popolo = tp.id_popolo" : ""}
+      ${usedTables.has("tpi") ? "LEFT JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere" : ""}
+      ${usedTables.has("tser") ? "LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie" : ""}
     `;
     const sql = `SELECT f.ID_Fuochi as id, f.Nome_Fuoco as nome, m.Mestiere as mestiere ${sidebarJoins} ${conditions} ${orderByClause} LIMIT ? OFFSET ?`;
     const [rows]: any = await pool.query(sql, [...params, limit, offset]);

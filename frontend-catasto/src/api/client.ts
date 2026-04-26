@@ -37,6 +37,13 @@ export const buildParams = (filters: any): URLSearchParams => {
   if (filters.filterDeduzioniMax)
     params.append("deduzioni_max", filters.filterDeduzioniMax);
 
+  if (filters.filterSerie) params.append("serie", filters.filterSerie);
+  if (filters.filterQuartiere) params.append("quartiere", filters.filterQuartiere);
+  if (filters.filterPiviere) params.append("piviere", filters.filterPiviere);
+  if (filters.filterPopolo) params.append("popolo", filters.filterPopolo);
+  if (filters.filterParticolaritaParente) params.append("particolarita_parente", filters.filterParticolaritaParente);
+  if (filters.filterCasa) params.append("casa", filters.filterCasa);
+
   if (filters.sortBy) params.append("sort_by", filters.sortBy);
   if (filters.sortOrder) params.append("order", filters.sortOrder);
 

@@ -19,7 +19,7 @@ export class CatastoService {
 
     const [total, data] = await Promise.all([
       FuocoModel.count(conditions, params, allUsedTables),
-      FuocoModel.findAll(conditions, params, orderByClause, limit, offset)
+      FuocoModel.findAll(conditions, params, orderByClause, limit, offset, allUsedTables)
     ]);
 
     const pagination: PaginationInfo = {
@@ -40,10 +40,11 @@ export class CatastoService {
     order: string = "ASC"
   ): Promise<SidebarItem[]> {
     const offset = (page - 1) * limit;
-    const { conditions, params } = buildQuery(filters);
-    const { clause: orderByClause } = buildOrderBy(sort_by, order);
+    const { conditions, params, usedTables: queryTables } = buildQuery(filters);
+    const { clause: orderByClause, usedTables: orderTables } = buildOrderBy(sort_by, order);
+    const allUsedTables = new Set([...queryTables, ...orderTables]);
 
-    return await FuocoModel.getSidebar(conditions, params, orderByClause, limit, offset);
+    return await FuocoModel.getSidebar(conditions, params, orderByClause, limit, offset, allUsedTables);
   }
 
   static async getParenti(fuocoId: number): Promise<Parenti[]> {
