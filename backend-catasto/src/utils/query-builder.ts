@@ -16,6 +16,12 @@ export interface QueryFilters {
   imponibile_max?: string | number;
   deduzioni_min?: string | number;
   deduzioni_max?: string | number;
+  serie?: string;
+  quartiere?: string;
+  piviere?: string;
+  popolo?: string;
+  particolarita_parente?: string;
+  casa?: string;
 }
 
 export const buildQuery = (filters: QueryFilters) => {
@@ -37,6 +43,12 @@ export const buildQuery = (filters: QueryFilters) => {
     imponibile_max,
     deduzioni_min,
     deduzioni_max,
+    serie,
+    quartiere,
+    piviere,
+    popolo,
+    particolarita_parente,
+    casa,
   } = filters;
 
   let conditions = "WHERE 1=1";
@@ -62,10 +74,9 @@ export const buildQuery = (filters: QueryFilters) => {
     params.push(volume);
   }
 
-  if (mestiere) {
-    usedTables.add("m");
-    conditions += " AND m.Mestiere LIKE ?";
-    params.push(`%${mestiere}%`);
+  if (mestiere && mestiere !== "") {
+    conditions += " AND f.Mestiere_Fuoco = ?";
+    params.push(mestiere);
   }
   if (bestiame && bestiame !== "") {
     conditions += " AND f.Bestiame_Fuoco = ?";
@@ -119,6 +130,35 @@ export const buildQuery = (filters: QueryFilters) => {
   if (deduzioni_max) {
     conditions += " AND f.Deduzioni_Fuoco <= ?";
     params.push(deduzioni_max);
+  }
+  
+  if (serie && serie !== "") {
+    usedTables.add("tser");
+    conditions += " AND tser.id_serie = ?";
+    params.push(serie);
+  }
+  if (quartiere && quartiere !== "") {
+    usedTables.add("tq");
+    conditions += " AND tq.id_quartiere = ?";
+    params.push(quartiere);
+  }
+  if (piviere && piviere !== "") {
+    usedTables.add("tpi");
+    conditions += " AND tpi.id_piviere = ?";
+    params.push(piviere);
+  }
+  if (popolo && popolo !== "") {
+    usedTables.add("tp");
+    conditions += " AND tp.id_popolo = ?";
+    params.push(popolo);
+  }
+  if (particolarita_parente && particolarita_parente !== "") {
+    conditions += " AND EXISTS (SELECT 1 FROM parenti p_sub WHERE p_sub.ID_FUOCO = f.ID_Fuochi AND p_sub.Particolarita = ?)";
+    params.push(particolarita_parente);
+  }
+  if (casa && casa !== "") {
+    conditions += " AND f.Casa_Fuoco = ?";
+    params.push(casa);
   }
 
   return { conditions, params, usedTables };

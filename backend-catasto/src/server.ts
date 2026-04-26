@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3005;
 
 // Middlewares
 app.use(cors());
-app.use(compression());
+app.use(compression() as any);
 app.use(express.json());
 
 // Routes

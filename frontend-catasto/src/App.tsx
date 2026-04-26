@@ -4,7 +4,6 @@ import HomePage from './pages/HomePage';
 import { FilterProvider } from './context/FilterContext';
 
 // Lazy loaded pages (keeping original logic)
-const MestieriPage = lazy(() => import('./pages/MestieriPage'));
 const InfoPage = lazy(() => import('./pages/InfoPage'));
 const MappaPage = lazy(() => import('./pages/MappaPage'));
 const ContattiPage = lazy(() => import('./pages/ContattiPage'));
@@ -25,7 +24,6 @@ export default function App() {
         }>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/mestieri" element={<MestieriPage />} />
             <Route path="/informazioni" element={<InfoPage />} />
             <Route path="/mappa" element={<MappaPage />} />
             <Route path="/contatti" element={<ContattiPage />} />

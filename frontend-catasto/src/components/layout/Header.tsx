@@ -50,15 +50,6 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen, showHomeLink =
         </div>
         
         <div className="flex items-center h-full gap-3 md:gap-4">
-          <nav className="hidden md:flex items-center gap-6 mr-4 border-r border-white/20 pr-6">
-            <Link to="/" className="text-sm font-semibold hover:text-accent uppercase tracking-wider transition-colors">
-              Ricerca
-            </Link>
-            <Link to="/mestieri" className="text-sm font-semibold hover:text-accent uppercase tracking-wider transition-colors">
-              Mestieri
-            </Link>
-          </nav>
-
           <button
             onClick={toggleTheme}
             className="p-2 rounded-full hover:bg-white/10 transition-all"

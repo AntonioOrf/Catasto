@@ -24,6 +24,14 @@ export function useCatastoFilters() {
   const [filterDeduzioniMin, setFilterDeduzioniMin] = useState("");
   const [filterDeduzioniMax, setFilterDeduzioniMax] = useState("");
 
+  // Geographic Filters
+  const [filterSerie, setFilterSerie] = useState("");
+  const [filterQuartiere, setFilterQuartiere] = useState("");
+  const [filterPiviere, setFilterPiviere] = useState("");
+  const [filterPopolo, setFilterPopolo] = useState("");
+  const [filterParticolaritaParente, setFilterParticolaritaParente] = useState("");
+  const [filterCasa, setFilterCasa] = useState("");
+
   // Sorting
   const [sortBy, setSortBy] = useState("nome");
   const [sortOrder, setSortOrder] = useState("ASC");
@@ -76,6 +84,18 @@ export function useCatastoFilters() {
     setFilterDeduzioniMin,
     filterDeduzioniMax,
     setFilterDeduzioniMax,
+    filterSerie,
+    setFilterSerie,
+    filterQuartiere,
+    setFilterQuartiere,
+    filterPiviere,
+    setFilterPiviere,
+    filterPopolo,
+    setFilterPopolo,
+    filterParticolaritaParente,
+    setFilterParticolaritaParente,
+    filterCasa,
+    setFilterCasa,
     sortBy,
     sortOrder,
 
