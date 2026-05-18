@@ -57,9 +57,8 @@ export class CatastoService {
 
   static async getManifest(id: string): Promise<any> {
     const targetUrl = `https://archiviodigitale-icar.cultura.gov.it/metadata/${id}/manifest.json?type=archive`;
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
-    const response = await fetch(proxyUrl, {
+    const response = await fetch(targetUrl, {
       method: "GET",
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
