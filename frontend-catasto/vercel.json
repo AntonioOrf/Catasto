@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/icar-manifest/:id",
+      "destination": "https://archiviodigitale-icar.cultura.gov.it/metadata/:id/manifest.json?type=archive"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

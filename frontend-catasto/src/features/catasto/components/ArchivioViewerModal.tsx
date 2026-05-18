@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ZoomIn, ZoomOut, Maximize, AlertCircle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
-import { API_URL } from '../../../api/client';
 
 const SPLIT_VOLUMES: Record<string, { part1: { max: number; id: string }; part2: { min: number; id: string } }> = {
   '18': { part1: { max: 1187, id: '2722381' }, part2: { min: 1188, id: '2722382' } },
@@ -74,7 +73,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
          }
       }
 
-      const manifestUrl = `${API_URL}/api/catasto/manifest/${activeCodice}`;
+      const manifestUrl = `/api/icar-manifest/${activeCodice}`;
       const response = await fetch(manifestUrl);
       
       if (!response.ok) {
