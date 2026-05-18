@@ -303,7 +303,7 @@ export default function FilterPanel({
                   />
                 </div>
                 <div className="col-span-1">
-                  <label className={labelClasses.replace("md:text-sm", "text-[10px]")}>Piviere (Gonfalone)</label>
+                  <label className={labelClasses.replace("md:text-sm", "text-[10px]")}>Piviere (Gonfalone, Podesetria)</label>
                   <CustomAutocomplete
                     value={filterPiviere}
                     onChange={(e: any) => {
