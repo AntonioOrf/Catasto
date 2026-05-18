@@ -277,7 +277,12 @@ export default function FilterPanel({
                   <label className={labelClasses.replace("md:text-sm", "text-[10px]")}>Serie</label>
                   <CustomAutocomplete
                     value={filterSerie}
-                    onChange={(e: any) => setFilterSerie(e.target.value)}
+                    onChange={(e: any) => {
+                      setFilterSerie(e.target.value);
+                      setFilterQuartiere("");
+                      setFilterPiviere("");
+                      setFilterPopolo("");
+                    }}
                     options={filterOptions.serie}
                     placeholder="Seleziona Serie..."
                     icon={<Map size={14} />}
@@ -287,7 +292,11 @@ export default function FilterPanel({
                   <label className={labelClasses.replace("md:text-sm", "text-[10px]")}>Quartiere</label>
                   <CustomAutocomplete
                     value={filterQuartiere}
-                    onChange={(e: any) => setFilterQuartiere(e.target.value)}
+                    onChange={(e: any) => {
+                      setFilterQuartiere(e.target.value);
+                      setFilterPiviere("");
+                      setFilterPopolo("");
+                    }}
                     options={filterOptions.quartieri}
                     placeholder="Seleziona Quartiere..."
                     icon={<Navigation size={14} />}
@@ -297,7 +306,10 @@ export default function FilterPanel({
                   <label className={labelClasses.replace("md:text-sm", "text-[10px]")}>Piviere (Gonfalone)</label>
                   <CustomAutocomplete
                     value={filterPiviere}
-                    onChange={(e: any) => setFilterPiviere(e.target.value)}
+                    onChange={(e: any) => {
+                      setFilterPiviere(e.target.value);
+                      setFilterPopolo("");
+                    }}
                     options={filterOptions.pivieri}
                     placeholder="Seleziona Piviere..."
                     icon={<Navigation size={14} />}

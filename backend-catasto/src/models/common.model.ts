@@ -12,10 +12,10 @@ export class CommonModel {
       const [rapporto]: any = await pool.query("SELECT ID_Rapporto as id, RapportoLavoro as label FROM rapporto_mestiere");
       const [immigrazione]: any = await pool.query("SELECT Id as id, Immigrazione as label FROM immigrazione");
       const [mestieri]: any = await pool.query("SELECT id, Mestiere as label FROM mestieri ORDER BY Mestiere");
-      const [serie]: any = await pool.query("SELECT GROUP_CONCAT(id_serie) as id, nome_serie as label FROM t_serie GROUP BY nome_serie ORDER BY nome_serie");
-      const [quartieri]: any = await pool.query("SELECT GROUP_CONCAT(id_quartiere) as id, nome_quartiere as label FROM t_quartieri GROUP BY nome_quartiere ORDER BY nome_quartiere");
-      const [pivieri]: any = await pool.query("SELECT GROUP_CONCAT(id_piviere) as id, nome_piviere as label FROM t_pivieri GROUP BY nome_piviere ORDER BY nome_piviere");
-      const [popoli]: any = await pool.query("SELECT GROUP_CONCAT(id_popolo) as id, nome_popolo as label FROM t_popoli GROUP BY nome_popolo ORDER BY nome_popolo");
+      const [serie]: any = await pool.query("SELECT GROUP_CONCAT(id_serie) as id, TRIM(REGEXP_REPLACE(nome_serie, ' \\\\([IVX]+\\\\)$', '')) as label FROM t_serie GROUP BY label ORDER BY label");
+      const [quartieri]: any = await pool.query("SELECT GROUP_CONCAT(id_quartiere) as id, TRIM(REGEXP_REPLACE(nome_quartiere, ' \\\\([IVX]+\\\\)$', '')) as label FROM t_quartieri GROUP BY label ORDER BY label");
+      const [pivieri]: any = await pool.query("SELECT GROUP_CONCAT(id_piviere) as id, TRIM(REGEXP_REPLACE(nome_piviere, ' \\\\([IVX]+\\\\)$', '')) as label FROM t_pivieri GROUP BY label ORDER BY label");
+      const [popoli]: any = await pool.query("SELECT GROUP_CONCAT(id_popolo) as id, TRIM(REGEXP_REPLACE(nome_popolo, ' \\\\([IVX]+\\\\)$', '')) as label FROM t_popoli GROUP BY label ORDER BY label");
       const [particolaritaParente]: any = await pool.query("SELECT ID_ParticolaritaParenti as id, ParticolaritaParenti as label FROM particolarita_parenti ORDER BY ParticolaritaParenti");
       const [casa]: any = await pool.query("SELECT Id_casa as id, Casa as label FROM casa ORDER BY Casa");
 
@@ -61,30 +61,30 @@ export class CommonModel {
     const whereClause = geoConditions.length > 0 ? "WHERE " + geoConditions.join(" AND ") : "";
 
     const [quartieri]: any = await pool.query(`
-      SELECT GROUP_CONCAT(DISTINCT tq.id_quartiere) as id, tq.nome_quartiere as label 
+      SELECT GROUP_CONCAT(DISTINCT tq.id_quartiere) as id, TRIM(REGEXP_REPLACE(tq.nome_quartiere, ' \\\\([IVX]+\\\\)$', '')) as label 
       FROM t_struttura_catastale ts 
       JOIN t_quartieri tq ON ts.id_quartiere = tq.id_quartiere 
       ${whereClause} 
-      GROUP BY tq.nome_quartiere
-      ORDER BY tq.nome_quartiere
+      GROUP BY label
+      ORDER BY label
     `, geoParams);
 
     const [pivieri]: any = await pool.query(`
-      SELECT GROUP_CONCAT(DISTINCT tpi.id_piviere) as id, tpi.nome_piviere as label 
+      SELECT GROUP_CONCAT(DISTINCT tpi.id_piviere) as id, TRIM(REGEXP_REPLACE(tpi.nome_piviere, ' \\\\([IVX]+\\\\)$', '')) as label 
       FROM t_struttura_catastale ts 
       JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere 
       ${whereClause} 
-      GROUP BY tpi.nome_piviere
-      ORDER BY tpi.nome_piviere
+      GROUP BY label
+      ORDER BY label
     `, geoParams);
 
     const [popoli]: any = await pool.query(`
-      SELECT GROUP_CONCAT(DISTINCT tp.id_popolo) as id, tp.nome_popolo as label 
+      SELECT GROUP_CONCAT(DISTINCT tp.id_popolo) as id, TRIM(REGEXP_REPLACE(tp.nome_popolo, ' \\\\([IVX]+\\\\)$', '')) as label 
       FROM t_struttura_catastale ts 
       JOIN t_popoli tp ON ts.id_popolo = tp.id_popolo 
       ${whereClause} 
-      GROUP BY tp.nome_popolo
-      ORDER BY tp.nome_popolo
+      GROUP BY label
+      ORDER BY label
     `, geoParams);
 
     return {
