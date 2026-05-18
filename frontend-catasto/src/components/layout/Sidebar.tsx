@@ -127,9 +127,6 @@ export default React.memo(function Sidebar({
           <h2 className="font-bold text-text-main uppercase text-xs tracking-wider flex items-center gap-2">
             <List className="h-4 w-4" /> Indice
           </h2>
-          <button onClick={() => setIsSidebarOpen(false)} className="text-text-accent hover:text-primary p-1">
-            <ChevronLeft className="h-5 w-5" />
-          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto relative" ref={containerRef} onScroll={onScroll}>
