@@ -134,23 +134,27 @@ export const buildQuery = (filters: QueryFilters) => {
   
   if (serie && serie !== "") {
     usedTables.add("tser");
-    conditions += " AND tser.id_serie = ?";
-    params.push(serie);
+    const ids = String(serie).split(",");
+    conditions += ` AND tser.id_serie IN (${ids.map(() => '?').join(',')})`;
+    params.push(...ids);
   }
   if (quartiere && quartiere !== "") {
     usedTables.add("tq");
-    conditions += " AND tq.id_quartiere = ?";
-    params.push(quartiere);
+    const ids = String(quartiere).split(",");
+    conditions += ` AND tq.id_quartiere IN (${ids.map(() => '?').join(',')})`;
+    params.push(...ids);
   }
   if (piviere && piviere !== "") {
     usedTables.add("tpi");
-    conditions += " AND tpi.id_piviere = ?";
-    params.push(piviere);
+    const ids = String(piviere).split(",");
+    conditions += ` AND tpi.id_piviere IN (${ids.map(() => '?').join(',')})`;
+    params.push(...ids);
   }
   if (popolo && popolo !== "") {
     usedTables.add("tp");
-    conditions += " AND tp.id_popolo = ?";
-    params.push(popolo);
+    const ids = String(popolo).split(",");
+    conditions += ` AND tp.id_popolo IN (${ids.map(() => '?').join(',')})`;
+    params.push(...ids);
   }
   if (particolarita_parente && particolarita_parente !== "") {
     conditions += " AND EXISTS (SELECT 1 FROM parenti p_sub WHERE p_sub.ID_FUOCO = f.ID_Fuochi AND p_sub.Particolarita = ?)";

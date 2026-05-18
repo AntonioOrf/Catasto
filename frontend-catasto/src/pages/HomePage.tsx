@@ -38,21 +38,28 @@ export default function HomePage() {
     casa: [],
   });
 
-  // Fetch filter options on mount
+  // Custom Hooks
+  const filters: any = useFilters();
+
+  // Fetch filter options dynamically
   useEffect(() => {
     const loadFilters = async () => {
       try {
-        const options = await fetchFilterOptions();
+        const geoFilters = {
+          serie: filters.filterSerie,
+          quartiere: filters.filterQuartiere,
+          piviere: filters.filterPiviere,
+        };
+        const options = await fetchFilterOptions(geoFilters);
         setFilterOptions(options);
       } catch (err) {
         console.error("Failed to load filter options", err);
       }
     };
     loadFilters();
-  }, []);
+  }, [filters.filterSerie, filters.filterQuartiere, filters.filterPiviere]);
 
-  // Custom Hooks
-  const filters: any = useFilters();
+
   
   const filterValues = useMemo(
     () => ({
