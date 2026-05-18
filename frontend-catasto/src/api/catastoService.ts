@@ -35,8 +35,14 @@ export const fetchParentiData = async (idFuoco: number | null) => {
   return await response.json();
 };
 
-export const fetchFilterOptions = async () => {
-  const response = await fetch(`${API_URL}/api/filters`);
+export const fetchFilterOptions = async (geoFilters?: { serie?: string; quartiere?: string; piviere?: string }) => {
+  const params = new URLSearchParams();
+  if (geoFilters?.serie) params.append("serie", geoFilters.serie);
+  if (geoFilters?.quartiere) params.append("quartiere", geoFilters.quartiere);
+  if (geoFilters?.piviere) params.append("piviere", geoFilters.piviere);
+
+  const queryString = params.toString() ? `?${params.toString()}` : "";
+  const response = await fetch(`${API_URL}/api/filters${queryString}`);
   if (!response.ok) throw new Error("Errore caricamento filtri");
   return await response.json();
 };
