@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { BookOpen, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import CatastoRow from "./CatastoRow";
+import CatastoRow, { CatastoMobileCard } from "./CatastoRow";
 import Pagination from "./Pagination";
 import ArchivioViewerModal from "./ArchivioViewerModal";
 import { useFilters } from "../../../context/FilterContext";
@@ -86,7 +86,8 @@ export default function CatastoTable({
       </div>
 
       <div className="bg-bg-main shadow-lg border border-border-base rounded-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full divide-y divide-border-base">
             <thead className="bg-bg-sidebar">
               <tr>
@@ -154,6 +155,43 @@ export default function CatastoTable({
           </table>
         </div>
 
+        {/* Mobile View */}
+        <div className="block md:hidden divide-y divide-border-base">
+          {error ? (
+            <div className="px-4 py-8 text-center text-red-900 font-serif bg-red-100 border-l-4 border-red-500">
+              <p className="font-bold text-base mb-1">Errore Server</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          ) : loading ? (
+            [...Array(5)].map((_, i) => (
+              <div key={i} className="animate-pulse p-4 space-y-3 bg-bg-main border-b border-border-base">
+                <div className="h-5 bg-gray-200 rounded w-1/3 opacity-50"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2 opacity-50"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/4 opacity-50"></div>
+              </div>
+            ))
+          ) : data.length > 0 ? (
+            <div className="p-2 space-y-3 bg-bg-main">
+              {data.map((row) => (
+                <CatastoMobileCard
+                  key={row.id}
+                  ref={(el: any) => (tableRowsRef.current[row.id] = el)}
+                  row={row}
+                  expanded={expandedId === row.id}
+                  onRowClick={handleRowClick}
+                  loadingParenti={loadingParenti}
+                  parentiData={parentiData}
+                  onViewArchivio={handleViewArchivio}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="px-4 py-8 text-center text-text-accent italic bg-bg-main">
+              Nessun dato trovato con i filtri correnti.
+            </div>
+          )}
+        </div>
+
         <Pagination
           page={page}
           totalPages={totalPages}
@@ -165,10 +203,10 @@ export default function CatastoTable({
       <ArchivioViewerModal 
         isOpen={viewerData.isOpen} 
         onClose={closeViewer}
-        codiceArchivio={viewerData.codiceArchivio}
-        foglio={viewerData.foglio}
-        volume={viewerData.volume}
-        nome={viewerData.nome}
+        codiceArchivio={viewerData.codiceArchivio || ""}
+        foglio={viewerData.foglio || ""}
+        volume={viewerData.volume || ""}
+        nome={viewerData.nome || ""}
       />
     </div>
   );

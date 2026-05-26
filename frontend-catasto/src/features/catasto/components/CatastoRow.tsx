@@ -230,4 +230,165 @@ const DetailRow = ({ icon: Icon, label, value }: any) => (
   </div>
 );
 
+export const CatastoMobileCard = React.memo(
+  forwardRef<HTMLDivElement, CatastoRowProps>(
+    ({ row, expanded, onRowClick, loadingParenti, parentiData, onViewArchivio }, ref) => {
+      const cardClasses = expanded
+        ? "bg-primary/10 border-primary"
+        : "bg-bg-table border-border-base hover:border-primary/50";
+
+      return (
+        <div
+          ref={ref}
+          onClick={() => onRowClick(row.id)}
+          className={`p-4 rounded-lg border transition-all cursor-pointer shadow-sm ${cardClasses}`}
+        >
+          <div className="flex justify-between items-start">
+            <div className="flex-1 min-w-0 pr-2">
+              <h3 className="text-base font-serif font-bold text-text-main leading-tight truncate">
+                {row.nome}
+              </h3>
+              <p className="text-xs text-text-accent flex items-center gap-1 mt-1 truncate">
+                <Briefcase className="h-3.5 w-3.5 flex-shrink-0" />
+                {row.mestiere || "Nessun mestiere"}
+              </p>
+            </div>
+            <div className="flex-shrink-0 mt-0.5">
+              {expanded ? (
+                <ChevronDown className="h-5 w-5 text-primary" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-text-accent opacity-50" />
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-dashed border-border-base text-xs">
+            {/* Localizzazione */}
+            <div className="space-y-1">
+              <div className="font-bold text-primary flex items-center gap-1">
+                <Layers className="h-3.5 w-3.5 flex-shrink-0" /> {row.serie || "Serie N/D"}
+              </div>
+              <div className="text-text-main font-medium pl-1">
+                {row.quartiere || "Quartiere N/D"}
+              </div>
+              <div className="text-text-accent italic text-[11px] pl-1 leading-snug">
+                {row.piviere} &raquo; {row.popolo}
+              </div>
+            </div>
+
+            {/* Dati Economici & Riferimenti */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-1 text-primary font-bold font-serif text-sm">
+                <Coins className="h-3.5 w-3.5 flex-shrink-0" />
+                {row.fortune ? row.fortune.toLocaleString() : 0} fiorini
+              </div>
+              <div className="flex items-center gap-1 text-text-main opacity-80 pl-1">
+                <Home className="h-3.5 w-3.5 flex-shrink-0" /> {row.casa || "N/D"}
+              </div>
+              
+              {/* Riferimento Archivio */}
+              <div className="mt-1.5 pl-1">
+                {row.codice_archivio ? (
+                  <button 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      if(onViewArchivio) onViewArchivio(row); 
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-mono text-primary bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded border border-primary/20 active:scale-95 transition-all"
+                  >
+                    <span>Vol. {row.volume} c. {row.foglio}</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </button>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-mono text-text-accent bg-bg-sidebar px-2 py-0.5 rounded border border-border-base">
+                    Vol. {row.volume || "?"} c. {row.foglio || "?"}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Expanded Content */}
+          {expanded && (
+            <div className="mt-4 pt-4 border-t-2 border-text-accent/30 space-y-4" onClick={(e) => e.stopPropagation()}>
+              {/* Dettagli Economici */}
+              <div>
+                <h4 className="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-2 border-b border-border-base pb-1">
+                  <Info className="h-3.5 w-3.5" /> Dettagli Economici
+                </h4>
+                <div className="bg-bg-main p-3 rounded border border-border-base space-y-3 text-xs">
+                  <div className="grid grid-cols-2 gap-3">
+                    <DetailItem label="Credito" value={`${row.credito || 0} fiorini`} />
+                    <DetailItem label="Credito ai Monti" value={`${row.credito_m || 0} fiorini`} />
+                    <DetailItem label="Fortune" value={`${row.fortune || 0} fiorini`} />
+                    <DetailItem label="Deduzioni" value={`${row.deduzioni || 0} fiorini`} />
+                    <div className="col-span-2">
+                      <span className="text-[10px] text-text-accent uppercase block">Imponibile Totale</span>
+                      <span className="font-bold text-primary text-sm">{row.imponibile || 0} fiorini</span>
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-dashed border-border-base space-y-2">
+                    <DetailRow icon={PawPrint} label="Bestiame" value={row.bestiame} />
+                    <DetailRow icon={Flag} label="Immigrazione" value={row.immigrazione} />
+                    <DetailRow icon={Hammer} label="Rapporto Mestiere" value={row.rapporto_mestiere} />
+                  </div>
+                  <div className="pt-2 border-t border-dashed border-border-base">
+                    <span className="text-[10px] text-text-accent uppercase block mb-1">Particolarità Fuoco</span>
+                    <p className="italic text-text-main bg-bg-sidebar p-2 rounded border border-border-base">
+                      {row.particolarita_fuoco || "Nessuna particolarità registrata."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Composizione Familiare */}
+              <div>
+                <h4 className="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-2 border-b border-border-base pb-1">
+                  <Users className="h-3.5 w-3.5" /> Composizione Familiare
+                </h4>
+                {loadingParenti ? (
+                  <div className="text-xs text-text-accent italic">Caricamento...</div>
+                ) : parentiData.length > 0 ? (
+                  <div className="overflow-hidden border border-border-base rounded bg-bg-main">
+                    <table className="min-w-full divide-y divide-border-base">
+                      <thead className="bg-primary/10">
+                        <tr>
+                          <th className="px-2 py-1.5 text-left text-[10px] font-medium text-primary uppercase">Parente</th>
+                          <th className="px-2 py-1.5 text-left text-[10px] font-medium text-primary uppercase">Età</th>
+                          <th className="px-2 py-1.5 text-left text-[10px] font-medium text-primary uppercase">Stato</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-bg-main divide-y divide-border-base text-xs">
+                        {parentiData.map((parente: any, idx: number) => (
+                          <tr key={idx} className="text-text-main">
+                            <td className="px-2 py-1.5 font-medium">
+                              {parente.parentela_desc || "Membro"}
+                              {parente.sesso && <span className="text-[10px] text-text-accent ml-1">({parente.sesso})</span>}
+                            </td>
+                            <td className="px-2 py-1.5">{parente.eta ? parente.eta : "-"}</td>
+                            <td className="px-2 py-1.5">
+                              <div className="flex flex-col">
+                                <span>{parente.stato_civile}</span>
+                                <span className="text-[10px] italic text-text-accent">{parente.particolarita}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-xs text-text-accent italic p-3 border border-dashed border-border-base rounded bg-bg-sidebar">
+                    Nessun parente registrato.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+  )
+);
+
 export default React.memo(CatastoRow);
