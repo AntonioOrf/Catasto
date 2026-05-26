@@ -39,6 +39,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartInfo = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
+  const touchStartRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     if (isOpen && codiceArchivio) {
@@ -141,6 +142,67 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
 
   const imageUrl = pages[currentIndex]?.id;
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      const touch = e.touches[0];
+      dragStartInfo.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        posX: position.x,
+        posY: position.y
+      };
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    
+    // Prevent default scrolling gesture on touch screens when dragging
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+    
+    const touch = e.touches[0];
+    const dx = touch.clientX - dragStartInfo.current.x;
+    const dy = touch.clientY - dragStartInfo.current.y;
+    setPosition({
+      x: dragStartInfo.current.posX + dx,
+      y: dragStartInfo.current.posY + dy
+    });
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    setIsDragging(false);
+    
+    // Swipe gesture detection (only if scale is close to 1, to prevent accidental swipe while panning)
+    if (scale <= 1.1 && e.changedTouches && e.changedTouches.length > 0) {
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - touchStartRef.current.x;
+      const deltaY = touch.clientY - touchStartRef.current.y;
+      
+      // Horizontal swipe
+      if (Math.abs(deltaX) > 80 && Math.abs(deltaY) < 50) {
+        if (deltaX > 0) {
+          // Swipe right -> Previous page
+          if (pages.length > 1 && currentIndex > 0) {
+            setImageLoading(true);
+            setCurrentIndex(currentIndex - 1);
+            handleResetZoom();
+          }
+        } else {
+          // Swipe left -> Next page
+          if (pages.length > 1 && currentIndex < pages.length - 1) {
+            setImageLoading(true);
+            setCurrentIndex(currentIndex + 1);
+            handleResetZoom();
+          }
+        }
+      }
+    }
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     dragStartInfo.current = {
@@ -178,22 +240,23 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg-main/90 backdrop-blur-sm p-4">
-      <div className="bg-bg-table border border-border-base shadow-2xl rounded-lg w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg-main/95 backdrop-blur-sm p-0 sm:p-4">
+      <div className="bg-bg-table border-0 sm:border border-border-base shadow-2xl sm:rounded-lg w-full max-w-6xl h-full sm:h-[90vh] flex flex-col overflow-hidden">
         
         {/* Header Modale */}
-        <div className="flex items-center justify-between p-4 border-b border-border-base bg-bg-sidebar">
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border-base bg-bg-sidebar">
           <div className="flex flex-col">
-            <h2 className="text-xl font-serif font-bold text-item-selected flex items-center gap-2">
-              <BookOpenIcon className="h-5 w-5" />
-              Archivio di Stato di Firenze - Volume {volume || '?'}, Foglio {foglio || '?'}
+            <h2 className="text-sm sm:text-base md:text-xl font-serif font-bold text-item-selected flex items-center gap-1.5 sm:gap-2">
+              <BookOpenIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+              <span className="hidden sm:inline">Archivio di Stato di Firenze - </span>
+              Volume {volume || '?'}, Foglio {foglio || '?'}
             </h2>
             {nome && (
-              <p className="text-sm text-text-main font-semibold mt-1">
+              <p className="text-xs sm:text-sm text-text-main font-semibold mt-0.5 sm:mt-1">
                 Fuoco: {nome}
               </p>
             )}
-            <p className="text-[10px] md:text-xs text-text-accent font-mono mt-1 opacity-80">
+            <p className="text-[9px] sm:text-xs text-text-accent font-mono mt-0.5 sm:mt-1 opacity-80">
               ID Archivio: {codiceArchivio}
             </p>
           </div>
@@ -202,7 +265,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
             onClick={onClose} 
             className="text-text-main hover:text-red-500 hover:bg-border-base/50 p-2 rounded transition-colors"
           >
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
         </div>
 
@@ -241,6 +304,9 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                onMouseUp={handleMouseUp}
                onMouseLeave={handleMouseUp}
                onWheel={handleWheel}
+               onTouchStart={handleTouchStart}
+               onTouchMove={handleTouchMove}
+               onTouchEnd={handleTouchEnd}
             >
               {/* Image Loading Indicator */}
               {imageLoading && (
@@ -274,10 +340,10 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                     setCurrentIndex(currentIndex - 1);
                     handleResetZoom();
                   }}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-item-selected text-white p-3 rounded-full shadow-lg backdrop-blur-sm transition-colors z-20 pointer-events-auto"
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-item-selected text-white p-2 sm:p-3 rounded-full shadow-lg backdrop-blur-sm transition-colors z-20 pointer-events-auto"
                   title="Pagina Precedente"
                 >
-                  <ChevronLeft className="h-8 w-8" />
+                  <ChevronLeft className="h-5 w-5 sm:h-8 sm:w-8" />
                 </button>
               )}
 
@@ -289,10 +355,10 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                     setCurrentIndex(currentIndex + 1);
                     handleResetZoom();
                   }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-item-selected text-white p-3 rounded-full shadow-lg backdrop-blur-sm transition-colors z-20 pointer-events-auto"
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-item-selected text-white p-2 sm:p-3 rounded-full shadow-lg backdrop-blur-sm transition-colors z-20 pointer-events-auto"
                   title="Pagina Successiva"
                 >
-                  <ChevronRight className="h-8 w-8" />
+                  <ChevronRight className="h-5 w-5 sm:h-8 sm:w-8" />
                 </button>
               )}
 
@@ -310,7 +376,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
         {!loading && !error && pages.length > 1 && (
           <div className="bg-bg-main border-t border-border-base p-2 flex items-center gap-2 overflow-x-auto">
              <span className="text-xs text-text-accent font-semibold ml-2 whitespace-nowrap">Pagine:</span>
-             {pages.map((p, idx) => (
+             {pages.map((_, idx) => (
                 <button 
                   key={idx}
                   onClick={() => { 
@@ -330,32 +396,33 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
 
         {/* Toolbar Footer (Zoom Controls) */}
         {!loading && !error && imageUrl && (
-          <div className="bg-bg-sidebar border-t border-border-base p-3 flex items-center justify-center gap-4">
-             <button onClick={handleZoomOut} className="p-2 hover:bg-border-base rounded text-text-main transition-colors" title="Zoom Out">
+          <div className="bg-bg-sidebar border-t border-border-base p-2 sm:p-3 flex items-center justify-center gap-2 sm:gap-4">
+             <button onClick={handleZoomOut} className="p-2.5 sm:p-2 hover:bg-border-base rounded text-text-main transition-colors" title="Zoom Out">
                <ZoomOut className="h-5 w-5" />
              </button>
-             <span className="text-text-accent font-mono text-sm min-w-[3rem] text-center">
+             <span className="text-text-accent font-mono text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3rem] text-center">
                {Math.round(scale * 100)}%
              </span>
-             <button onClick={handleZoomIn} className="p-2 hover:bg-border-base rounded text-text-main transition-colors" title="Zoom In">
+             <button onClick={handleZoomIn} className="p-2.5 sm:p-2 hover:bg-border-base rounded text-text-main transition-colors" title="Zoom In">
                <ZoomIn className="h-5 w-5" />
              </button>
-             <div className="w-px h-6 bg-border-base mx-2"></div>
-             <button onClick={handleResetZoom} className="p-2 hover:bg-border-base rounded text-text-main transition-colors flex items-center gap-2 text-sm" title="Reimposta Zoom">
+             <div className="w-px h-5 sm:h-6 bg-border-base mx-1 sm:mx-2"></div>
+             <button onClick={handleResetZoom} className="p-2.5 sm:p-2 hover:bg-border-base rounded text-text-main transition-colors flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm" title="Reimposta Zoom">
                <Maximize className="h-4 w-4" />
                <span className="hidden sm:inline">Adatta</span>
              </button>
 
              <div className="ml-auto">
-                <a 
-                  href={`https://archiviodigitale-icar.cultura.gov.it/it/185/ricerca/detail/${codiceArchivio}`}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-xs text-item-selected hover:underline flex items-center gap-1 opacity-80"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  Sito Originale
-                </a>
+                 <a 
+                   href={`https://archiviodigitale-icar.cultura.gov.it/it/185/ricerca/detail/${codiceArchivio}`}
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   className="text-[10px] sm:text-xs text-item-selected hover:underline flex items-center gap-1 opacity-80"
+                 >
+                   <ExternalLink className="h-3 w-3" />
+                   <span className="hidden sm:inline">Sito Originale</span>
+                   <span className="sm:hidden">Originale</span>
+                 </a>
              </div>
           </div>
         )}

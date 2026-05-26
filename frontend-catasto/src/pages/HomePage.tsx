@@ -17,9 +17,12 @@ import { useCatastoData } from "../hooks/useCatastoData";
 import { useCatastoSidebar } from "../hooks/useCatastoSidebar";
 
 export default function HomePage() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(
-    () => window.innerWidth >= 768,
-  );
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    setIsSidebarOpen(window.innerWidth >= 768);
+  }, []);
+
   const tableRowsRef = useRef<Record<string, any>>({});
   const mainContentRef = useRef<HTMLElement>(null);
   const [targetScrolledId, setTargetScrolledId] = useState<string | null>(null);
