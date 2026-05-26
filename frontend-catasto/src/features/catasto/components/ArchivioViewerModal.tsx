@@ -34,6 +34,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
   const [loading, setLoading] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [resolvedCodice, setResolvedCodice] = useState<string>(codiceArchivio);
   
   // Per lo zoom manuale essenziale
   const [scale, setScale] = useState(1);
@@ -41,10 +42,119 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
   const [isDragging, setIsDragging] = useState(false);
   const dragStartInfo = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
   const touchStartRef = useRef({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const initialPinchDistanceRef = useRef<number | null>(null);
+  const initialScaleRef = useRef<number>(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imageUrl = pages[currentIndex]?.id;
+  
+  const stateRef = useRef({ position, scale, isDragging, pages, currentIndex });
+  
+  useEffect(() => {
+    stateRef.current = { position, scale, isDragging, pages, currentIndex };
+  }, [position, scale, isDragging, pages, currentIndex]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleTouchStartRaw = (e: TouchEvent) => {
+      const currentState = stateRef.current;
+      if (e.touches.length === 1) {
+        setIsDragging(true);
+        isDraggingRef.current = true;
+        const touch = e.touches[0];
+        dragStartInfo.current = {
+          x: touch.clientX,
+          y: touch.clientY,
+          posX: currentState.position.x,
+          posY: currentState.position.y
+        };
+        touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+        initialPinchDistanceRef.current = null;
+      } else if (e.touches.length === 2) {
+        setIsDragging(false);
+        isDraggingRef.current = false;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        initialPinchDistanceRef.current = Math.sqrt(dx * dx + dy * dy);
+        initialScaleRef.current = currentState.scale;
+      }
+    };
+
+    const handleTouchMoveRaw = (e: TouchEvent) => {
+      if (e.touches.length === 1 && isDraggingRef.current) {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        const touch = e.touches[0];
+        const dx = touch.clientX - dragStartInfo.current.x;
+        const dy = touch.clientY - dragStartInfo.current.y;
+        setPosition({
+          x: dragStartInfo.current.posX + dx,
+          y: dragStartInfo.current.posY + dy
+        });
+      } else if (e.touches.length === 2 && initialPinchDistanceRef.current !== null) {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > 10) {
+          const factor = distance / initialPinchDistanceRef.current;
+          const newScale = Math.min(Math.max(initialScaleRef.current * factor, 0.2), 5);
+          setScale(newScale);
+        }
+      }
+    };
+
+    const handleTouchEndRaw = (e: TouchEvent) => {
+      const currentState = stateRef.current;
+      setIsDragging(false);
+      isDraggingRef.current = false;
+      initialPinchDistanceRef.current = null;
+
+      if (currentState.scale <= 1.1 && e.changedTouches && e.changedTouches.length > 0) {
+        const touch = e.changedTouches[0];
+        const deltaX = touch.clientX - touchStartRef.current.x;
+        const deltaY = touch.clientY - touchStartRef.current.y;
+
+        if (Math.abs(deltaX) > 80 && Math.abs(deltaY) < 50) {
+          if (deltaX > 0) {
+            if (currentState.pages.length > 1 && currentState.currentIndex > 0) {
+              setImageLoading(true);
+              setCurrentIndex(prev => prev - 1);
+              setScale(1);
+              setPosition({ x: 0, y: 0 });
+            }
+          } else {
+            if (currentState.pages.length > 1 && currentState.currentIndex < currentState.pages.length - 1) {
+              setImageLoading(true);
+              setCurrentIndex(prev => prev + 1);
+              setScale(1);
+              setPosition({ x: 0, y: 0 });
+            }
+          }
+        }
+      }
+    };
+
+    container.addEventListener('touchstart', handleTouchStartRaw, { passive: false });
+    container.addEventListener('touchmove', handleTouchMoveRaw, { passive: false });
+    container.addEventListener('touchend', handleTouchEndRaw, { passive: false });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStartRaw);
+      container.removeEventListener('touchmove', handleTouchMoveRaw);
+      container.removeEventListener('touchend', handleTouchEndRaw);
+    };
+  }, [isOpen, imageUrl, loading]);
 
   useEffect(() => {
     if (isOpen && codiceArchivio) {
       setImageLoading(true);
+      setResolvedCodice(codiceArchivio);
       fetchManifest();
       // Reset zoom state
       setScale(1);
@@ -55,6 +165,17 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
       setError(null);
     }
   }, [isOpen, codiceArchivio, foglio]);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   const fetchManifest = async () => {
     setLoading(true);
@@ -74,6 +195,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
             }
          }
       }
+      setResolvedCodice(activeCodice);
 
       const manifestUrl = `${API_URL}/api/catasto/manifest/${activeCodice}`;
       const response = await fetch(manifestUrl);
@@ -141,68 +263,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
 
   if (!isOpen) return null;
 
-  const imageUrl = pages[currentIndex]?.id;
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      setIsDragging(true);
-      const touch = e.touches[0];
-      dragStartInfo.current = {
-        x: touch.clientX,
-        y: touch.clientY,
-        posX: position.x,
-        posY: position.y
-      };
-      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || e.touches.length !== 1) return;
-    
-    // Prevent default scrolling gesture on touch screens when dragging
-    if (e.cancelable) {
-      e.preventDefault();
-    }
-    
-    const touch = e.touches[0];
-    const dx = touch.clientX - dragStartInfo.current.x;
-    const dy = touch.clientY - dragStartInfo.current.y;
-    setPosition({
-      x: dragStartInfo.current.posX + dx,
-      y: dragStartInfo.current.posY + dy
-    });
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    setIsDragging(false);
-    
-    // Swipe gesture detection (only if scale is close to 1, to prevent accidental swipe while panning)
-    if (scale <= 1.1 && e.changedTouches && e.changedTouches.length > 0) {
-      const touch = e.changedTouches[0];
-      const deltaX = touch.clientX - touchStartRef.current.x;
-      const deltaY = touch.clientY - touchStartRef.current.y;
-      
-      // Horizontal swipe
-      if (Math.abs(deltaX) > 80 && Math.abs(deltaY) < 50) {
-        if (deltaX > 0) {
-          // Swipe right -> Previous page
-          if (pages.length > 1 && currentIndex > 0) {
-            setImageLoading(true);
-            setCurrentIndex(currentIndex - 1);
-            handleResetZoom();
-          }
-        } else {
-          // Swipe left -> Next page
-          if (pages.length > 1 && currentIndex < pages.length - 1) {
-            setImageLoading(true);
-            setCurrentIndex(currentIndex + 1);
-            handleResetZoom();
-          }
-        }
-      }
-    }
-  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -241,7 +302,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg-main/95 backdrop-blur-sm p-0 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg-main/95 backdrop-blur-sm p-0 sm:p-4 touch-none">
       <div className="bg-bg-table border-0 sm:border border-border-base shadow-2xl sm:rounded-lg w-full max-w-6xl h-full sm:h-[90vh] flex flex-col overflow-hidden">
         
         {/* Header Modale */}
@@ -258,7 +319,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
               </p>
             )}
             <p className="text-[9px] sm:text-xs text-text-accent font-mono mt-0.5 sm:mt-1 opacity-80">
-              ID Archivio: {codiceArchivio}
+              ID Archivio: {resolvedCodice}
             </p>
           </div>
           <button  
@@ -286,7 +347,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                <p className="text-text-accent max-w-md">{error}</p>
                
                <a 
-                 href={`https://archiviodigitale-icar.cultura.gov.it/it/185/ricerca/detail/${codiceArchivio}`}
+                 href={`https://archiviodigitale-icar.cultura.gov.it/it/185/ricerca/detail/${resolvedCodice}#viewer`}
                  target="_blank" 
                  rel="noopener noreferrer"
                  className="mt-6 flex items-center gap-2 bg-item-selected text-bg-main px-4 py-2 rounded font-bold hover:brightness-110 transition-all"
@@ -299,15 +360,13 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
 
            {imageUrl && !loading && !error && (
             <div 
-               className="w-full h-full cursor-grab active:cursor-grabbing relative flex items-center justify-center overflow-hidden select-none"
+               ref={containerRef}
+               className="w-full h-full cursor-grab active:cursor-grabbing relative flex items-center justify-center overflow-hidden select-none touch-none"
                onMouseDown={handleMouseDown}
                onMouseMove={handleMouseMove}
                onMouseUp={handleMouseUp}
                onMouseLeave={handleMouseUp}
                onWheel={handleWheel}
-               onTouchStart={handleTouchStart}
-               onTouchMove={handleTouchMove}
-               onTouchEnd={handleTouchEnd}
             >
               {/* Image Loading Indicator */}
               {imageLoading && (
@@ -415,10 +474,10 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
 
              <div className="ml-auto">
                  <a 
-                   href={`https://archiviodigitale-icar.cultura.gov.it/it/185/ricerca/detail/${codiceArchivio}`}
+                   href={`https://archiviodigitale-icar.cultura.gov.it/it/185/ricerca/detail/${resolvedCodice}#viewer`}
                    target="_blank" 
                    rel="noopener noreferrer"
-                   className="text-[10px] sm:text-xs text-item-selected hover:underline flex items-center gap-1 opacity-80"
+                   className="text-[10px] sm:text-xs text-white bg-primary hover:bg-primary/95 px-2 py-1.5 rounded-sm flex items-center gap-1 active:scale-95 transition-all shadow-sm font-semibold"
                  >
                    <ExternalLink className="h-3 w-3" />
                    <span className="hidden sm:inline">Sito Originale</span>

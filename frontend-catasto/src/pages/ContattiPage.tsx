@@ -17,8 +17,11 @@ export default function ContattiPage() {
           <div className="space-y-6">
             <div className="flex flex-col">
               <span className="text-xs uppercase tracking-widest text-text-accent font-bold mb-1">Email</span>
-              <a href="mailto:info@catastofiorentino.it" className="text-primary text-xl hover:underline">
-                info@catastofiorentino.it
+              <a href="mailto:antonio.orfitelli@edu.unifi.it" className="text-primary text-xl hover:underline">
+                antonio.orfitelli@edu.unifi.it
+              </a>
+              <a href="mailto:ipavon@ipavon.com" className="text-primary text-xl hover:underline">
+                ipavon@ipavon.com
               </a>
             </div>
 
