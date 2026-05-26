@@ -1,4 +1,3 @@
-import React from "react";
 import { Menu, X, Scroll, Moon, Sun, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import useDarkMode from "../../hooks/useDarkMode";
@@ -12,7 +11,7 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen, showHomeLink =
   };
   
   return (
-    <header className="bg-bg-header text-white shadow-md border-bg-header-border border-b-4 flex-shrink-0 sticky top-0 z-50 h-16 md:h-20 transition-all duration-300 relative">
+    <header className="bg-bg-header text-white shadow-md border-bg-header-border border-b-4 flex-shrink-0 sticky top-0 z-50 h-16 lg:h-20 transition-all duration-300 relative">
       <div className="w-full px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
         <div className="flex items-center h-full">
           {setIsSidebarOpen ? (
@@ -33,23 +32,23 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen, showHomeLink =
             </Link>
           ) : null}
           
-          <div className="h-8 w-[1px] bg-white/20 mx-3 md:mx-4"></div>
+          <div className="h-8 w-[1px] bg-white/20 mx-3 lg:mx-4"></div>
 
           <div className="flex items-center gap-3">
-            <Scroll className="h-6 w-6 md:h-8 md:w-8" />
+            <Scroll className="h-6 w-6 lg:h-8 lg:w-8" />
             <div>
-              <h1 className="text-lg md:text-2xl font-bold tracking-wide font-serif leading-tight">
+              <h1 className="text-lg lg:text-2xl font-bold tracking-wide font-serif leading-tight">
                 Catasto Fiorentino
-                <span className="hidden md:inline"> del 1427/30</span>
+                <span className="hidden lg:inline"> del 1427/30</span>
               </h1>
-              <p className="text-[10px] md:text-xs uppercase tracking-wider font-medium hidden sm:block opacity-80">
+              <p className="text-[10px] lg:text-xs uppercase tracking-wider font-medium hidden sm:block opacity-80">
                 Sistema di Consultazione
               </p>
             </div>
           </div>
         </div>
         
-        <div className="flex items-center h-full gap-3 md:gap-4">
+        <div className="flex items-center h-full gap-3 lg:gap-4">
           <button
             onClick={toggleTheme}
             className="p-2 rounded-full hover:bg-white/10 transition-all"

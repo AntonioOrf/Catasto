@@ -87,7 +87,7 @@ export default function CatastoTable({
 
       <div className="bg-bg-main shadow-lg border border-border-base rounded-sm overflow-hidden">
         {/* Desktop View */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="hidden lg:block overflow-x-auto">
           <table className="min-w-full divide-y divide-border-base">
             <thead className="bg-bg-sidebar">
               <tr>
@@ -106,7 +106,7 @@ export default function CatastoTable({
                     Dati Sintetici{renderSortIcon("fortune")}
                   </div>
                 </th>
-                <th className="hidden md:table-cell px-6 py-4 text-left text-xs font-bold text-text-accent uppercase tracking-wider font-sans">
+                <th className="hidden lg:table-cell px-6 py-4 text-left text-xs font-bold text-text-accent uppercase tracking-wider font-sans">
                   Riferimenti
                 </th>
                 <th className="px-3 py-3 md:px-6 md:py-4 w-8 md:w-10"></th>
@@ -156,7 +156,7 @@ export default function CatastoTable({
         </div>
 
         {/* Mobile View */}
-        <div className="block md:hidden divide-y divide-border-base">
+        <div className="block lg:hidden divide-y divide-border-base">
           {error ? (
             <div className="px-4 py-8 text-center text-red-900 font-serif bg-red-100 border-l-4 border-red-500">
               <p className="font-bold text-base mb-1">Errore Server</p>

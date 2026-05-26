@@ -1,4 +1,4 @@
-import React, {
+import {
   useState,
   useRef,
   useEffect,
@@ -20,7 +20,7 @@ export default function HomePage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
-    setIsSidebarOpen(window.innerWidth >= 768);
+    setIsSidebarOpen(window.innerWidth >= 1024);
   }, []);
 
   const tableRowsRef = useRef<Record<string, any>>({});
@@ -145,7 +145,7 @@ export default function HomePage() {
       const rowElement = tableRowsRef.current[targetScrolledId];
       if (rowElement) {
         rowElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        handleRowClick(targetScrolledId);
+        handleRowClick(Number(targetScrolledId));
       }
       setTargetScrolledId(null);
     }
@@ -164,7 +164,7 @@ export default function HomePage() {
 
   const handleSidebarClick = useCallback(
     (idFuoco: string) => {
-      if (window.innerWidth < 768) {
+      if (window.innerWidth < 1024) {
         setIsSidebarOpen(false);
       }
 
@@ -176,7 +176,7 @@ export default function HomePage() {
           const rowElement = tableRowsRef.current[idFuoco];
           if (rowElement)
             rowElement.scrollIntoView({ behavior: "smooth", block: "center" });
-          handleRowClick(idFuoco);
+          handleRowClick(Number(idFuoco));
         } else {
           setTargetScrolledId(idFuoco);
           handlePageChange(targetPage);

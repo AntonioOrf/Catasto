@@ -73,12 +73,12 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
               <div className="flex items-center gap-1 text-primary font-bold font-serif text-sm md:text-base">
                 <Coins className="h-3 w-3 md:h-4 md:w-4" />
                 {row.fortune ? row.fortune.toLocaleString() : 0}
-                <span className="hidden md:inline"> fiorini</span>
+                <span className="hidden lg:inline"> fiorini</span>
               </div>
-              <div className="flex items-center gap-1 text-[10px] md:text-xs text-text-main font-sans opacity-80">
+              <div className="flex items-center gap-1 text-[10px] lg:text-xs text-text-main font-sans opacity-80">
                 <Home className="h-3 w-3" /> {row.casa || "N/D"}
               </div>
-              <div className="md:hidden flex items-center gap-2 text-[10px] text-text-main font-mono bg-bg-sidebar px-1 rounded w-fit border border-border-base mt-1">
+              <div className="lg:hidden flex items-center gap-2 text-[10px] text-text-main font-mono bg-bg-sidebar px-1 rounded w-fit border border-border-base mt-1">
                 {row.codice_archivio ? (
                   <button 
                     onClick={(e) => { e.stopPropagation(); if(onViewArchivio) onViewArchivio(row); }}
@@ -100,7 +100,7 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
           </td>
 
           {/* RIFERIMENTI (Desktop only) */}
-          <td className="hidden md:table-cell px-6 py-4">
+          <td className="hidden lg:table-cell px-6 py-4">
             <div className={`flex flex-col gap-1 text-sm text-text-main font-mono p-2 rounded w-fit border ${row.codice_archivio ? 'border-primary/50 bg-primary/5 hover:bg-primary/10 cursor-pointer transition-colors shadow-sm' : 'border-border-base bg-bg-sidebar'}`}
                  onClick={(e) => { 
                    if (row.codice_archivio && onViewArchivio) {
@@ -134,7 +134,7 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
         {expanded && (
           <tr className="bg-primary/5 border-l-4 border-l-primary">
             <td colSpan={5} className="px-4 py-4 md:px-6 md:py-6 border-b-2 border-text-accent/30">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
                 <div>
                   <h3 className="text-xs md:text-sm font-bold text-primary uppercase tracking-wider mb-2 md:mb-3 flex items-center gap-2 border-b border-border-base pb-1">
                     <Info className="h-4 w-4" /> Dettagli Economici
