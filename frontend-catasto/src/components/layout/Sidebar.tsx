@@ -107,7 +107,7 @@ export default React.memo(function Sidebar({
     <>
       {isSidebarOpen && (
         <div
-          className="absolute inset-0 bg-black/30 z-30 md:hidden backdrop-blur-[2px]"
+          className="absolute inset-0 bg-black/30 z-30 lg:hidden backdrop-blur-[2px]"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -116,8 +116,8 @@ export default React.memo(function Sidebar({
         className={`
           bg-bg-sidebar border-r border-border-base flex flex-col 
           transition-all duration-300 ease-in-out
-          absolute top-0 left-0 bottom-0 z-30 shadow-2xl md:shadow-none md:static
-          ${isSidebarOpen ? "w-[80%] sm:w-72 translate-x-0" : "w-0 -translate-x-full opacity-0 md:w-0"}
+          absolute top-0 left-0 bottom-0 z-30 shadow-2xl lg:shadow-none lg:static
+          ${isSidebarOpen ? "w-[80%] sm:w-72 translate-x-0" : "w-0 -translate-x-full opacity-0 lg:w-0"}
         `}
       >
         <div
