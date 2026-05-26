@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { List, ChevronLeft } from "lucide-react";
+import { List } from "lucide-react";
 
 interface SidebarProps {
   isSidebarOpen: boolean;
@@ -91,7 +91,7 @@ export default React.memo(function Sidebar({
           onClick={() => handleSidebarClick(row.id)}
           className={`
             w-full text-left p-2 rounded text-sm transition-colors h-full flex flex-col justify-center
-            ${isSelected ? "bg-primary text-white" : "hover:bg-gray-100 text-text-main"}
+            ${isSelected ? "bg-primary text-white" : "hover:bg-item-hover text-text-main"}
           `}
         >
           <div className="font-bold truncate font-serif">{row.nome}</div>
