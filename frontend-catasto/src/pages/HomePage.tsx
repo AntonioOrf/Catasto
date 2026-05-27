@@ -46,6 +46,7 @@ export default function HomePage() {
 
   // Fetch filter options dynamically
   useEffect(() => {
+    const controller = new AbortController();
     const loadFilters = async () => {
       try {
         const geoFilters = {
@@ -53,13 +54,16 @@ export default function HomePage() {
           quartiere: filters.filterQuartiere,
           piviere: filters.filterPiviere,
         };
-        const options = await fetchFilterOptions(geoFilters);
+        const options = await fetchFilterOptions(geoFilters, controller.signal);
         setFilterOptions(options);
-      } catch (err) {
-        console.error("Failed to load filter options", err);
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          console.error("Failed to load filter options", err);
+        }
       }
     };
     loadFilters();
+    return () => controller.abort();
   }, [filters.filterSerie, filters.filterQuartiere, filters.filterPiviere]);
 
 
