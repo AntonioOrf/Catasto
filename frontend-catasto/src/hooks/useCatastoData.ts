@@ -15,7 +15,7 @@ export function useCatastoData(filters: any) {
     refetch,
   } = useQuery({
     queryKey: ["catastoData", filters, page],
-    queryFn: () => fetchCatastoData(filters, page, 50),
+    queryFn: ({ signal }) => fetchCatastoData(filters, page, 50, signal),
     // @ts-ignore - keeping previous behavior
     placeholderData: (previousData: any) => previousData,
   });
@@ -28,7 +28,7 @@ export function useCatastoData(filters: any) {
   // 2. Fetch Parenti data
   const { data: parentiResult, isLoading: loadingParenti } = useQuery({
     queryKey: ["parenti", expandedId],
-    queryFn: () => fetchParentiData(expandedId),
+    queryFn: ({ signal }) => fetchParentiData(expandedId, signal),
     enabled: !!expandedId,
     staleTime: 10 * 60 * 1000,
   });
