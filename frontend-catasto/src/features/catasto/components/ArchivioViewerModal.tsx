@@ -28,6 +28,14 @@ interface ArchivioViewerModalProps {
   nome: string;
 }
 
+const getIiifImageUrl = (url: string, width?: number) => {
+  if (!url) return '';
+  if (width && url.includes('/full/full/0/default.jpg')) {
+    return url.replace('/full/full/0/default.jpg', `/full/${width},/0/default.jpg`);
+  }
+  return url;
+};
+
 const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClose, codiceArchivio, foglio, volume, nome }) => {
   const [pages, setPages] = useState<Page[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -35,6 +43,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
   const [imageLoading, setImageLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resolvedCodice, setResolvedCodice] = useState<string>(codiceArchivio);
+  const [useHighRes, setUseHighRes] = useState(false);
   
   // Per lo zoom manuale essenziale
   const [scale, setScale] = useState(1);
@@ -47,12 +56,24 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
   const initialScaleRef = useRef<number>(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const imageUrl = pages[currentIndex]?.id;
+  const activeImageUrl = useHighRes ? imageUrl : getIiifImageUrl(imageUrl, 1600);
   
   const stateRef = useRef({ position, scale, isDragging, pages, currentIndex });
   
   useEffect(() => {
     stateRef.current = { position, scale, isDragging, pages, currentIndex };
   }, [position, scale, isDragging, pages, currentIndex]);
+
+  useEffect(() => {
+    if (scale > 1.2) {
+      setUseHighRes(true);
+    }
+  }, [scale]);
+
+  useEffect(() => {
+    setUseHighRes(false);
+  }, [currentIndex, resolvedCodice]);
+
 
   useEffect(() => {
     const container = containerRef.current;
@@ -291,7 +312,11 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
   
   const handleZoomIn = () => setScale(s => Math.min(s + 0.3, 5));
   const handleZoomOut = () => setScale(s => Math.max(s - 0.3, 0.2));
-  const handleResetZoom = () => { setScale(1); setPosition({x:0, y:0}); };
+  const handleResetZoom = () => { 
+    setScale(1); 
+    setPosition({x:0, y:0}); 
+    setUseHighRes(false);
+  };
 
   const handleWheel = (e: React.WheelEvent) => {
     const zoomSensitivity = 0.002;
@@ -377,7 +402,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
               )}
 
               <img 
-                src={imageUrl} 
+                src={activeImageUrl} 
                 alt={`Volume ${volume}, Foglio ${foglio}`}
                 style={{
                   transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
@@ -425,7 +450,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
               {/* Preload delle pagine successive di nascosto per velocizzare la transizione */}
               <div className="hidden">
                  {pages.map((p, i) => (
-                   i !== currentIndex && <img key={`preload-${i}`} src={p.id} alt={`preload-${i}`} />
+                   i !== currentIndex && <img key={`preload-${i}`} src={getIiifImageUrl(p.id, 1600)} alt={`preload-${i}`} />
                  ))}
               </div>
             </div>
