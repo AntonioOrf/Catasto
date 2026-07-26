@@ -27,9 +27,10 @@ npm install
 ### 3. Database
 
 1. Crea un database chiamato `catasto` nel tuo server MySQL.
-2. Importa lo schema:
+2. Richiedi il file `Catasto.sql` a chi gestisce il progetto: non è incluso nel repository per scelta (i dati non vengono resi pubblici) e va posizionato manualmente in `init/Catasto.sql`.
+3. Importa lo schema:
    ```bash
-   mysql -u root -p catasto < db/Catasto.sql
+   mysql -u root -p catasto < init/Catasto.sql
    ```
 
 ### 4. Configurazione (.env)
@@ -71,6 +72,8 @@ Abbiamo adottato un'architettura a **multi-container** per garantire la massima 
 
 ### 1. Avvio Rapido con Docker Compose
 
+Prima di partire, richiedi il file `Catasto.sql` a chi gestisce il progetto (non è incluso nel repository per scelta) e posizionalo in `init/Catasto.sql`: `docker-compose.yml` lo monta come volume per l'inizializzazione del container MySQL, quindi deve esistere localmente prima del primo avvio.
+
 Assicurati di avere Docker e Docker Compose installati, quindi esegui dalla root:
 
 ```bash
@@ -80,7 +83,7 @@ docker-compose up -d --build
 Questo comando:
 
 - Crea la rete interna tra i servizi.
-- Configura automaticamente il database MySQL e importa i dati da `db/Catasto.sql`.
+- Configura automaticamente il database MySQL e importa i dati da `init/Catasto.sql`.
 - Avvia il backend sulla porta `3005`.
 - Avvia il frontend sulla porta `80`.
 

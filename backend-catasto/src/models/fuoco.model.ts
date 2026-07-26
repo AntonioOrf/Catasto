@@ -17,7 +17,7 @@ export class FuocoModel {
     return rows[0].total;
   }
 
-  static async findAll(conditions: string, params: any[], orderByClause: string, limit: number, offset: number, usedTables: Set<string>): Promise<Fuoco[]> {
+  static async findAll(conditions: string, params: any[], orderByClause: string, limit: number, offset: number): Promise<Fuoco[]> {
     const baseJoins = `
       FROM fuochi f
       LEFT JOIN mestieri m ON f.Mestiere_Fuoco = m.id

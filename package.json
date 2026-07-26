@@ -7,9 +7,12 @@
     "packages/*"
   ],
   "scripts": {
+    "prepare": "npm run build -w @catasto/shared",
+    "predev": "npm run build -w @catasto/shared",
     "dev": "concurrently \"npm run dev -w catasto-frontend\" \"npm run dev -w catasto-backend\"",
     "build": "npm run build --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "dependencies": {
     "dotenv": "^17.3.1"
@@ -19,5 +22,13 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "@tailwindcss/postcss": "^4.1.18"
+  },
+  "overrides": {
+    "tsup": {
+      "esbuild": "^0.28.1"
+    },
+    "tsx": {
+      "esbuild": "^0.28.1"
+    }
   }
 }

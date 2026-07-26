@@ -1,23 +1,19 @@
 import { Request, Response, NextFunction } from "express";
 import { CatastoService } from "../services/catasto.service.js";
+import { paginationSchema, parseNumericId } from "../utils/validation.js";
 
 export class CatastoController {
   static async getAll(req: Request, res: Response, next: NextFunction) {
     try {
-      const { 
-        page = "1", 
-        limit = "50", 
-        sort_by = "nome", 
-        order = "ASC",
-        ...filters 
-      } = req.query;
+      const { page, limit, sort_by, order } = paginationSchema.parse(req.query);
+      const { page: _p, limit: _l, sort_by: _s, order: _o, ...filters } = req.query;
 
       const result = await CatastoService.getAllFuochi(
         filters as any,
-        parseInt(page as string),
-        parseInt(limit as string),
-        sort_by as string,
-        order as string
+        page,
+        limit,
+        sort_by,
+        order
       );
 
       res.json(result);
@@ -28,20 +24,18 @@ export class CatastoController {
 
   static async getSidebar(req: Request, res: Response, next: NextFunction) {
     try {
-      const { 
-        page = "1", 
-        limit = "1000", 
-        sort_by = "nome", 
-        order = "ASC",
-        ...filters 
-      } = req.query;
+      const { page, limit, sort_by, order } = paginationSchema.parse({
+        limit: "1000",
+        ...req.query,
+      });
+      const { page: _p, limit: _l, sort_by: _s, order: _o, ...filters } = req.query;
 
       const data = await CatastoService.getSidebar(
         filters as any,
-        parseInt(page as string),
-        parseInt(limit as string),
-        sort_by as string,
-        order as string
+        page,
+        limit,
+        sort_by,
+        order
       );
       res.json(data);
     } catch (error) {
@@ -51,8 +45,8 @@ export class CatastoController {
 
   static async getParenti(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
-      const data = await CatastoService.getParenti(parseInt(id));
+      const id = parseNumericId(req.params.id, "fuoco id");
+      const data = await CatastoService.getParenti(parseInt(id, 10));
       res.json(data);
     } catch (error) {
       next(error);
@@ -70,10 +64,9 @@ export class CatastoController {
 
   static async getManifest(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = parseNumericId(req.params.id, "archive id");
       const data = await CatastoService.getManifest(id);
-      
-      res.setHeader("Access-Control-Allow-Origin", "*");
+
       res.setHeader("Content-Type", "application/json");
       res.json(data);
     } catch (error) {

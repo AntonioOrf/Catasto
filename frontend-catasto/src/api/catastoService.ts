@@ -11,7 +11,9 @@ export const fetchCatastoData = async (filters: any, page: number, limit: number
     try {
       const errorData = await response.json();
       errorMsg = errorData.error || errorMsg;
-    } catch (e) {}
+    } catch {
+      // response body isn't JSON, keep the generic errorMsg
+    }
     throw new Error(errorMsg);
   }
   return await response.json();

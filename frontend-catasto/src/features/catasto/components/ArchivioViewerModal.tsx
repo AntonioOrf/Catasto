@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, ZoomIn, ZoomOut, Maximize, AlertCircle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { API_URL } from '../../../api/client';
 
@@ -172,38 +172,12 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
     };
   }, [isOpen, imageUrl, loading]);
 
-  useEffect(() => {
-    if (isOpen && codiceArchivio) {
-      setImageLoading(true);
-      setResolvedCodice(codiceArchivio);
-      fetchManifest();
-      // Reset zoom state
-      setScale(1);
-      setPosition({ x: 0, y: 0 });
-    } else {
-      setPages([]);
-      setCurrentIndex(0);
-      setError(null);
-    }
-  }, [isOpen, codiceArchivio, foglio]);
-
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
-  const fetchManifest = async () => {
+  const fetchManifest = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       let activeCodice = codiceArchivio;
-      
+
       const volNum = String(volume).trim();
       if (SPLIT_VOLUMES[volNum] && foglio) {
          const foglioNum = parseInt(String(foglio).replace(/\D/g, ''), 10);
@@ -220,14 +194,14 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
 
       const manifestUrl = `${API_URL}/api/catasto/manifest/${activeCodice}`;
       const response = await fetch(manifestUrl);
-      
+
       if (!response.ok) {
         throw new Error('Impossibile scaricare le informazioni del volume dall\'Archivio di Stato.');
       }
-      
+
       const data = await response.json();
       const canvases = data?.sequences?.[0]?.canvases;
-      
+
       if (!canvases || canvases.length === 0) {
          throw new Error('Il volume risulta vuoto o privo di pagine digitalizzate.');
       }
@@ -237,9 +211,9 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
       if (foglio) {
         const foglioStr = String(foglio).trim();
         const paddedFoglio = foglioStr.padStart(4, '0'); // es. "130" -> "0130"
-        
+
         const matches = canvases.filter((c: any) => {
-          let lbl = (c.label || '').toLowerCase().replace(/\.[a-z]{3,4}$/, '').trim();
+          const lbl = (c.label || '').toLowerCase().replace(/\.[a-z]{3,4}$/, '').trim();
           return lbl.endsWith('_' + paddedFoglio) ||
                  lbl.endsWith(paddedFoglio) ||
                  lbl.endsWith('_' + foglioStr) ||
@@ -247,8 +221,8 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
         });
 
         if (matches.length > 0) {
-          targetCanvas = matches.find((c: any) => (c.label || '').toLowerCase().includes('registro')) || 
-                         matches.find((c: any) => !(c.label || '').toLowerCase().includes('repertorio') && !(c.label || '').toLowerCase().includes('indice')) || 
+          targetCanvas = matches.find((c: any) => (c.label || '').toLowerCase().includes('registro')) ||
+                         matches.find((c: any) => !(c.label || '').toLowerCase().includes('repertorio') && !(c.label || '').toLowerCase().includes('indice')) ||
                          matches[0];
         }
       }
@@ -265,7 +239,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
             label: c.label || `Pag. ${i+1}`
          };
       }).filter((p: any) => p.id);
-      
+
       if (pagesToLoad.length > 0) {
         setPages(pagesToLoad);
         setCurrentIndex(0);
@@ -280,7 +254,33 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
     } finally {
       setLoading(false);
     }
-  };
+  }, [codiceArchivio, volume, foglio]);
+
+  useEffect(() => {
+    if (isOpen && codiceArchivio) {
+      setImageLoading(true);
+      setResolvedCodice(codiceArchivio);
+      fetchManifest();
+      // Reset zoom state
+      setScale(1);
+      setPosition({ x: 0, y: 0 });
+    } else {
+      setPages([]);
+      setCurrentIndex(0);
+      setError(null);
+    }
+  }, [isOpen, codiceArchivio, foglio, fetchManifest]);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

@@ -1,7 +1,7 @@
 import mysql from "mysql2/promise";
 import dotenv from "dotenv";
 
-dotenv.config({ path: ".env" });
+dotenv.config({ path: ".env", quiet: true });
 
 async function checkDB() {
   try {

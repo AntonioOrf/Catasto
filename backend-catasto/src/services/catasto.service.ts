@@ -19,7 +19,7 @@ export class CatastoService {
 
     const [total, data] = await Promise.all([
       FuocoModel.count(conditions, params, allUsedTables),
-      FuocoModel.findAll(conditions, params, orderByClause, limit, offset, allUsedTables)
+      FuocoModel.findAll(conditions, params, orderByClause, limit, offset)
     ]);
 
     const pagination: PaginationInfo = {
@@ -55,7 +55,18 @@ export class CatastoService {
     return await CommonModel.getMestieriList();
   }
 
+  // Manifests describe already-digitized historical volumes and never change,
+  // so caching them avoids re-hitting the upstream government service on
+  // every page load of the viewer.
+  private static manifestCache = new Map<string, { data: any; expiresAt: number }>();
+  private static readonly MANIFEST_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
   static async getManifest(id: string): Promise<any> {
+    const cached = this.manifestCache.get(id);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+
     const targetUrl = `https://archiviodigitale-icar.cultura.gov.it/metadata/${id}/manifest.json?type=archive`;
 
     const response = await fetch(targetUrl, {
@@ -70,6 +81,8 @@ export class CatastoService {
       throw new Error(`Archivio Icar error: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    this.manifestCache.set(id, { data, expiresAt: Date.now() + this.MANIFEST_CACHE_TTL_MS });
+    return data;
   }
 }

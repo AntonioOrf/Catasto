@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import {
   Search,
   MapPin,
@@ -19,7 +18,6 @@ import {
   Users,
 } from "lucide-react";
 
-import CustomSelect from "../../../components/common/CustomSelect";
 import CustomAutocomplete from "../../../components/common/CustomAutocomplete";
 import CustomNumberInput from "../../../components/common/CustomNumberInput";
 import { useFilters } from "../../../context/FilterContext";
@@ -28,6 +26,8 @@ interface FilterPanelProps {
   loading: boolean;
   fetchData: (page: number) => void;
   filterOptions?: {
+    bestiame: any[];
+    rapporto: any[];
     immigrazione: any[];
     mestieri: any[];
     serie: any[];
@@ -99,8 +99,6 @@ export default function FilterPanel({
   // Classi riutilizzabili per pulizia codice
   const inputClasses =
     "block w-full pl-9 md:pl-10 pr-3 py-2 md:py-3 border border-border-base bg-bg-main text-text-main focus:outline-none focus:ring-2 focus:ring-bg-header font-serif text-base md:text-lg placeholder:text-text-accent placeholder:opacity-50 transition-colors";
-  const smallInputClasses =
-    "block w-full pl-8 pr-2 py-2 border border-border-base bg-bg-main text-text-main focus:outline-none focus:ring-1 focus:ring-bg-header text-sm placeholder:text-text-accent placeholder:opacity-50 transition-colors";
   const labelClasses =
     "block text-xs md:text-sm font-semibold text-item-selected mb-1 md:mb-2 uppercase tracking-wider";
 
