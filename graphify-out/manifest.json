@@ -1,0 +1,357 @@
+{
+  "backend-catasto/check-db.ts": {
+    "mtime": 1785071182.956007,
+    "ast_hash": "15ddb42e671f924262ae60aebd40b12c",
+    "semantic_hash": "15ddb42e671f924262ae60aebd40b12c"
+  },
+  "backend-catasto/package.json": {
+    "mtime": 1785071182.9570165,
+    "ast_hash": "0bd71b7b59cc04104ad47e51ca012e98",
+    "semantic_hash": "0bd71b7b59cc04104ad47e51ca012e98"
+  },
+  "backend-catasto/src/config/db.ts": {
+    "mtime": 1785071182.9589777,
+    "ast_hash": "7e63ce44f6c573bc809fc072acdac192",
+    "semantic_hash": "7e63ce44f6c573bc809fc072acdac192"
+  },
+  "backend-catasto/src/controllers/catasto.controller.ts": {
+    "mtime": 1785071182.9599535,
+    "ast_hash": "478ee9ba3c93b440e25cd3aad26851e7",
+    "semantic_hash": "478ee9ba3c93b440e25cd3aad26851e7"
+  },
+  "backend-catasto/src/controllers/filter.controller.ts": {
+    "mtime": 1785071182.9609313,
+    "ast_hash": "62b6eabd06672ac63c06831c3501c029",
+    "semantic_hash": "62b6eabd06672ac63c06831c3501c029"
+  },
+  "backend-catasto/src/middlewares/error.middleware.ts": {
+    "mtime": 1785071182.9619062,
+    "ast_hash": "53ed34ac92d16a819dcfbd484f3822b0",
+    "semantic_hash": "53ed34ac92d16a819dcfbd484f3822b0"
+  },
+  "backend-catasto/src/models/common.model.ts": {
+    "mtime": 1785071182.962883,
+    "ast_hash": "616ff5d7d6256991d825d730a7498d0a",
+    "semantic_hash": "616ff5d7d6256991d825d730a7498d0a"
+  },
+  "backend-catasto/src/models/fuoco.model.ts": {
+    "mtime": 1785071182.962883,
+    "ast_hash": "29c23842bb1d034383712fce1854dc3b",
+    "semantic_hash": "29c23842bb1d034383712fce1854dc3b"
+  },
+  "backend-catasto/src/routes/catasto.routes.ts": {
+    "mtime": 1785071182.9653752,
+    "ast_hash": "5d38e1f8afdb50f345c01b9248d80fbf",
+    "semantic_hash": "5d38e1f8afdb50f345c01b9248d80fbf"
+  },
+  "backend-catasto/src/routes/filter.routes.ts": {
+    "mtime": 1785071182.9653752,
+    "ast_hash": "041fd853dc3a08b8aa3984815a44ae09",
+    "semantic_hash": "041fd853dc3a08b8aa3984815a44ae09"
+  },
+  "backend-catasto/src/routes/mestieri.routes.ts": {
+    "mtime": 1785071182.9653752,
+    "ast_hash": "3e811841eb988f23a01146dc072409fb",
+    "semantic_hash": "3e811841eb988f23a01146dc072409fb"
+  },
+  "backend-catasto/src/routes/parenti.routes.ts": {
+    "mtime": 1785071182.9668832,
+    "ast_hash": "36b8016bdedcb0efee47179c386d7276",
+    "semantic_hash": "36b8016bdedcb0efee47179c386d7276"
+  },
+  "backend-catasto/src/server.ts": {
+    "mtime": 1785071182.967868,
+    "ast_hash": "d115e50110a571dbb7ef2312c545abfa",
+    "semantic_hash": "d115e50110a571dbb7ef2312c545abfa"
+  },
+  "backend-catasto/src/services/catasto.service.ts": {
+    "mtime": 1785071182.9688432,
+    "ast_hash": "056f2d9dd78c4c6454a376ce4be495e9",
+    "semantic_hash": "056f2d9dd78c4c6454a376ce4be495e9"
+  },
+  "backend-catasto/src/utils/query-builder.ts": {
+    "mtime": 1785071182.9698265,
+    "ast_hash": "72891322127b98e2809bc0892ec79d85",
+    "semantic_hash": "72891322127b98e2809bc0892ec79d85"
+  },
+  "backend-catasto/tsconfig.json": {
+    "mtime": 1785071182.9708018,
+    "ast_hash": "b426bc129caddb9210788d871214144e",
+    "semantic_hash": "b426bc129caddb9210788d871214144e"
+  },
+  "frontend-catasto/eslint.config.js": {
+    "mtime": 1785071182.9776795,
+    "ast_hash": "c15fd0f45c689a8b77c8ff6fe6fada9b",
+    "semantic_hash": "c15fd0f45c689a8b77c8ff6fe6fada9b"
+  },
+  "frontend-catasto/package.json": {
+    "mtime": 1785071182.9806056,
+    "ast_hash": "943869f84cdf67d17c502a6c822b7a29",
+    "semantic_hash": "943869f84cdf67d17c502a6c822b7a29"
+  },
+  "frontend-catasto/postcss.config.js": {
+    "mtime": 1785071182.9806056,
+    "ast_hash": "8e5f2021f5b1721b527c842f43f78c73",
+    "semantic_hash": "8e5f2021f5b1721b527c842f43f78c73"
+  },
+  "frontend-catasto/src/App.tsx": {
+    "mtime": 1785071182.983535,
+    "ast_hash": "02d2075a8df3548858cd427d14bce060",
+    "semantic_hash": "02d2075a8df3548858cd427d14bce060"
+  },
+  "frontend-catasto/src/api/catastoService.ts": {
+    "mtime": 1785071182.9845111,
+    "ast_hash": "97c837bfcae1c6339db162aa6f250bbe",
+    "semantic_hash": "97c837bfcae1c6339db162aa6f250bbe"
+  },
+  "frontend-catasto/src/api/client.ts": {
+    "mtime": 1785071182.9845111,
+    "ast_hash": "0b1da6345477ac32e3dae7aa6a57601b",
+    "semantic_hash": "0b1da6345477ac32e3dae7aa6a57601b"
+  },
+  "frontend-catasto/src/components/common/CustomAutocomplete.tsx": {
+    "mtime": 1785071182.9909127,
+    "ast_hash": "b933e92b1bb3f8762b7c9acad59d0faa",
+    "semantic_hash": "b933e92b1bb3f8762b7c9acad59d0faa"
+  },
+  "frontend-catasto/src/components/common/CustomNumberInput.tsx": {
+    "mtime": 1785071182.9918897,
+    "ast_hash": "6d7e682e764c54aec48b91d966f6537e",
+    "semantic_hash": "6d7e682e764c54aec48b91d966f6537e"
+  },
+  "frontend-catasto/src/components/common/CustomSelect.tsx": {
+    "mtime": 1785071182.992865,
+    "ast_hash": "f77663a1c2aee48dd27e8c799d6e9e6f",
+    "semantic_hash": "f77663a1c2aee48dd27e8c799d6e9e6f"
+  },
+  "frontend-catasto/src/components/common/Spinner.tsx": {
+    "mtime": 1785071182.9938424,
+    "ast_hash": "ae4b3689eb7d5f3c03aefb7b305eb515",
+    "semantic_hash": "ae4b3689eb7d5f3c03aefb7b305eb515"
+  },
+  "frontend-catasto/src/components/layout/Footer.tsx": {
+    "mtime": 1785071182.9948168,
+    "ast_hash": "5edeeb53b2294d57811d9b9fb9a93359",
+    "semantic_hash": "5edeeb53b2294d57811d9b9fb9a93359"
+  },
+  "frontend-catasto/src/components/layout/Header.tsx": {
+    "mtime": 1785071182.9957945,
+    "ast_hash": "03f7d8e8e999fcf86f16578913d6fa4c",
+    "semantic_hash": "03f7d8e8e999fcf86f16578913d6fa4c"
+  },
+  "frontend-catasto/src/components/layout/Sidebar.tsx": {
+    "mtime": 1785071182.9968002,
+    "ast_hash": "c74503353e4b7febd67e76f063423269",
+    "semantic_hash": "c74503353e4b7febd67e76f063423269"
+  },
+  "frontend-catasto/src/components/ui/Form.tsx": {
+    "mtime": 1785071182.9977858,
+    "ast_hash": "13aa981c5df72ad399ead7bb69f1a9b5",
+    "semantic_hash": "13aa981c5df72ad399ead7bb69f1a9b5"
+  },
+  "frontend-catasto/src/components/ui/Table.tsx": {
+    "mtime": 1785071182.9987617,
+    "ast_hash": "ae2b999be84750c1387f0c83804b7905",
+    "semantic_hash": "ae2b999be84750c1387f0c83804b7905"
+  },
+  "frontend-catasto/src/context/FilterContext.tsx": {
+    "mtime": 1785071183.000714,
+    "ast_hash": "16b68891d6dd353903ac8616221fe64f",
+    "semantic_hash": "16b68891d6dd353903ac8616221fe64f"
+  },
+  "frontend-catasto/src/features/catasto/api/get-fuochi.ts": {
+    "mtime": 1785071183.0026672,
+    "ast_hash": "a0f13cc9136cf55b6f3847dea1a20615",
+    "semantic_hash": "a0f13cc9136cf55b6f3847dea1a20615"
+  },
+  "frontend-catasto/src/features/catasto/api/get-manifest.ts": {
+    "mtime": 1785071183.003644,
+    "ast_hash": "ae4e2b79fe49697e5be2997266941ed1",
+    "semantic_hash": "ae4e2b79fe49697e5be2997266941ed1"
+  },
+  "frontend-catasto/src/features/catasto/components/ArchivioViewerModal.tsx": {
+    "mtime": 1785071183.005597,
+    "ast_hash": "81f8914fc9248237f4fd0944d67fec83",
+    "semantic_hash": "81f8914fc9248237f4fd0944d67fec83"
+  },
+  "frontend-catasto/src/features/catasto/components/CatastoRow.tsx": {
+    "mtime": 1785071183.0075889,
+    "ast_hash": "5c9b9b5260d1ae8e19710b522e7b2e76",
+    "semantic_hash": "5c9b9b5260d1ae8e19710b522e7b2e76"
+  },
+  "frontend-catasto/src/features/catasto/components/CatastoTable.tsx": {
+    "mtime": 1785071183.0085633,
+    "ast_hash": "35bd8b3752f0d29ddf88c65c0062ee4b",
+    "semantic_hash": "35bd8b3752f0d29ddf88c65c0062ee4b"
+  },
+  "frontend-catasto/src/features/catasto/components/FilterPanel.tsx": {
+    "mtime": 1785071183.009541,
+    "ast_hash": "1266fba37d1b91b51301037bd1bb6e79",
+    "semantic_hash": "1266fba37d1b91b51301037bd1bb6e79"
+  },
+  "frontend-catasto/src/features/catasto/components/Pagination.tsx": {
+    "mtime": 1785071183.009541,
+    "ast_hash": "fd1ae90ff62dde22b74831fd289fde25",
+    "semantic_hash": "fd1ae90ff62dde22b74831fd289fde25"
+  },
+  "frontend-catasto/src/hooks/useCatastoData.ts": {
+    "mtime": 1785071183.011495,
+    "ast_hash": "e559eae00293f4dc8f7f7ac2d4c29076",
+    "semantic_hash": "e559eae00293f4dc8f7f7ac2d4c29076"
+  },
+  "frontend-catasto/src/hooks/useCatastoFilters.ts": {
+    "mtime": 1785071183.011495,
+    "ast_hash": "306079ba7bf46073095816dfedbff587",
+    "semantic_hash": "306079ba7bf46073095816dfedbff587"
+  },
+  "frontend-catasto/src/hooks/useCatastoSidebar.ts": {
+    "mtime": 1785071183.012473,
+    "ast_hash": "6bb5e12ae126be309cb95e4dd239d39b",
+    "semantic_hash": "6bb5e12ae126be309cb95e4dd239d39b"
+  },
+  "frontend-catasto/src/hooks/useDarkMode.ts": {
+    "mtime": 1785071183.0134459,
+    "ast_hash": "9fdf5ca276b578454f1a62e628753a3b",
+    "semantic_hash": "9fdf5ca276b578454f1a62e628753a3b"
+  },
+  "frontend-catasto/src/lib/api-client.ts": {
+    "mtime": 1785071183.015399,
+    "ast_hash": "a63045007b8b98dd32cf18eb306483e0",
+    "semantic_hash": "a63045007b8b98dd32cf18eb306483e0"
+  },
+  "frontend-catasto/src/main.tsx": {
+    "mtime": 1785071183.015399,
+    "ast_hash": "5a78f5cf84597a02e313e3850afe2a67",
+    "semantic_hash": "5a78f5cf84597a02e313e3850afe2a67"
+  },
+  "frontend-catasto/src/pages/ContattiPage.tsx": {
+    "mtime": 1785071183.0169039,
+    "ast_hash": "9ca21668fb20eb8c0719290790530fb2",
+    "semantic_hash": "9ca21668fb20eb8c0719290790530fb2"
+  },
+  "frontend-catasto/src/pages/HomePage.tsx": {
+    "mtime": 1785071183.017886,
+    "ast_hash": "e0dc130953a5034e2f7b5d4a15481b32",
+    "semantic_hash": "e0dc130953a5034e2f7b5d4a15481b32"
+  },
+  "frontend-catasto/src/pages/InfoPage.tsx": {
+    "mtime": 1785071183.0188658,
+    "ast_hash": "85a27c6946e3a22b56c8a29e9597f5eb",
+    "semantic_hash": "85a27c6946e3a22b56c8a29e9597f5eb"
+  },
+  "frontend-catasto/src/pages/MappaPage.tsx": {
+    "mtime": 1785071183.0198517,
+    "ast_hash": "f093e04edb9ba9d4b7656f133d3c4bec",
+    "semantic_hash": "f093e04edb9ba9d4b7656f133d3c4bec"
+  },
+  "frontend-catasto/src/providers/Providers.tsx": {
+    "mtime": 1785071183.021805,
+    "ast_hash": "7250765cc78f9f946bc2f61cfb75d8e2",
+    "semantic_hash": "7250765cc78f9f946bc2f61cfb75d8e2"
+  },
+  "frontend-catasto/src/utils/constants.ts": {
+    "mtime": 1785071183.022778,
+    "ast_hash": "4520dd9c01e4d86962057899d6a01586",
+    "semantic_hash": "4520dd9c01e4d86962057899d6a01586"
+  },
+  "frontend-catasto/tsconfig.json": {
+    "mtime": 1785071183.022778,
+    "ast_hash": "6175ca5365ffa745d28b1ec8e721a22b",
+    "semantic_hash": "6175ca5365ffa745d28b1ec8e721a22b"
+  },
+  "frontend-catasto/tsconfig.node.json": {
+    "mtime": 1785071183.0237534,
+    "ast_hash": "b2e18e9dd4aa8737060220b546b5443a",
+    "semantic_hash": "b2e18e9dd4aa8737060220b546b5443a"
+  },
+  "frontend-catasto/vercel.json": {
+    "mtime": 1785071183.0237534,
+    "ast_hash": "cb337f17c40ff241d90dad33d18bc6ed",
+    "semantic_hash": "cb337f17c40ff241d90dad33d18bc6ed"
+  },
+  "frontend-catasto/vite.config.js": {
+    "mtime": 1785071183.0247295,
+    "ast_hash": "708a4af0b7ae905df6385288d78d0b1e",
+    "semantic_hash": "708a4af0b7ae905df6385288d78d0b1e"
+  },
+  "package.json": {
+    "mtime": 1785071183.028677,
+    "ast_hash": "c738e003b81d2dd24ac9272e4be26b7c",
+    "semantic_hash": "c738e003b81d2dd24ac9272e4be26b7c"
+  },
+  "packages/shared/package.json": {
+    "mtime": 1785071183.0306299,
+    "ast_hash": "602df0b3a87af237193da13deaeb94e9",
+    "semantic_hash": "602df0b3a87af237193da13deaeb94e9"
+  },
+  "packages/shared/src/index.ts": {
+    "mtime": 1785071183.0316093,
+    "ast_hash": "6e87b2b01f4a4f752e918b26d59f6ef9",
+    "semantic_hash": "6e87b2b01f4a4f752e918b26d59f6ef9"
+  },
+  "packages/shared/tsconfig.json": {
+    "mtime": 1785071183.0325859,
+    "ast_hash": "ef397ba01592fbb5f608e245bb62da8d",
+    "semantic_hash": "ef397ba01592fbb5f608e245bb62da8d"
+  },
+  "test_db2.mjs": {
+    "mtime": 1785071183.0345378,
+    "ast_hash": "be0822945c6ac6511e4c45ff63246391",
+    "semantic_hash": "be0822945c6ac6511e4c45ff63246391"
+  },
+  "tsconfig.base.json": {
+    "mtime": 1785071183.0345378,
+    "ast_hash": "808e0879039febe05e442a1ed8a9f906",
+    "semantic_hash": "808e0879039febe05e442a1ed8a9f906"
+  },
+  "docker-compose.yml": {
+    "mtime": 1785071182.972756,
+    "ast_hash": "a7e14bf0a9130bb8658452f85b33c4ea",
+    "semantic_hash": "a7e14bf0a9130bb8658452f85b33c4ea"
+  },
+  "docs/backend.md": {
+    "mtime": 1785071182.973733,
+    "ast_hash": "5933c585c01ff1db0d0d602a65f32c55",
+    "semantic_hash": "5933c585c01ff1db0d0d602a65f32c55"
+  },
+  "docs/frontend.md": {
+    "mtime": 1785071182.9747088,
+    "ast_hash": "7a3f3f8f2c8699db98374c8202dcc908",
+    "semantic_hash": "7a3f3f8f2c8699db98374c8202dcc908"
+  },
+  "docs/guides.md": {
+    "mtime": 1785071182.9747088,
+    "ast_hash": "b78b34bc9eb4f471b8fddb39d032d77d",
+    "semantic_hash": "b78b34bc9eb4f471b8fddb39d032d77d"
+  },
+  "frontend-catasto/index.html": {
+    "mtime": 1785071182.978655,
+    "ast_hash": "10dc64d0f3be8b026b68e825d8794904",
+    "semantic_hash": "10dc64d0f3be8b026b68e825d8794904"
+  },
+  "readme.md": {
+    "mtime": 1785071183.0335596,
+    "ast_hash": "87afbdf741d9395b5386cc9188ecf625",
+    "semantic_hash": "87afbdf741d9395b5386cc9188ecf625"
+  },
+  "frontend-catasto/public/vite.svg": {
+    "mtime": 1785071182.9815805,
+    "ast_hash": "8e3a10e157f75ada21ab742c022d5430",
+    "semantic_hash": "8e3a10e157f75ada21ab742c022d5430"
+  },
+  "frontend-catasto/src/assets/Book.svg": {
+    "mtime": 1785071182.9854865,
+    "ast_hash": "c5e1a0eb5d47d0f7702f6b9d8d6c92af",
+    "semantic_hash": "c5e1a0eb5d47d0f7702f6b9d8d6c92af"
+  },
+  "frontend-catasto/src/assets/faviconV2.png": {
+    "mtime": 1785071182.9879842,
+    "ast_hash": "746f05bcfb8219711473bbbdb626dc44",
+    "semantic_hash": "746f05bcfb8219711473bbbdb626dc44"
+  },
+  "frontend-catasto/src/assets/react.svg": {
+    "mtime": 1785071182.9889593,
+    "ast_hash": "f0402b67b6ce880f65666bb49e841696",
+    "semantic_hash": "f0402b67b6ce880f65666bb49e841696"
+  }
+}

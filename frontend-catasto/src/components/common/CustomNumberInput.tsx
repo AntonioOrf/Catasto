@@ -1,4 +1,3 @@
-import React from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
 interface CustomNumberInputProps {

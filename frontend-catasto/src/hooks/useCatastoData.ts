@@ -16,7 +16,6 @@ export function useCatastoData(filters: any) {
   } = useQuery({
     queryKey: ["catastoData", filters, page],
     queryFn: ({ signal }) => fetchCatastoData(filters, page, 50, signal),
-    // @ts-ignore - keeping previous behavior
     placeholderData: (previousData: any) => previousData,
   });
 

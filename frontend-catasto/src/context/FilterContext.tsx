@@ -13,6 +13,7 @@ export const FilterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook colocated with its provider, common pattern
 export const useFilters = () => {
   const context = useContext(FilterContext);
   if (!context) {
