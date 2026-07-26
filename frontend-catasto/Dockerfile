@@ -10,10 +10,15 @@ COPY backend-catasto/package.json ./backend-catasto/
 COPY packages/shared/package.json ./packages/shared/
 
 # Installazione pulita delle dipendenze (molto più veloce con il lockfile)
-RUN npm ci
+# --ignore-scripts: il sorgente di @catasto/shared non e' ancora presente in
+# questo layer, quindi il suo script "prepare" (tsc) non troverebbe nulla da compilare
+RUN npm ci --ignore-scripts
 
 # Copiamo il codice sorgente
 COPY . .
+
+# Build di @catasto/shared prima del frontend, che lo importa a runtime
+RUN npm run build -w @catasto/shared
 
 # Build del frontend tramite il workspace
 RUN npm run build -w frontend-catasto
