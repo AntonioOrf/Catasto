@@ -1,3 +1,7 @@
+export * from "./fields.js";
+export * from "./query-ast.js";
+export * from "./segnalazioni.js";
+
 export interface Fuoco {
   id: number;
   nome: string;
@@ -19,6 +23,12 @@ export interface Fuoco {
   piviere?: string;
   serie?: string;
   codice_archivio?: string;
+  /**
+   * Dato redazionale assente nel dump dell'Archivio: valorizzato solo dalle
+   * segnalazioni accettate, quindi null per la grande maggioranza dei fuochi.
+   * La UI non deve mostrare nulla quando manca.
+   */
+  segnatura_portata?: string | null;
 }
 
 export interface SidebarItem {

@@ -1,7 +1,8 @@
 import { FuocoModel } from "../models/fuoco.model.js";
 import { CommonModel } from "../models/common.model.js";
 import { buildQuery, buildOrderBy, QueryFilters } from "../utils/query-builder.js";
-import { Fuoco, ApiResponse, PaginationInfo, SidebarItem, Parenti } from "@catasto/shared";
+import { buildQueryFromAst } from "../utils/query-ast-builder.js";
+import { Fuoco, ApiResponse, PaginationInfo, SidebarItem, Parenti, QueryGroup } from "@catasto/shared";
 
 export class CatastoService {
   static async getAllFuochi(
@@ -45,6 +46,43 @@ export class CatastoService {
     const allUsedTables = new Set([...queryTables, ...orderTables]);
 
     return await FuocoModel.getSidebar(conditions, params, orderByClause, limit, offset, allUsedTables);
+  }
+
+  /**
+   * Ricerca avanzata: stessa pipeline della ricerca semplice, cambia solo il
+   * compilatore delle condizioni. `view` evita di duplicare l'endpoint per la
+   * sidebar, che filtra sugli stessi criteri ma proietta meno colonne.
+   */
+  static async queryFuochi(
+    ast: QueryGroup,
+    page: number = 1,
+    limit: number = 50,
+    sort_by: string = "nome",
+    order: string = "ASC",
+    view: "table" | "sidebar" = "table"
+  ): Promise<ApiResponse<Fuoco[]> | SidebarItem[]> {
+    const offset = (page - 1) * limit;
+    const { conditions, params, usedTables: queryTables } = buildQueryFromAst(ast);
+    const { clause: orderByClause, usedTables: orderTables } = buildOrderBy(sort_by, order);
+    const allUsedTables = new Set([...queryTables, ...orderTables]);
+
+    if (view === "sidebar") {
+      return await FuocoModel.getSidebar(conditions, params, orderByClause, limit, offset, allUsedTables);
+    }
+
+    const [total, data] = await Promise.all([
+      FuocoModel.count(conditions, params, allUsedTables),
+      FuocoModel.findAll(conditions, params, orderByClause, limit, offset)
+    ]);
+
+    const pagination: PaginationInfo = {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+
+    return { data, pagination };
   }
 
   static async getParenti(fuocoId: number): Promise<Parenti[]> {

@@ -95,6 +95,10 @@ export default function HomePage() {
       filterCasa: filters.filterCasa,
       sortBy: filters.sortBy,
       sortOrder: filters.sortOrder,
+      // `queryAst` (già ripulito dalle condizioni incomplete) e non `ast`:
+      // qui serve l'albero eseguibile, non quello in editing.
+      advancedMode: filters.advancedMode,
+      ast: filters.queryAst,
     }),
     [
       filters.searchPersona,
@@ -122,6 +126,8 @@ export default function HomePage() {
       filters.filterCasa,
       filters.sortBy,
       filters.sortOrder,
+      filters.advancedMode,
+      filters.queryAst,
     ],
   );
 
