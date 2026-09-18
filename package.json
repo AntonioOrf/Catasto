@@ -11,6 +11,8 @@
     "predev": "npm run build -w @catasto/shared",
     "dev": "concurrently \"npm run dev -w catasto-frontend\" \"npm run dev -w catasto-backend\"",
     "build": "npm run build --workspaces --if-present",
+    "start": "node backend-catasto/dist/server.js",
+    "db:migrate": "node backend-catasto/dist/scripts/migrate.js",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   },
