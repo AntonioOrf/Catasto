@@ -16,11 +16,14 @@ import {
   Map,
   Navigation,
   Users,
+  RotateCcw,
+  SlidersHorizontal,
 } from "lucide-react";
 
 import CustomAutocomplete from "../../../components/common/CustomAutocomplete";
 import CustomNumberInput from "../../../components/common/CustomNumberInput";
 import { useFilters } from "../../../context/FilterContext";
+import AdvancedSearchPanel from "./AdvancedSearchPanel";
 
 interface FilterPanelProps {
   loading: boolean;
@@ -92,8 +95,16 @@ export default function FilterPanel({
     setFilterPiviere,
     filterPopolo,
     setFilterPopolo,
+    activeFilterCount,
+    advancedFilterCount,
+    astConditionCount,
+    resetFilters,
+    advancedMode,
+    setAdvancedMode,
+    ast,
+    setAst,
   } = filters;
-  
+
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Classi riutilizzabili per pulizia codice
@@ -106,7 +117,10 @@ export default function FilterPanel({
     <div className="bg-bg-sidebar rounded-sm shadow-md border border-border-base mb-6 relative transition-colors duration-300">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent rounded-t-sm"></div>
       <div className="p-4 md:p-6 pt-6 md:pt-8">
-        <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-end mb-4">
+        {/* In modalità avanzata i filtri semplici non vengono applicati: la
+            query è interamente descritta dall'AST. Mostrarli comunque
+            significherebbe mostrare controlli che non fanno nulla. */}
+        <div className={`flex flex-col md:flex-row gap-4 md:gap-6 items-end mb-4 ${advancedMode ? "hidden" : ""}`}>
           <div className="flex-1 w-full">
             <label className={labelClasses}>Cerca Persona</label>
             <div className="relative">
@@ -160,22 +174,64 @@ export default function FilterPanel({
           </button>
         </div>
 
-        <div className="flex justify-start mb-2">
+        <div className="flex flex-wrap justify-end items-center gap-3 md:gap-4 mb-2">
           <button
-            onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-            className="flex items-center gap-2 text-primary font-bold text-xs md:text-sm uppercase tracking-wider hover:underline focus:outline-none transition-colors"
+            onClick={resetFilters}
+            disabled={activeFilterCount === 0}
+            className="flex items-center gap-2 text-text-accent font-bold text-xs md:text-sm uppercase tracking-wider hover:underline focus:outline-none transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
+            title="Azzera tutti i filtri e l'ordinamento"
           >
-            <Filter className="h-4 w-4" />
-            {isFiltersOpen ? "Nascondi Filtri" : "Mostra Filtri Avanzati"}
-            {isFiltersOpen ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
+            <RotateCcw className="h-4 w-4" />
+            Resetta Filtri
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-text-accent/15 text-[10px] leading-none">
+                {activeFilterCount}
+              </span>
             )}
           </button>
+
+          <button
+            onClick={() => setAdvancedMode(!advancedMode)}
+            className="flex items-center gap-2 text-text-accent font-bold text-xs md:text-sm uppercase tracking-wider hover:underline focus:outline-none transition-colors"
+            aria-pressed={advancedMode}
+            title="Costruisci query con AND/OR, gruppi e negazioni"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {advancedMode ? "Ricerca Semplice" : "Ricerca Avanzata"}
+            {advancedMode && astConditionCount > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-text-accent/15 text-[10px] leading-none">
+                {astConditionCount}
+              </span>
+            )}
+          </button>
+
+          {!advancedMode && (
+            <button
+              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+              className="flex items-center gap-2 text-primary font-bold text-xs md:text-sm uppercase tracking-wider hover:underline focus:outline-none transition-colors"
+              aria-expanded={isFiltersOpen}
+            >
+              <Filter className="h-4 w-4" />
+              {isFiltersOpen ? "Nascondi Filtri" : "Mostra Filtri Avanzati"}
+              {advancedFilterCount > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-primary text-white text-[10px] leading-none">
+                  {advancedFilterCount}
+                </span>
+              )}
+              {isFiltersOpen ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
+          )}
         </div>
 
-        {isFiltersOpen && (
+        {advancedMode && (
+          <AdvancedSearchPanel ast={ast} onChange={setAst} options={filterOptions as any} />
+        )}
+
+        {isFiltersOpen && !advancedMode && (
           <div className="bg-bg-main border border-border-base rounded p-3 md:p-4 mt-2 transition-all duration-300">
             {/* Griglia Mestieri e Status */}
             <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">

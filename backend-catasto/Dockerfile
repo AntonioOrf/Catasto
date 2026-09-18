@@ -40,6 +40,9 @@ RUN npm ci --omit=dev --ignore-scripts
 COPY --from=build /app/backend-catasto/dist ./backend-catasto/dist
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 
+# Gli .sql sono letti a runtime dal runner di migrazioni, non bundlati da tsup
+COPY --from=build /app/backend-catasto/migrations ./backend-catasto/migrations
+
 EXPOSE 3005
 
 # Avviamo il server puntando al file compilato nel workspace del backend

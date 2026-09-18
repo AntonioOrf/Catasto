@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchSidebarData } from "../api/catastoService";
+import { fetchSidebarAuto } from "../api/catastoService";
 
 export function useCatastoSidebar(filters: any) {
   const [sidebarData, setSidebarData] = useState<any[]>([]);
@@ -41,6 +41,8 @@ export function useCatastoSidebar(filters: any) {
     filters.filterDeduzioniMax,
     filters.sortBy,
     filters.sortOrder,
+    filters.advancedMode,
+    filters.ast,
   ]);
 
   const loadSidebar = async (pageToLoad: number, isNewSearch = false, signal?: AbortSignal) => {
@@ -48,7 +50,7 @@ export function useCatastoSidebar(filters: any) {
     setSidebarLoading(true);
     try {
       const limit = 1000;
-      const result = await fetchSidebarData(filters, pageToLoad, limit, signal);
+      const result = await fetchSidebarAuto(filters, pageToLoad, limit, signal);
       const newItems = Array.isArray(result) ? result : (result.data || []);
 
       if (isNewSearch) {
@@ -87,7 +89,7 @@ export function useCatastoSidebar(filters: any) {
     setSidebarLoading(true);
     const superLimit = targetRowIndex + limitSidebar;
 
-    fetchSidebarData(filters, 1, superLimit, signal)
+    fetchSidebarAuto(filters, 1, superLimit, signal)
       .then((result) => {
         const newItems = Array.isArray(result) ? result : (result.data || []);
         setSidebarData(newItems);

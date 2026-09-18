@@ -13,8 +13,11 @@ import {
   PawPrint,
   Flag,
   Hammer,
-  ExternalLink
+  ExternalLink,
+  Flag as FlagIcon,
+  ScrollText
 } from "lucide-react";
+import type { TipoSegnalazione } from "@catasto/shared";
 
 interface CatastoRowProps {
   row: any;
@@ -23,10 +26,61 @@ interface CatastoRowProps {
   loadingParenti: boolean;
   parentiData: any[];
   onViewArchivio?: (row: any) => void;
+  onSegnala?: (row: any, tipo?: TipoSegnalazione) => void;
 }
 
+/**
+ * La segnatura della portata non esiste nel dump dell'Archivio: compare solo
+ * per i fuochi in cui una segnalazione è stata verificata e accettata. Quando
+ * manca non si mostra nulla - né etichetta né placeholder - perché un "N/D"
+ * suggerirebbe un dato assente per quel fuoco invece che per l'intera fonte.
+ */
+const SegnaturaPortata = ({ row, onSegnala }: { row: any; onSegnala?: CatastoRowProps["onSegnala"] }) => {
+  if (!row.segnatura_portata) {
+    return onSegnala ? (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onSegnala(row, "segnatura");
+        }}
+        className="text-[10px] md:text-xs text-text-accent hover:text-primary underline underline-offset-2 transition-colors"
+      >
+        Segnatura della portata non nota — contribuisci
+      </button>
+    ) : null;
+  }
+
+  return (
+    <div className="flex items-start gap-2">
+      <ScrollText className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+      <div>
+        <span className="text-[10px] md:text-xs text-text-accent uppercase block">
+          Segnatura della portata
+        </span>
+        <span className="text-text-main font-mono text-xs md:text-sm">{row.segnatura_portata}</span>
+      </div>
+    </div>
+  );
+};
+
+const SegnalaButton = ({ row, onSegnala }: { row: any; onSegnala?: CatastoRowProps["onSegnala"] }) => {
+  if (!onSegnala) return null;
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onSegnala(row, "dato_errato");
+      }}
+      className="flex items-center gap-1 text-[10px] md:text-xs text-text-accent hover:text-primary transition-colors uppercase tracking-wider"
+      title="Segnala un errore in questa scheda"
+    >
+      <FlagIcon className="h-3.5 w-3.5" /> Segnala un errore
+    </button>
+  );
+};
+
 const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
-  ({ row, expanded, onRowClick, loadingParenti, parentiData, onViewArchivio }, ref) => {
+  ({ row, expanded, onRowClick, loadingParenti, parentiData, onViewArchivio, onSegnala }, ref) => {
 
     const rowClasses = expanded
       ? "bg-primary/10 border-l-4 border-l-primary"
@@ -161,6 +215,10 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
                         {row.particolarita_fuoco || "Nessuna particolarità registrata."}
                       </p>
                     </div>
+                    <div className="pt-2 border-t border-dashed border-border-base flex flex-wrap items-center justify-between gap-2">
+                      <SegnaturaPortata row={row} onSegnala={onSegnala} />
+                      <SegnalaButton row={row} onSegnala={onSegnala} />
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -232,7 +290,7 @@ const DetailRow = ({ icon: Icon, label, value }: any) => (
 
 export const CatastoMobileCard = React.memo(
   forwardRef<HTMLDivElement, CatastoRowProps>(
-    ({ row, expanded, onRowClick, loadingParenti, parentiData, onViewArchivio }, ref) => {
+    ({ row, expanded, onRowClick, loadingParenti, parentiData, onViewArchivio, onSegnala }, ref) => {
       const cardClasses = expanded
         ? "bg-primary/10 border-primary"
         : "bg-bg-table border-border-base hover:border-primary/50";
@@ -337,6 +395,10 @@ export const CatastoMobileCard = React.memo(
                     <p className="italic text-text-main bg-bg-sidebar p-2 rounded border border-border-base">
                       {row.particolarita_fuoco || "Nessuna particolarità registrata."}
                     </p>
+                  </div>
+                  <div className="pt-2 border-t border-dashed border-border-base space-y-2">
+                    <SegnaturaPortata row={row} onSegnala={onSegnala} />
+                    <SegnalaButton row={row} onSegnala={onSegnala} />
                   </div>
                 </div>
               </div>

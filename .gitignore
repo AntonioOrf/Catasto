@@ -42,3 +42,10 @@ load-test.mjs
 init
 import_db.mjs
 Util
+
+CODEMAP.md
+CLAUDE.md
+codemap.html
+graphify-out/
+graphify-build.py
+TODO.md

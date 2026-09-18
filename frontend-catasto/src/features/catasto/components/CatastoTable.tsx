@@ -3,7 +3,9 @@ import { BookOpen, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import CatastoRow, { CatastoMobileCard } from "./CatastoRow";
 import Pagination from "./Pagination";
 import ArchivioViewerModal from "./ArchivioViewerModal";
+import SegnalazioneModal from "../../segnalazioni/components/SegnalazioneModal";
 import { useFilters } from "../../../context/FilterContext";
+import type { TipoSegnalazione } from "@catasto/shared";
 
 interface CatastoTableProps {
   data: any[];
@@ -35,12 +37,13 @@ export default function CatastoTable({
   handlePageChange,
 }: CatastoTableProps) {
   const { sortBy, sortOrder, handleSort }: any = useFilters();
-  const [viewerData, setViewerData] = useState({
+  const [viewerData, setViewerData] = useState<any>({
     isOpen: false,
     codiceArchivio: null,
     foglio: null,
     volume: null,
-    nome: null
+    nome: null,
+    row: null
   });
 
   const handleViewArchivio = React.useCallback((row: any) => {
@@ -49,13 +52,36 @@ export default function CatastoTable({
       codiceArchivio: row.codice_archivio,
       foglio: row.foglio,
       volume: row.volume,
-      nome: row.nome
+      nome: row.nome,
+      // La riga intera serve alla segnalazione aperta dal visore: da lì
+      // l'utente ha davanti la carta originale, è il momento migliore per
+      // trascrivere la segnatura.
+      row
     });
   }, []);
 
   const closeViewer = React.useCallback(() => {
-    setViewerData(prev => ({ ...prev, isOpen: false }));
+    setViewerData((prev: any) => ({ ...prev, isOpen: false }));
   }, []);
+
+  // La modale di segnalazione vive qui e non nella riga: una sola istanza per
+  // tabella invece di una per ognuna delle 50 righe della pagina.
+  const [segnalazione, setSegnalazione] = useState<{
+    isOpen: boolean;
+    row: any;
+    tipo: TipoSegnalazione;
+  }>({ isOpen: false, row: null, tipo: "dato_errato" });
+
+  const handleSegnala = React.useCallback(
+    (row: any, tipo: TipoSegnalazione = "dato_errato") =>
+      setSegnalazione({ isOpen: true, row, tipo }),
+    [],
+  );
+
+  const closeSegnalazione = React.useCallback(
+    () => setSegnalazione((prev) => ({ ...prev, isOpen: false })),
+    [],
+  );
 
   // Gestione icone ordinamento con colori dinamici
   const renderSortIcon = (columnKey: string) => {
@@ -142,6 +168,7 @@ export default function CatastoTable({
                     loadingParenti={loadingParenti}
                     parentiData={parentiData}
                     onViewArchivio={handleViewArchivio}
+                    onSegnala={handleSegnala}
                   />
                 ))
               ) : (
@@ -207,6 +234,16 @@ export default function CatastoTable({
         foglio={viewerData.foglio || ""}
         volume={viewerData.volume || ""}
         nome={viewerData.nome || ""}
+        onSegnalaSegnatura={
+          viewerData.row ? () => handleSegnala(viewerData.row, "segnatura") : undefined
+        }
+      />
+
+      <SegnalazioneModal
+        isOpen={segnalazione.isOpen}
+        onClose={closeSegnalazione}
+        row={segnalazione.row}
+        defaultTipo={segnalazione.tipo}
       />
     </div>
   );

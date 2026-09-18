@@ -10,11 +10,22 @@ import catastoRoutes from "./routes/catasto.routes.js";
 import filterRoutes from "./routes/filter.routes.js";
 import parentiRoutes from "./routes/parenti.routes.js";
 import mestieriRoutes from "./routes/mestieri.routes.js";
+import segnalazioneRoutes from "./routes/segnalazione.routes.js";
 
 dotenv.config({ quiet: true });
 
 const app = express();
 const PORT = process.env.PORT || 3005;
+
+// TRUST_PROXY = numero di proxy davanti al server (1 con il solo nginx del
+// compose). Serve a req.ip: senza, rate limit e hash anti-abuso vedrebbero
+// tutti lo stesso IP del reverse proxy. Non attivarlo "a fiducia": con
+// trust proxy attivo senza un proxy reale il client può falsificare
+// X-Forwarded-For e aggirare i limiti.
+const trustProxy = process.env.TRUST_PROXY;
+if (trustProxy) {
+  app.set("trust proxy", Number.isNaN(Number(trustProxy)) ? trustProxy : Number(trustProxy));
+}
 
 // CORS_ORIGIN: comma-separated list of allowed origins for production.
 // Left unset, CORS stays open (current behavior) so this doesn't silently
@@ -33,7 +44,10 @@ const allowedOrigins = corsOrigin?.split(",").map((o) => o.trim());
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: allowedOrigins ?? true }));
 app.use(compression() as any);
-app.use(express.json());
+// Limite esplicito: i body accettati sono un AST di ricerca o una segnalazione,
+// entrambi nell'ordine dei KB. Il default di express (100kb) è già stretto, ma
+// tenerlo scritto documenta l'intento.
+app.use(express.json({ limit: "64kb" }));
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -71,6 +85,7 @@ app.use("/api/catasto", catastoRoutes);
 app.use("/api/filters", filterRoutes);
 app.use("/api/parenti", parentiRoutes);
 app.use("/api/mestieri", mestieriRoutes);
+app.use("/api/segnalazioni", segnalazioneRoutes);
 
 // Error Handling
 app.use(errorHandler);
