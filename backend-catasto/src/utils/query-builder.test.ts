@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildOrderBy, buildQuery } from "./query-builder.js";
+import { ValidationError } from "./validation.js";
 
 describe("buildQuery", () => {
   it("returns the base condition with no params when no filters are given", () => {
@@ -10,7 +11,7 @@ describe("buildQuery", () => {
 
   it("parameterizes text filters instead of interpolating them into the SQL", () => {
     const { conditions, params } = buildQuery({ q_persona: "Rossi" });
-    expect(conditions).toContain("f.Nome_Fuoco LIKE ?");
+    expect(conditions).toContain("f.Nome_Fuoco LIKE ? ESCAPE '!'");
     expect(conditions).not.toContain("Rossi");
     expect(params).toEqual(["%Rossi%"]);
   });
@@ -18,8 +19,32 @@ describe("buildQuery", () => {
   it("expands comma-separated ids into one placeholder per id", () => {
     const { conditions, params, usedTables } = buildQuery({ serie: "1,2,3" });
     expect(conditions).toContain("tser.id_serie IN (?,?,?)");
-    expect(params).toEqual(["1", "2", "3"]);
+    expect(params).toEqual([1, 2, 3]);
     expect(usedTables.has("tser")).toBe(true);
+  });
+});
+
+describe("buildQuery - input ostili", () => {
+  it("neutralizza i jolly LIKE", () => {
+    const { params } = buildQuery({ q_localita: "%_" });
+    expect(params).toEqual(["%!%!_%", "%!%!_%", "%!%!_%", "%!%!_%"]);
+  });
+
+  it("rifiuta array e oggetti prodotti dal parser qs", () => {
+    expect(() => buildQuery({ mestiere: ["1", "2"] } as any)).toThrow(ValidationError);
+    expect(() => buildQuery({ q_persona: { a: "b" } } as any)).toThrow(ValidationError);
+  });
+
+  it("rifiuta testi troppo lunghi e id non numerici", () => {
+    expect(() => buildQuery({ q_persona: "a".repeat(201) })).toThrow(ValidationError);
+    expect(() => buildQuery({ serie: "1,2) OR (1=1" })).toThrow(ValidationError);
+    expect(() => buildQuery({ fortune_min: "abc" })).toThrow(ValidationError);
+  });
+
+  it("applica anche un minimo pari a zero", () => {
+    const { conditions, params } = buildQuery({ fortune_min: "0" });
+    expect(conditions).toContain("f.Fortune_Fuoco >= ?");
+    expect(params).toEqual([0]);
   });
 });
 
