@@ -176,6 +176,7 @@ function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp,
               onClick={() => onUpdate(path, () => null)}
               className="text-text-accent hover:text-red-500 transition-colors"
               title="Rimuovi gruppo"
+              aria-label="Rimuovi gruppo"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -347,6 +348,7 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
         onClick={onRemove}
         className="text-text-accent hover:text-red-500 transition-colors ml-auto"
         title="Rimuovi condizione"
+        aria-label="Rimuovi condizione"
       >
         <Trash2 className="h-4 w-4" />
       </button>

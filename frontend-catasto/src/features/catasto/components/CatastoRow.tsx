@@ -79,6 +79,19 @@ const SegnalaButton = ({ row, onSegnala }: { row: any; onSegnala?: CatastoRowPro
   );
 };
 
+/**
+ * Riga e card si espandono al click: senza questo handler restano
+ * irraggiungibili da tastiera. Il controllo sul target evita che Invio su un
+ * pulsante interno (visore, segnalazione) espanda anche la riga.
+ */
+const toggleOnKey = (id: number, onRowClick: (id: number) => void) => (e: React.KeyboardEvent) => {
+  if (e.target !== e.currentTarget) return;
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    onRowClick(id);
+  }
+};
+
 const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
   ({ row, expanded, onRowClick, loadingParenti, parentiData, onViewArchivio, onSegnala }, ref) => {
 
@@ -91,7 +104,10 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
         <tr
           ref={ref}
           onClick={() => onRowClick(row.id)}
-          className={`cursor-pointer transition-colors border-b border-border-base bg-bg-table ${rowClasses}`}
+          onKeyDown={toggleOnKey(row.id, onRowClick)}
+          tabIndex={0}
+          aria-expanded={expanded}
+          className={`cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2 border-b border-border-base bg-bg-table ${rowClasses}`}
         >
           {/* NOME E MESTIERE */}
           <td className="px-3 py-3 md:px-6 md:py-4">
@@ -299,7 +315,9 @@ export const CatastoMobileCard = React.memo(
         <div
           ref={ref}
           onClick={() => onRowClick(row.id)}
-          className={`p-4 rounded-lg border transition-all cursor-pointer shadow-sm ${cardClasses}`}
+          onKeyDown={toggleOnKey(row.id, onRowClick)}
+          tabIndex={0}
+          className={`focus-visible:outline-2 focus-visible:outline-primary p-4 rounded-lg border transition-all cursor-pointer shadow-sm ${cardClasses}`}
         >
           <div className="flex justify-between items-start">
             <div className="flex-1 min-w-0 pr-2">

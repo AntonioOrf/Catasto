@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, ZoomIn, ZoomOut, Maximize, AlertCircle, ExternalLink, ChevronLeft, ChevronRight, Flag } from 'lucide-react';
 import { API_URL } from '../../../api/client';
+import { useModal } from '../../../hooks/useModal';
 
 const SPLIT_VOLUMES: Record<string, { part1: { max: number; id: string }; part2: { min: number; id: string } }> = {
   '18': { part1: { max: 1187, id: '2722381' }, part2: { min: 1188, id: '2722382' } },
@@ -273,16 +274,8 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
     }
   }, [isOpen, codiceArchivio, foglio, fetchManifest]);
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModal(isOpen, onClose, dialogRef);
 
   if (!isOpen) return null;
 
@@ -330,12 +323,19 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg-main/95 backdrop-blur-sm p-0 sm:p-4 touch-none">
-      <div className="bg-bg-table border-0 sm:border border-border-base shadow-2xl sm:rounded-lg w-full max-w-6xl h-full sm:h-[90vh] flex flex-col overflow-hidden">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="viewer-title"
+        tabIndex={-1}
+        className="bg-bg-table border-0 sm:border border-border-base shadow-2xl sm:rounded-lg w-full max-w-6xl h-full sm:h-[90vh] flex flex-col overflow-hidden focus:outline-none"
+      >
         
         {/* Header Modale */}
         <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border-base bg-bg-sidebar">
           <div className="flex flex-col">
-            <h2 className="text-sm sm:text-base md:text-xl font-serif font-bold text-item-selected flex items-center gap-1.5 sm:gap-2">
+            <h2 id="viewer-title" className="text-sm sm:text-base md:text-xl font-serif font-bold text-item-selected dark:text-text-symbols flex items-center gap-1.5 sm:gap-2">
               <BookOpenIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
               <span className="hidden sm:inline">Archivio di Stato di Firenze - </span>
               Volume {volume || '?'}, Foglio {foglio || '?'}
@@ -351,6 +351,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
           </div>
           <button  
             title="Chiudi Visore"
+            aria-label="Chiudi visore"
             onClick={onClose} 
             className="text-text-main hover:text-red-500 hover:bg-border-base/50 p-2 rounded transition-colors"
           >
@@ -429,6 +430,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                   }}
                   className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-item-selected text-white p-2 sm:p-3 rounded-full shadow-lg backdrop-blur-sm transition-colors z-20 pointer-events-auto"
                   title="Pagina Precedente"
+                  aria-label="Pagina precedente"
                 >
                   <ChevronLeft className="h-5 w-5 sm:h-8 sm:w-8" />
                 </button>
@@ -444,6 +446,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                   }}
                   className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-item-selected text-white p-2 sm:p-3 rounded-full shadow-lg backdrop-blur-sm transition-colors z-20 pointer-events-auto"
                   title="Pagina Successiva"
+                  aria-label="Pagina successiva"
                 >
                   <ChevronRight className="h-5 w-5 sm:h-8 sm:w-8" />
                 </button>
@@ -452,7 +455,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
               {/* Preload delle pagine successive di nascosto per velocizzare la transizione */}
               <div className="hidden">
                  {pages.map((p, i) => (
-                   i !== currentIndex && <img key={`preload-${i}`} src={getIiifImageUrl(p.id, 1600)} alt={`preload-${i}`} />
+                   i !== currentIndex && <img key={`preload-${i}`} src={getIiifImageUrl(p.id, 1600)} alt="" />
                  ))}
               </div>
             </div>
@@ -473,6 +476,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                         handleResetZoom();
                      }
                   }}
+                  aria-current={idx === currentIndex ? 'page' : undefined}
                   className={`px-3 py-1.5 text-xs rounded transition-colors whitespace-nowrap ${idx === currentIndex ? 'bg-item-selected text-bg-main font-bold shadow-md' : 'bg-bg-sidebar text-text-main border border-border-base hover:bg-border-base'}`}
                 >
                   {idx === 0 ? 'Attuale' : `Succ. ${idx}`}
@@ -484,13 +488,13 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
         {/* Toolbar Footer (Zoom Controls) */}
         {!loading && !error && imageUrl && (
           <div className="bg-bg-sidebar border-t border-border-base p-2 sm:p-3 flex items-center justify-center gap-2 sm:gap-4">
-             <button onClick={handleZoomOut} className="p-2.5 sm:p-2 hover:bg-border-base rounded text-text-main transition-colors" title="Zoom Out">
+             <button onClick={handleZoomOut} className="p-2.5 sm:p-2 hover:bg-border-base rounded text-text-main transition-colors" title="Zoom Out" aria-label="Riduci zoom">
                <ZoomOut className="h-5 w-5" />
              </button>
              <span className="text-text-accent font-mono text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3rem] text-center">
                {Math.round(scale * 100)}%
              </span>
-             <button onClick={handleZoomIn} className="p-2.5 sm:p-2 hover:bg-border-base rounded text-text-main transition-colors" title="Zoom In">
+             <button onClick={handleZoomIn} className="p-2.5 sm:p-2 hover:bg-border-base rounded text-text-main transition-colors" title="Zoom In" aria-label="Aumenta zoom">
                <ZoomIn className="h-5 w-5" />
              </button>
              <div className="w-px h-5 sm:h-6 bg-border-base mx-1 sm:mx-2"></div>

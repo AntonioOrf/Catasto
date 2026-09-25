@@ -167,6 +167,7 @@ export default function FilterPanel({
             onClick={() => fetchData(1)}
             className="w-full md:w-auto p-2 md:p-3 border bg-primary text-white hover:bg-primary/90 transition-all shadow-sm flex justify-center h-[42px] md:h-[54px] items-center"
             title="Aggiorna Ricerca"
+            aria-label="Aggiorna ricerca"
           >
             <RefreshCw
               className={`h-5 w-5 md:h-6 md:w-6 ${loading ? "animate-spin" : ""}`}

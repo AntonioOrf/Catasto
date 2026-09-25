@@ -48,6 +48,8 @@ export default function CustomNumberInput({
         <button
           type="button"
           onClick={handleIncrement}
+          aria-label="Aumenta"
+          tabIndex={-1}
           className="flex-1 px-1 hover:bg-primary hover:text-white text-text-accent transition-colors flex items-center justify-center border-b border-border-base"
         >
           <ChevronUp size={12} />
@@ -55,6 +57,8 @@ export default function CustomNumberInput({
         <button
           type="button"
           onClick={handleDecrement}
+          aria-label="Diminuisci"
+          tabIndex={-1}
           className="flex-1 px-1 hover:bg-primary hover:text-white text-text-accent transition-colors flex items-center justify-center"
         >
           <ChevronDown size={12} />
