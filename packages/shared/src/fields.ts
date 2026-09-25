@@ -127,6 +127,16 @@ export const FIELD_REGISTRY: readonly FieldDef[] = [
     optionsKey: "particolaritaParente",
     existsSubquery: { from: "parenti", alias: "p_sub", on: "p_sub.ID_FUOCO = f.ID_Fuochi" },
   },
+  {
+    // "Età parente > 60" = il fuoco ha almeno un parente oltre i 60 anni;
+    // neq/is_empty diventano "nessun parente con...", come per le particolarità.
+    key: "eta_parente",
+    label: "Età parente",
+    type: "number",
+    column: "p_sub.Eta",
+    operators: NUMBER_OPS,
+    existsSubquery: { from: "parenti", alias: "p_sub", on: "p_sub.ID_FUOCO = f.ID_Fuochi" },
+  },
 
   // --- Campi redazionali ---
   {
