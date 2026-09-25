@@ -28,7 +28,7 @@ export default function Pagination({
               ? // Stato Disabilitato: Testo grigio (accent) con opacità, niente sfondo
                 "text-text-accent opacity-40 cursor-not-allowed bg-transparent"
               : // Stato Attivo: Colore brand (item-selected), sfondo main, bordo base
-                "text-item-selected hover:bg-item-hover bg-bg-main border border-border-base"
+                "text-accent-strong hover:bg-item-hover bg-bg-main border border-border-base"
           }`}
       >
         <ArrowLeft className="h-3 w-3 md:h-4 md:w-4" />{" "}
@@ -42,10 +42,11 @@ export default function Pagination({
         </span>
 
         <select
+          aria-label={`Pagina corrente, su ${totalPages}`}
           value={page}
           onChange={(e) => handlePageChange(Number(e.target.value))}
           // SELECT: Fondamentale usare bg-bg-main per evitare lo sfondo bianco in dark mode
-          className="border border-border-base rounded px-1 md:px-2 py-1 bg-bg-main text-text-main font-bold text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-item-selected cursor-pointer"
+          className="border border-border-base rounded px-1 md:px-2 py-1 bg-bg-main text-text-main font-bold text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
         >
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(
             (pageNum) => (
@@ -73,7 +74,7 @@ export default function Pagination({
           ${
             page === totalPages
               ? "text-text-accent opacity-40 cursor-not-allowed bg-transparent"
-              : "text-item-selected hover:bg-item-hover bg-bg-main border border-border-base"
+              : "text-accent-strong hover:bg-item-hover bg-bg-main border border-border-base"
           }`}
       >
         <span className="hidden sm:inline">Successivo</span>{" "}

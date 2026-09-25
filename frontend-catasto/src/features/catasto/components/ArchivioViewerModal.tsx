@@ -335,7 +335,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
         {/* Header Modale */}
         <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border-base bg-bg-sidebar">
           <div className="flex flex-col">
-            <h2 id="viewer-title" className="text-sm sm:text-base md:text-xl font-serif font-bold text-item-selected dark:text-text-symbols flex items-center gap-1.5 sm:gap-2">
+            <h2 id="viewer-title" className="text-sm sm:text-base md:text-xl font-serif font-bold text-accent-strong flex items-center gap-1.5 sm:gap-2">
               <BookOpenIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
               <span className="hidden sm:inline">Archivio di Stato di Firenze - </span>
               Volume {volume || '?'}, Foglio {foglio || '?'}
@@ -363,7 +363,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
         <div className="flex-1 relative bg-[#1e1e1e] overflow-hidden flex items-center justify-center">
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-text-main z-10 bg-[#1e1e1e]/80">
-               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-item-selected mb-4"></div>
+               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
                <p className="font-mono text-sm animate-pulse text-white/80">Recupero informazioni manoscritto...</p>
             </div>
           )}
@@ -378,7 +378,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                  href={`https://archiviodigitale-icar.cultura.gov.it/it/185/ricerca/detail/${resolvedCodice}#viewer`}
                  target="_blank" 
                  rel="noopener noreferrer"
-                 className="mt-6 flex items-center gap-2 bg-item-selected text-bg-main px-4 py-2 rounded font-bold hover:brightness-110 transition-all"
+                 className="mt-6 flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded font-bold hover:brightness-110 transition-all"
                >
                  <span>Apri sul sito dell'Archivio</span>
                  <ExternalLink className="h-4 w-4" />
@@ -399,7 +399,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
               {/* Image Loading Indicator */}
               {imageLoading && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1e1e1e]/50 z-10 pointer-events-none">
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-item-selected mb-2"></div>
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-2"></div>
                   <p className="text-xs text-text-accent font-mono animate-pulse drop-shadow-md">Caricamento immagine in corso...</p>
                 </div>
               )}
@@ -413,7 +413,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                   transformOrigin: 'center center',
                   opacity: imageLoading ? 0.4 : 1
                 }}
-                className="max-w-full max-h-full object-contain pointer-events-none select-none"
+                className="max-w-full max-h-full object-contain pointer-events-none select-none motion-reduce:!transition-none"
                 draggable={false}
                 onLoad={() => setImageLoading(false)}
                 onError={() => setImageLoading(false)}
@@ -477,7 +477,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                      }
                   }}
                   aria-current={idx === currentIndex ? 'page' : undefined}
-                  className={`px-3 py-1.5 text-xs rounded transition-colors whitespace-nowrap ${idx === currentIndex ? 'bg-item-selected text-bg-main font-bold shadow-md' : 'bg-bg-sidebar text-text-main border border-border-base hover:bg-border-base'}`}
+                  className={`px-3 py-1.5 text-xs rounded transition-colors whitespace-nowrap ${idx === currentIndex ? 'bg-primary text-on-primary font-bold shadow-md' : 'bg-bg-sidebar text-text-main border border-border-base hover:bg-border-base'}`}
                 >
                   {idx === 0 ? 'Attuale' : `Succ. ${idx}`}
                 </button>
@@ -519,7 +519,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                    href={`https://archiviodigitale-icar.cultura.gov.it/it/185/ricerca/detail/${resolvedCodice}#viewer`}
                    target="_blank" 
                    rel="noopener noreferrer"
-                   className="text-[10px] sm:text-xs text-white bg-primary hover:bg-primary/95 px-2 py-1.5 rounded-sm flex items-center gap-1 active:scale-95 transition-all shadow-sm font-semibold"
+                   className="text-[10px] sm:text-xs text-on-primary bg-primary hover:bg-primary/95 px-2 py-1.5 rounded-sm flex items-center gap-1 active:scale-95 transition-all shadow-sm font-semibold"
                  >
                    <ExternalLink className="h-3 w-3" />
                    <span className="hidden sm:inline">Sito Originale</span>

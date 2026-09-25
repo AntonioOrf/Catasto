@@ -7,6 +7,8 @@ interface CustomNumberInputProps {
   max?: number;
   placeholder?: string;
   className?: string;
+  id?: string;
+  ariaLabel?: string;
 }
 
 export default function CustomNumberInput({
@@ -16,6 +18,8 @@ export default function CustomNumberInput({
   max,
   placeholder,
   className = "",
+  id,
+  ariaLabel,
 }: CustomNumberInputProps) {
   const handleIncrement = () => {
     const currentValue = value === "" ? 0 : parseInt(value as string, 10);
@@ -36,6 +40,8 @@ export default function CustomNumberInput({
   return (
     <div className={`relative flex items-center border border-border-base bg-bg-card text-text-main rounded-sm focus-within:ring-1 focus-within:ring-primary ${className}`}>
       <input
+        id={id}
+        aria-label={ariaLabel}
         type="number"
         value={value}
         onChange={onChange as any}
@@ -50,7 +56,7 @@ export default function CustomNumberInput({
           onClick={handleIncrement}
           aria-label="Aumenta"
           tabIndex={-1}
-          className="flex-1 px-1 hover:bg-primary hover:text-white text-text-accent transition-colors flex items-center justify-center border-b border-border-base"
+          className="flex-1 px-1 hover:bg-primary hover:text-on-primary text-text-accent transition-colors flex items-center justify-center border-b border-border-base"
         >
           <ChevronUp size={12} />
         </button>
@@ -59,7 +65,7 @@ export default function CustomNumberInput({
           onClick={handleDecrement}
           aria-label="Diminuisci"
           tabIndex={-1}
-          className="flex-1 px-1 hover:bg-primary hover:text-white text-text-accent transition-colors flex items-center justify-center"
+          className="flex-1 px-1 hover:bg-primary hover:text-on-primary text-text-accent transition-colors flex items-center justify-center"
         >
           <ChevronDown size={12} />
         </button>
