@@ -98,6 +98,10 @@ export class CatastoService {
   // every page load of the viewer.
   private static manifestCache = new Map<string, { data: any; expiresAt: number }>();
   private static readonly MANIFEST_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+  // L'id arriva dal client: senza un tetto la cache crescerebbe con ogni id
+  // richiesto. La Map conserva l'ordine di inserimento, quindi la prima chiave
+  // e' la meno recente.
+  private static readonly MANIFEST_CACHE_MAX_ENTRIES = 500;
 
   static async getManifest(id: string): Promise<any> {
     const cached = this.manifestCache.get(id);
@@ -120,6 +124,11 @@ export class CatastoService {
     }
 
     const data = await response.json();
+    this.manifestCache.delete(id);
+    if (this.manifestCache.size >= this.MANIFEST_CACHE_MAX_ENTRIES) {
+      const oldest = this.manifestCache.keys().next().value;
+      if (oldest !== undefined) this.manifestCache.delete(oldest);
+    }
     this.manifestCache.set(id, { data, expiresAt: Date.now() + this.MANIFEST_CACHE_TTL_MS });
     return data;
   }

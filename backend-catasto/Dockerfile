@@ -25,6 +25,10 @@ RUN npm run build -w backend-catasto
 # Stage 2: Run
 FROM node:20-alpine
 
+# Senza, l'error handler restituisce gli stack trace e SEGNALAZIONI_SALT non
+# viene reso obbligatorio (entrambi i controlli leggono NODE_ENV).
+ENV NODE_ENV=production
+
 WORKDIR /app
 
 # Copiamo solo i file necessari per l'esecuzione
@@ -44,6 +48,9 @@ COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/backend-catasto/migrations ./backend-catasto/migrations
 
 EXPOSE 3005
+
+# Utente non privilegiato già presente nell'immagine node
+USER node
 
 # Avviamo il server puntando al file compilato nel workspace del backend
 CMD ["node", "backend-catasto/dist/server.js"]
