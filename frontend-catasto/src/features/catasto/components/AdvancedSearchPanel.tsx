@@ -123,6 +123,7 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
                   onClick={() => setSaved(deleteQuery(query.id))}
                   className="text-text-accent hover:text-red-500 p-0.5"
                   title="Elimina filtro"
+                  aria-label={`Elimina filtro ${query.nome}`}
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>

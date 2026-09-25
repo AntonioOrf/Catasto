@@ -19,6 +19,8 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen, showHomeLink =
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="p-2 mr-1 hover:bg-white/10 rounded-md transition-colors focus:outline-none"
               title={isSidebarOpen ? "Chiudi Indice" : "Apri Indice"}
+              aria-label={isSidebarOpen ? "Chiudi indice" : "Apri indice"}
+              aria-expanded={isSidebarOpen}
             >
               {isSidebarOpen ? (
                 <X className="h-6 w-6" />
@@ -53,6 +55,7 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen, showHomeLink =
             onClick={toggleTheme}
             className="p-2 rounded-full hover:bg-white/10 transition-all"
             title={theme === "dark" ? "Passa alla modalità chiara" : "Passa alla modalità scura"}
+            aria-label={theme === "dark" ? "Passa alla modalità chiara" : "Passa alla modalità scura"}
           >
             {theme === "dark" ? (
               <Sun className="h-5 w-5 animate-in spin-in-90 duration-300" />
