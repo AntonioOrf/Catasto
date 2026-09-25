@@ -20,6 +20,8 @@ interface CatastoTableProps {
   page: number;
   totalPages: number;
   handlePageChange: (page: number) => void;
+  /** Ripete l'ultima richiesta dopo un errore. */
+  onRetry?: () => void;
 }
 
 export default function CatastoTable({
@@ -35,8 +37,9 @@ export default function CatastoTable({
   page,
   totalPages,
   handlePageChange,
+  onRetry,
 }: CatastoTableProps) {
-  const { sortBy, sortOrder, handleSort }: any = useFilters();
+  const { sortBy, sortOrder, handleSort, resetFilters }: any = useFilters();
   const [viewerData, setViewerData] = useState<any>({
     isOpen: false,
     codiceArchivio: null,
@@ -98,7 +101,58 @@ export default function CatastoTable({
   };
 
   const thClasses =
-    "bg-bg-sidebar px-3 py-3 md:px-6 md:py-4 text-left text-xs font-bold text-text-accent uppercase tracking-wider font-sans cursor-pointer hover:bg-primary/10 group transition-colors";
+    "bg-bg-sidebar px-3 py-1 md:px-6 md:py-2 text-left text-xs font-bold text-text-accent uppercase tracking-wider font-sans";
+
+  // Il pulsante dentro l'intestazione rende l'ordinamento raggiungibile da
+  // tastiera; aria-sort annuncia colonna e verso correnti.
+  const sortableHeader = (column: string, label: string) => (
+    <th
+      key={column}
+      className={thClasses}
+      aria-sort={sortBy === column ? (sortOrder === "ASC" ? "ascending" : "descending") : "none"}
+    >
+      <button
+        type="button"
+        onClick={() => handleSort(column)}
+        className="flex items-center gap-1 min-h-11 w-full uppercase tracking-wider font-bold hover:text-primary transition-colors"
+      >
+        {label}
+        {renderSortIcon(column)}
+      </button>
+    </th>
+  );
+
+  const errorState = (compact = false) => (
+    <div role="alert" className={`${compact ? "px-4 py-8" : "px-6 py-12"} text-center text-text-main bg-red-500/10 border border-red-500/40 rounded`}>
+      <p className="font-bold text-lg mb-1">Impossibile caricare i fuochi</p>
+      <p className="text-sm text-text-accent mb-4">{error}</p>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="inline-flex items-center min-h-11 px-4 rounded bg-primary text-on-primary text-sm font-bold hover:bg-primary/90 transition-colors"
+        >
+          Riprova
+        </button>
+      )}
+    </div>
+  );
+
+  const emptyState = () => (
+    <div className="px-6 py-12 text-center">
+      <p className="text-text-main font-bold mb-1">Nessun fuoco corrisponde ai filtri</p>
+      <p className="text-sm text-text-accent mb-4">Allarga la ricerca togliendo qualche condizione, oppure ricomincia da capo.</p>
+      {resetFilters && (
+        <button
+          type="button"
+          onClick={resetFilters}
+          className="inline-flex items-center min-h-11 px-4 rounded border border-border-base bg-bg-main text-accent-strong text-sm font-bold hover:bg-item-hover transition-colors"
+        >
+          Azzera i filtri
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-4 pb-12">
@@ -106,8 +160,14 @@ export default function CatastoTable({
         <h2 className="text-lg md:text-xl font-bold text-primary flex items-center gap-2 font-serif">
           <BookOpen className="h-5 w-5 md:h-6 md:w-6" /> Registri Fuochi
         </h2>
-        <span className="bg-primary text-on-primary px-2 py-1 md:px-3 text-xs md:text-sm font-bold rounded-full">
-          {totalRecords} Risultati
+        {/* Annunciato ai lettori di schermo: è l'unico riscontro che una
+            ricerca è andata a buon fine senza guardare la tabella. */}
+        <span
+          role="status"
+          aria-live="polite"
+          className="bg-primary text-on-primary px-2 py-1 md:px-3 text-xs md:text-sm font-bold rounded-full tabular-nums"
+        >
+          {Number(totalRecords || 0).toLocaleString("it-IT")} {totalRecords === 1 ? "risultato" : "risultati"}
         </span>
       </div>
 
@@ -117,34 +177,23 @@ export default function CatastoTable({
           <table className="min-w-full divide-y divide-border-base">
             <thead className="bg-bg-sidebar">
               <tr>
-                <th onClick={() => handleSort("nome")} className={thClasses}>
-                  <div className="flex items-center gap-1">
-                    Capofamiglia{renderSortIcon("nome")}
-                  </div>
-                </th>
-                <th onClick={() => handleSort("localita")} className={thClasses}>
-                  <div className="flex items-center gap-1">
-                    Località{renderSortIcon("localita")}
-                  </div>
-                </th>
-                <th onClick={() => handleSort("fortune")} className={thClasses}>
-                  <div className="flex items-center gap-1">
-                    Dati Sintetici{renderSortIcon("fortune")}
-                  </div>
-                </th>
+                {sortableHeader("nome", "Capofamiglia")}
+                {sortableHeader("localita", "Località")}
+                {sortableHeader("fortune", "Dati Sintetici")}
                 <th className="hidden lg:table-cell px-6 py-4 text-left text-xs font-bold text-text-accent uppercase tracking-wider font-sans">
                   Riferimenti
                 </th>
-                <th className="px-3 py-3 md:px-6 md:py-4 w-8 md:w-10"></th>
+                <th className="px-3 py-3 md:px-6 md:py-4 w-8 md:w-10">
+                  <span className="sr-only">Espandi</span>
+                </th>
               </tr>
             </thead>
 
             <tbody className="bg-bg-main divide-y divide-border-base">
               {error ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-text-main font-serif bg-red-500/10 border border-red-500/40 rounded">
-                    <p className="font-bold text-lg mb-2">Errore Server</p>
-                    <p>{error}</p>
+                  <td colSpan={5} className="p-4">
+                    {errorState()}
                   </td>
                 </tr>
               ) : loading ? (
@@ -173,8 +222,8 @@ export default function CatastoTable({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-text-accent italic">
-                    Nessun dato trovato con i filtri correnti.
+                  <td colSpan={5}>
+                    {emptyState()}
                   </td>
                 </tr>
               )}
@@ -185,9 +234,8 @@ export default function CatastoTable({
         {/* Mobile View */}
         <div className="block lg:hidden divide-y divide-border-base">
           {error ? (
-            <div className="px-4 py-8 text-center text-text-main font-serif bg-red-500/10 border border-red-500/40 rounded">
-              <p className="font-bold text-base mb-1">Errore Server</p>
-              <p className="text-sm">{error}</p>
+            <div className="p-2">
+              {errorState(true)}
             </div>
           ) : loading ? (
             [...Array(5)].map((_, i) => (
@@ -209,12 +257,13 @@ export default function CatastoTable({
                   loadingParenti={loadingParenti}
                   parentiData={parentiData}
                   onViewArchivio={handleViewArchivio}
+                  onSegnala={handleSegnala}
                 />
               ))}
             </div>
           ) : (
-            <div className="px-4 py-8 text-center text-text-accent italic bg-bg-main">
-              Nessun dato trovato con i filtri correnti.
+            <div className="bg-bg-main">
+              {emptyState()}
             </div>
           )}
         </div>

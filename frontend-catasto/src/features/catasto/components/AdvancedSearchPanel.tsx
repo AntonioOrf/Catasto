@@ -58,7 +58,7 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
       <QueryBuilder value={ast} onChange={onChange} options={options} />
 
       <div className="border-t border-dashed border-border-base pt-3">
-        <span className="text-[10px] uppercase tracking-wider text-text-accent block mb-1">
+        <span className="text-[11px] uppercase tracking-wider text-text-accent block mb-1">
           Ricerca corrente
         </span>
         <p className="text-xs md:text-sm text-text-main italic">Mostra i fuochi dove {preview}.</p>
@@ -101,7 +101,7 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
 
       {saved.length > 0 && (
         <div className="border-t border-dashed border-border-base pt-3">
-          <span className="text-[10px] uppercase tracking-wider text-text-accent block mb-2">
+          <span className="text-[11px] uppercase tracking-wider text-text-accent block mb-2">
             Filtri salvati su questo dispositivo
           </span>
           <div className="flex flex-wrap gap-2">

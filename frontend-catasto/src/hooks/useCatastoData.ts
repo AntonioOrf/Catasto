@@ -22,7 +22,13 @@ export function useCatastoData(filters: any) {
   const data = queryResult?.data || [];
   const totalPages = queryResult?.pagination?.totalPages || 1;
   const totalRecords = queryResult?.pagination?.total || 0;
-  const error = isError ? (queryError?.message || "Impossibile connettersi al Server.") : null;
+  // Un fetch fallito per rete lancia TypeError("Failed to fetch"): messaggio
+  // tecnico e in inglese, che l'utente non deve vedere.
+  const error = isError
+    ? queryError instanceof TypeError || !queryError?.message
+      ? "Il server non risponde. Controlla la connessione e riprova."
+      : queryError.message
+    : null;
 
   // 2. Fetch Parenti data
   const { data: parentiResult, isLoading: loadingParenti } = useQuery({

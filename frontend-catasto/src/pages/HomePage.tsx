@@ -240,6 +240,7 @@ export default function HomePage() {
               page={page}
               totalPages={totalPages}
               handlePageChange={handlePageChange}
+              onRetry={fetchData}
             />
           </div>
           <Footer />

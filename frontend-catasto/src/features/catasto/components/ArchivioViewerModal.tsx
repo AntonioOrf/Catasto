@@ -45,6 +45,9 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
   const [loading, setLoading] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Carta non trovata nel manifest: si mostra la prima pagina, ma l'utente
+  // deve saperlo, altrimenti la scambia per la carta del fuoco.
+  const [notice, setNotice] = useState<string | null>(null);
   const [resolvedCodice, setResolvedCodice] = useState<string>(codiceArchivio);
   const [useHighRes, setUseHighRes] = useState(false);
   
@@ -178,6 +181,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
   const fetchManifest = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setNotice(null);
     try {
       let activeCodice = codiceArchivio;
 
@@ -232,7 +236,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
 
       if (!targetCanvas) {
          targetCanvas = canvases[0];
-         console.warn(`Foglio ${foglio} non trovato esattamente nel manifest, mostro la pagina 1.`);
+         setNotice(`La carta ${foglio} non è stata individuata nel volume digitalizzato: viene mostrata la prima pagina. Usa "Sito Originale" per sfogliare il volume.`);
       }
 
       const startIndex = canvases.indexOf(targetCanvas);
@@ -345,7 +349,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                 Fuoco: {nome}
               </p>
             )}
-            <p className="text-[9px] sm:text-xs text-text-accent font-mono mt-0.5 sm:mt-1 opacity-80">
+            <p className="text-[11px] sm:text-xs text-text-accent font-mono mt-0.5 sm:mt-1 opacity-80">
               ID Archivio: {resolvedCodice}
             </p>
           </div>
@@ -384,6 +388,12 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                  <ExternalLink className="h-4 w-4" />
                </a>
             </div>
+          )}
+
+          {notice && !loading && !error && (
+            <p role="status" className="absolute top-0 inset-x-0 z-20 bg-bg-sidebar/95 border-b border-border-base text-text-main text-xs sm:text-sm px-4 py-2 text-center">
+              {notice}
+            </p>
           )}
 
            {imageUrl && !loading && !error && (
@@ -507,7 +517,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                  {onSegnalaSegnatura && (
                    <button
                      onClick={onSegnalaSegnatura}
-                     className="text-[10px] sm:text-xs text-text-main bg-bg-main hover:bg-border-base px-2 py-1.5 rounded-sm flex items-center gap-1 border border-border-base active:scale-95 transition-all font-semibold"
+                     className="text-[11px] sm:text-xs text-text-main bg-bg-main hover:bg-border-base px-2 py-1.5 rounded-sm flex items-center gap-1 border border-border-base active:scale-95 transition-all font-semibold"
                      title="Segnala la segnatura della portata di questo fuoco"
                    >
                      <Flag className="h-3 w-3" />
@@ -519,7 +529,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                    href={`https://archiviodigitale-icar.cultura.gov.it/it/185/ricerca/detail/${resolvedCodice}#viewer`}
                    target="_blank" 
                    rel="noopener noreferrer"
-                   className="text-[10px] sm:text-xs text-on-primary bg-primary hover:bg-primary/95 px-2 py-1.5 rounded-sm flex items-center gap-1 active:scale-95 transition-all shadow-sm font-semibold"
+                   className="text-[11px] sm:text-xs text-on-primary bg-primary hover:bg-primary/95 px-2 py-1.5 rounded-sm flex items-center gap-1 active:scale-95 transition-all shadow-sm font-semibold"
                  >
                    <ExternalLink className="h-3 w-3" />
                    <span className="hidden sm:inline">Sito Originale</span>

@@ -34,7 +34,7 @@ export const fetchCatastoQuery = async (
   });
 
   if (!response.ok) {
-    await parseError(response, `Errore ricerca avanzata (${response.status})`);
+    await parseError(response, `La ricerca avanzata non è riuscita (errore ${response.status}).`);
   }
   return await response.json();
 };
@@ -70,7 +70,7 @@ export const fetchCatastoData = async (filters: any, page: number, limit: number
 
   const response = await fetch(`${API_URL}/api/catasto?${params.toString()}`, { signal });
   if (!response.ok) {
-    let errorMsg = `Errore server (${response.status} ${response.statusText})`;
+    let errorMsg = `Il server non ha risposto correttamente (errore ${response.status}).`;
     try {
       const errorData = await response.json();
       errorMsg = errorData.error || errorMsg;
@@ -90,14 +90,14 @@ export const fetchSidebarData = async (filters: any, page = 1, limit = 1000, sig
     `${API_URL}/api/catasto/sidebar?${params.toString()}`,
     { signal }
   );
-  if (!response.ok) throw new Error("Errore sidebar");
+  if (!response.ok) throw new Error("Impossibile caricare l'indice.");
   return await response.json();
 };
 
 export const fetchParentiData = async (idFuoco: number | null, signal?: AbortSignal) => {
   if (!idFuoco) return [];
   const response = await fetch(`${API_URL}/api/parenti/${idFuoco}`, { signal });
-  if (!response.ok) throw new Error("Errore parenti");
+  if (!response.ok) throw new Error("Impossibile caricare la composizione familiare.");
   return await response.json();
 };
 
@@ -112,6 +112,6 @@ export const fetchFilterOptions = async (
 
   const queryString = params.toString() ? `?${params.toString()}` : "";
   const response = await fetch(`${API_URL}/api/filters${queryString}`, { signal });
-  if (!response.ok) throw new Error("Errore caricamento filtri");
+  if (!response.ok) throw new Error("Impossibile caricare le opzioni dei filtri.");
   return await response.json();
 };

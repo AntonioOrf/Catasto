@@ -43,7 +43,7 @@ export default function Header({ isSidebarOpen, setIsSidebarOpen, showHomeLink =
                 Catasto Fiorentino
                 <span className="hidden lg:inline"> del 1427/30</span>
               </h1>
-              <p className="text-[10px] lg:text-xs uppercase tracking-wider font-medium hidden sm:block opacity-80">
+              <p className="text-[11px] lg:text-xs uppercase tracking-wider font-medium hidden sm:block opacity-80">
                 Sistema di Consultazione
               </p>
             </div>

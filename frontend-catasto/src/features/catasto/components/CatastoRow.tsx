@@ -43,7 +43,7 @@ const SegnaturaPortata = ({ row, onSegnala }: { row: any; onSegnala?: CatastoRow
           e.stopPropagation();
           onSegnala(row, "segnatura");
         }}
-        className="py-3.5 -my-3.5 text-[10px] md:text-xs text-text-accent hover:text-primary underline underline-offset-2 transition-colors"
+        className="py-4 -my-4 text-[11px] md:text-xs text-text-accent hover:text-primary underline underline-offset-2 transition-colors"
       >
         Segnatura della portata non nota — contribuisci
       </button>
@@ -54,7 +54,7 @@ const SegnaturaPortata = ({ row, onSegnala }: { row: any; onSegnala?: CatastoRow
     <div className="flex items-start gap-2">
       <ScrollText className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
       <div>
-        <span className="text-[10px] md:text-xs text-text-accent uppercase block">
+        <span className="text-[11px] md:text-xs text-text-accent uppercase block">
           Segnatura della portata
         </span>
         <span className="text-text-main font-mono text-xs md:text-sm">{row.segnatura_portata}</span>
@@ -71,7 +71,7 @@ const SegnalaButton = ({ row, onSegnala }: { row: any; onSegnala?: CatastoRowPro
         e.stopPropagation();
         onSegnala(row, "dato_errato");
       }}
-      className="flex items-center gap-1 py-3.5 -my-3.5 text-[10px] md:text-xs text-text-accent hover:text-primary transition-colors uppercase tracking-wider"
+      className="flex items-center gap-1 py-4 -my-4 text-[11px] md:text-xs text-text-accent hover:text-primary transition-colors uppercase tracking-wider"
       title="Segnala un errore in questa scheda"
     >
       <FlagIcon className="h-3.5 w-3.5" /> Segnala un errore
@@ -131,7 +131,7 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
               <div className="text-text-main ml-2 border-l-2 border-border-base pl-2">
                 {row.quartiere}
               </div>
-              <div className="text-text-accent ml-2 border-l-2 border-border-base pl-2 italic text-[10px] md:text-xs">
+              <div className="text-text-accent ml-2 border-l-2 border-border-base pl-2 italic text-[11px] md:text-xs">
                 {row.piviere} &raquo; {row.popolo}
               </div>
             </div>
@@ -145,10 +145,10 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
                 {row.fortune ? row.fortune.toLocaleString() : 0}
                 <span className="hidden lg:inline"> fiorini</span>
               </div>
-              <div className="flex items-center gap-1 text-[10px] lg:text-xs text-text-main font-sans opacity-80">
+              <div className="flex items-center gap-1 text-[11px] lg:text-xs text-text-main font-sans opacity-80">
                 <Home className="h-3 w-3" /> {row.casa || "N/D"}
               </div>
-              <div className="lg:hidden flex items-center gap-2 text-[10px] text-text-main font-mono bg-bg-sidebar px-1 rounded w-fit border border-border-base mt-1">
+              <div className="lg:hidden flex items-center gap-2 text-[11px] text-text-main font-mono bg-bg-sidebar px-1 rounded w-fit border border-border-base mt-1">
                 {row.codice_archivio ? (
                   <button 
                     onClick={(e) => { e.stopPropagation(); if(onViewArchivio) onViewArchivio(row); }}
@@ -216,7 +216,7 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
                       <DetailItem label="Fortune" value={`${row.fortune || 0} fiorini`} />
                       <DetailItem label="Deduzioni" value={`${row.deduzioni || 0} fiorini`} />
                       <div>
-                        <span className="text-[10px] md:text-xs text-text-accent uppercase block">Imponibile Totale</span>
+                        <span className="text-[11px] md:text-xs text-text-accent uppercase block">Imponibile Totale</span>
                         <span className="font-bold text-primary text-base md:text-lg">{row.imponibile || 0} fiorini</span>
                       </div>
                     </div>
@@ -226,7 +226,7 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
                       <DetailRow icon={Hammer} label="Rapporto Mestiere" value={row.rapporto_mestiere} />
                     </div>
                     <div className="pt-2 border-t border-dashed border-border-base">
-                      <span className="text-[10px] md:text-xs text-text-accent uppercase block mb-1">Particolarità Fuoco</span>
+                      <span className="text-[11px] md:text-xs text-text-accent uppercase block mb-1">Particolarità Fuoco</span>
                       <p className="italic text-text-main bg-bg-sidebar p-2 rounded border border-border-base">
                         {row.particolarita_fuoco || "Nessuna particolarità registrata."}
                       </p>
@@ -248,9 +248,9 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
                       <table className="min-w-full divide-y divide-border-base">
                         <thead className="bg-primary/10">
                           <tr>
-                            <th className="px-2 py-2 text-left text-[10px] md:text-xs font-medium text-primary uppercase">Parente</th>
-                            <th className="px-2 py-2 text-left text-[10px] md:text-xs font-medium text-primary uppercase">Età</th>
-                            <th className="px-2 py-2 text-left text-[10px] md:text-xs font-medium text-primary uppercase">Stato</th>
+                            <th className="px-2 py-2 text-left text-[11px] md:text-xs font-medium text-primary uppercase">Parente</th>
+                            <th className="px-2 py-2 text-left text-[11px] md:text-xs font-medium text-primary uppercase">Età</th>
+                            <th className="px-2 py-2 text-left text-[11px] md:text-xs font-medium text-primary uppercase">Stato</th>
                           </tr>
                         </thead>
                         <tbody className="bg-bg-main divide-y divide-border-base">
@@ -258,13 +258,13 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
                             <tr key={idx} className="text-xs md:text-sm text-text-main">
                               <td className="px-2 py-2 font-medium">
                                 {parente.parentela_desc || "Membro"}
-                                {parente.sesso && <span className="text-[10px] text-text-accent ml-1">({parente.sesso})</span>}
+                                {parente.sesso && <span className="text-[11px] text-text-accent ml-1">({parente.sesso})</span>}
                               </td>
                               <td className="px-2 py-2">{parente.eta ? parente.eta : "-"}</td>
                               <td className="px-2 py-2">
                                 <div className="flex flex-col">
                                   <span>{parente.stato_civile}</span>
-                                  <span className="text-[10px] italic text-text-accent">{parente.particolarita}</span>
+                                  <span className="text-[11px] italic text-text-accent">{parente.particolarita}</span>
                                 </div>
                               </td>
                             </tr>
@@ -289,7 +289,7 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
 
 const DetailItem = ({ label, value }: any) => (
   <div>
-    <span className="text-[10px] md:text-xs text-text-accent uppercase block">{label}</span>
+    <span className="text-[11px] md:text-xs text-text-accent uppercase block">{label}</span>
     <span className="font-bold text-text-main">{value}</span>
   </div>
 );
@@ -298,7 +298,7 @@ const DetailRow = ({ icon: Icon, label, value }: any) => (
   <div className="flex items-start gap-2">
     <Icon className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
     <div>
-      <span className="text-[10px] md:text-xs text-text-accent uppercase block">{label}</span>
+      <span className="text-[11px] md:text-xs text-text-accent uppercase block">{label}</span>
       <span className="text-text-main">{value || "Nessun dato"}</span>
     </div>
   </div>
@@ -399,7 +399,7 @@ export const CatastoMobileCard = React.memo(
                     <DetailItem label="Fortune" value={`${row.fortune || 0} fiorini`} />
                     <DetailItem label="Deduzioni" value={`${row.deduzioni || 0} fiorini`} />
                     <div className="col-span-2">
-                      <span className="text-[10px] text-text-accent uppercase block">Imponibile Totale</span>
+                      <span className="text-[11px] text-text-accent uppercase block">Imponibile Totale</span>
                       <span className="font-bold text-primary text-sm">{row.imponibile || 0} fiorini</span>
                     </div>
                   </div>
@@ -409,7 +409,7 @@ export const CatastoMobileCard = React.memo(
                     <DetailRow icon={Hammer} label="Rapporto Mestiere" value={row.rapporto_mestiere} />
                   </div>
                   <div className="pt-2 border-t border-dashed border-border-base">
-                    <span className="text-[10px] text-text-accent uppercase block mb-1">Particolarità Fuoco</span>
+                    <span className="text-[11px] text-text-accent uppercase block mb-1">Particolarità Fuoco</span>
                     <p className="italic text-text-main bg-bg-sidebar p-2 rounded border border-border-base">
                       {row.particolarita_fuoco || "Nessuna particolarità registrata."}
                     </p>
@@ -433,9 +433,9 @@ export const CatastoMobileCard = React.memo(
                     <table className="min-w-full divide-y divide-border-base">
                       <thead className="bg-primary/10">
                         <tr>
-                          <th className="px-2 py-1.5 text-left text-[10px] font-medium text-primary uppercase">Parente</th>
-                          <th className="px-2 py-1.5 text-left text-[10px] font-medium text-primary uppercase">Età</th>
-                          <th className="px-2 py-1.5 text-left text-[10px] font-medium text-primary uppercase">Stato</th>
+                          <th className="px-2 py-1.5 text-left text-[11px] font-medium text-primary uppercase">Parente</th>
+                          <th className="px-2 py-1.5 text-left text-[11px] font-medium text-primary uppercase">Età</th>
+                          <th className="px-2 py-1.5 text-left text-[11px] font-medium text-primary uppercase">Stato</th>
                         </tr>
                       </thead>
                       <tbody className="bg-bg-main divide-y divide-border-base text-xs">
@@ -443,13 +443,13 @@ export const CatastoMobileCard = React.memo(
                           <tr key={idx} className="text-text-main">
                             <td className="px-2 py-1.5 font-medium">
                               {parente.parentela_desc || "Membro"}
-                              {parente.sesso && <span className="text-[10px] text-text-accent ml-1">({parente.sesso})</span>}
+                              {parente.sesso && <span className="text-[11px] text-text-accent ml-1">({parente.sesso})</span>}
                             </td>
                             <td className="px-2 py-1.5">{parente.eta ? parente.eta : "-"}</td>
                             <td className="px-2 py-1.5">
                               <div className="flex flex-col">
                                 <span>{parente.stato_civile}</span>
-                                <span className="text-[10px] italic text-text-accent">{parente.particolarita}</span>
+                                <span className="text-[11px] italic text-text-accent">{parente.particolarita}</span>
                               </div>
                             </td>
                           </tr>
