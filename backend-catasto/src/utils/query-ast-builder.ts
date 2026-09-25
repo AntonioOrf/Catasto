@@ -92,6 +92,15 @@ const coerceScalar = (value: unknown, field: FieldDef, operator: Operator) => {
   return asString(value, field, operator);
 };
 
+/**
+ * Sui numerici il confronto con '' e' sbagliato: MySQL converte '' in 0, quindi
+ * `Eta = ''` e' vero per i neonati e un valore 0 risulterebbe "vuoto".
+ */
+const isNotEmptySql = (field: FieldDef): string =>
+  field.type === "number"
+    ? `${field.column} IS NOT NULL`
+    : `(${field.column} IS NOT NULL AND ${field.column} <> '')`;
+
 interface Compiled {
   sql: string;
   params: unknown[];
@@ -167,10 +176,10 @@ function compileCondition(condition: QueryCondition, usedTables: Set<string>): C
       break;
     }
     case "is_empty":
-      sql = `(${col} IS NULL OR ${col} = '')`;
+      sql = field.type === "number" ? `${col} IS NULL` : `(${col} IS NULL OR ${col} = '')`;
       break;
     case "is_not_empty":
-      sql = `(${col} IS NOT NULL AND ${col} <> '')`;
+      sql = isNotEmptySql(field);
       break;
     default:
       throw new ValidationError(`Operatore non supportato: ${operator}`);
@@ -202,7 +211,7 @@ function buildPositiveInner(condition: QueryCondition, field: FieldDef): string 
       return `${field.column} IN (${values.map(() => "?").join(",")})`;
     }
     default:
-      return `(${field.column} IS NOT NULL AND ${field.column} <> '')`;
+      return isNotEmptySql(field);
   }
 }
 

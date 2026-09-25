@@ -120,6 +120,40 @@ describe("buildQueryFromAst", () => {
     expect(() => buildQueryFromAst(node)).toThrow(/annidata/);
   });
 
+  it("filtra per età dei parenti con un EXISTS", () => {
+    const { conditions, params, usedTables } = buildQueryFromAst(
+      group([cond("eta_parente", "between", ["60", "80"])]),
+    );
+    expect(conditions).toBe(
+      "WHERE EXISTS (SELECT 1 FROM parenti p_sub WHERE p_sub.ID_FUOCO = f.ID_Fuochi AND p_sub.Eta BETWEEN ? AND ?)",
+    );
+    expect(params).toEqual([60, 80]);
+    expect([...usedTables]).toEqual(["f"]);
+  });
+
+  it("nega l'età dei parenti fuori dall'EXISTS", () => {
+    const { conditions, params } = buildQueryFromAst(group([cond("eta_parente", "neq", 30)]));
+    expect(conditions).toBe(
+      "WHERE NOT EXISTS (SELECT 1 FROM parenti p_sub WHERE p_sub.ID_FUOCO = f.ID_Fuochi AND p_sub.Eta = ?)",
+    );
+    expect(params).toEqual([30]);
+  });
+
+  it("non tratta lo 0 come vuoto sui campi numerici", () => {
+    expect(buildQueryFromAst(group([cond("fortune", "is_empty")])).conditions).toBe(
+      "WHERE f.Fortune_Fuoco IS NULL",
+    );
+    expect(buildQueryFromAst(group([cond("eta_parente", "is_empty")])).conditions).toBe(
+      "WHERE NOT EXISTS (SELECT 1 FROM parenti p_sub WHERE p_sub.ID_FUOCO = f.ID_Fuochi AND p_sub.Eta IS NOT NULL)",
+    );
+  });
+
+  it("rifiuta un'età non numerica", () => {
+    expect(() => buildQueryFromAst(group([cond("eta_parente", "gt", "vecchio")]))).toThrow(
+      ValidationError,
+    );
+  });
+
   it("non richiede valore per is_empty", () => {
     const { conditions, params } = buildQueryFromAst(
       group([cond("segnatura_portata", "is_empty")]),
