@@ -33,6 +33,10 @@ services:
       - DB_PORT=3306
       - DB_SSL=false
       - PORT=3005
+      # Segnalazioni utenti: vedi .env.prod.example
+      - SEGNALAZIONI_SALT=${SEGNALAZIONI_SALT}
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
+      - TRUST_PROXY=${TRUST_PROXY:-1}
     depends_on:
       db:
         condition: service_healthy

@@ -1,6 +1,13 @@
 import { Request, Response, NextFunction } from "express";
+import { z } from "zod";
 import { CatastoService } from "../services/catasto.service.js";
-import { paginationSchema, parseNumericId } from "../utils/validation.js";
+import { paginationSchema, parseNumericId, ValidationError } from "../utils/validation.js";
+import { astSchema } from "../utils/query-ast-builder.js";
+
+const advancedQuerySchema = z.object({
+  ast: astSchema,
+  view: z.enum(["table", "sidebar"]).catch("table"),
+});
 
 export class CatastoController {
   static async getAll(req: Request, res: Response, next: NextFunction) {
@@ -38,6 +45,35 @@ export class CatastoController {
         order
       );
       res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST perche' l'AST e' un oggetto annidato: infilarlo in una query string
+   * lo renderebbe fragile e soggetto al limite di lunghezza degli URL.
+   */
+  static async query(req: Request, res: Response, next: NextFunction) {
+    try {
+      const parsed = advancedQuerySchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw new ValidationError(
+          `Query non valida: ${parsed.error.issues[0]?.message ?? "formato non riconosciuto"}`
+        );
+      }
+
+      const { page, limit, sort_by, order } = paginationSchema.parse(req.body ?? {});
+      const result = await CatastoService.queryFuochi(
+        parsed.data.ast,
+        page,
+        limit,
+        sort_by,
+        order,
+        parsed.data.view
+      );
+
+      res.json(result);
     } catch (error) {
       next(error);
     }

@@ -1,4 +1,67 @@
 import { API_URL, buildParams } from "./client";
+import type { QueryGroup } from "@catasto/shared";
+
+const parseError = async (response: Response, fallback: string): Promise<never> => {
+  let message = fallback;
+  try {
+    const body = await response.json();
+    message = body.error || message;
+  } catch {
+    // il body non è JSON: teniamo il messaggio generico
+  }
+  throw new Error(message);
+};
+
+/**
+ * Ricerca avanzata: l'AST viaggia nel body, non in query string. Stessa forma
+ * di risposta della ricerca semplice, così i consumatori non si accorgono di
+ * quale dei due percorsi è stato usato.
+ */
+export const fetchCatastoQuery = async (
+  ast: QueryGroup,
+  page: number,
+  limit: number,
+  sortBy: string,
+  order: string,
+  view: "table" | "sidebar" = "table",
+  signal?: AbortSignal,
+) => {
+  const response = await fetch(`${API_URL}/api/catasto/query`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ast, view, page, limit, sort_by: sortBy, order }),
+    signal,
+  });
+
+  if (!response.ok) {
+    await parseError(response, `Errore ricerca avanzata (${response.status})`);
+  }
+  return await response.json();
+};
+
+/**
+ * Punto di ingresso unico per la tabella: sceglie l'endpoint in base alla
+ * modalità attiva. Il branch sta qui e non negli hook, che restano ignari.
+ */
+export const fetchCatastoAuto = async (
+  filters: any,
+  page: number,
+  limit: number,
+  signal?: AbortSignal,
+) =>
+  filters.advancedMode && filters.ast
+    ? fetchCatastoQuery(filters.ast, page, limit, filters.sortBy, filters.sortOrder, "table", signal)
+    : fetchCatastoData(filters, page, limit, signal);
+
+export const fetchSidebarAuto = async (
+  filters: any,
+  page: number,
+  limit: number,
+  signal?: AbortSignal,
+) =>
+  filters.advancedMode && filters.ast
+    ? fetchCatastoQuery(filters.ast, page, limit, filters.sortBy, filters.sortOrder, "sidebar", signal)
+    : fetchSidebarData(filters, page, limit, signal);
 
 export const fetchCatastoData = async (filters: any, page: number, limit: number, signal?: AbortSignal) => {
   const params = buildParams(filters);
