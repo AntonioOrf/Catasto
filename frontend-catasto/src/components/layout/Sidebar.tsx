@@ -25,7 +25,15 @@ export default React.memo(function Sidebar({
   hasMore,
 }: SidebarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const asideRef = useRef<HTMLElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
+
+  // Chiusa, la sidebar è larga 0 ma le voci restano nel DOM: senza inert il
+  // Tab e gli screen reader finirebbero su centinaia di pulsanti invisibili.
+  // Attributo impostato a mano perché React 18 non lo riconosce come prop.
+  useEffect(() => {
+    asideRef.current?.toggleAttribute("inert", !isSidebarOpen);
+  }, [isSidebarOpen]);
   const [containerHeight, setContainerHeight] = useState(0);
 
   useEffect(() => {
@@ -91,11 +99,11 @@ export default React.memo(function Sidebar({
           onClick={() => handleSidebarClick(row.id)}
           className={`
             w-full text-left p-2 rounded text-sm transition-colors h-full flex flex-col justify-center
-            ${isSelected ? "bg-primary text-white" : "hover:bg-item-hover text-text-main"}
+            ${isSelected ? "bg-primary text-on-primary" : "hover:bg-item-hover text-text-main"}
           `}
         >
           <div className="font-bold truncate font-serif">{row.nome}</div>
-          <div className={`text-xs truncate ${isSelected ? "text-white/80" : "text-text-accent"}`}>
+          <div className={`text-xs truncate ${isSelected ? "text-on-primary/80" : "text-text-accent"}`}>
             {row.mestiere || "Nessun mestiere"}
           </div>
         </button>
@@ -113,9 +121,10 @@ export default React.memo(function Sidebar({
       )}
 
       <aside
+        ref={asideRef}
         className={`
           bg-bg-sidebar border-r border-border-base flex flex-col 
-          transition-all duration-300 ease-in-out
+          transition-all duration-300 ease-in-out motion-reduce:transition-none
           absolute top-0 left-0 bottom-0 z-30 shadow-2xl lg:shadow-none lg:static
           ${isSidebarOpen ? "w-[80%] sm:w-72 translate-x-0" : "w-0 -translate-x-full opacity-0 lg:w-0"}
         `}

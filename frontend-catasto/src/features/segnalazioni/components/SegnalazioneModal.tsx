@@ -112,7 +112,7 @@ export default function SegnalazioneModal({
       >
         <div className="flex items-start justify-between p-4 border-b border-border-base">
           <div>
-            <h2 id="segnalazione-title" className="text-base md:text-lg font-serif font-bold text-item-selected dark:text-text-symbols flex items-center gap-2">
+            <h2 id="segnalazione-title" className="text-base md:text-lg font-serif font-bold text-accent-strong flex items-center gap-2">
               <AlertCircle className="h-5 w-5" /> Segnala un problema
             </h2>
             {row?.nome && (
@@ -125,7 +125,7 @@ export default function SegnalazioneModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-text-main hover:text-red-500 p-1 rounded transition-colors"
+            className="text-text-main hover:text-red-500 p-2.5 -m-2 rounded transition-colors"
             title="Chiudi"
             aria-label="Chiudi"
           >
@@ -142,7 +142,7 @@ export default function SegnalazioneModal({
             </p>
             <button
               onClick={onClose}
-              className="mt-2 bg-primary text-white px-4 py-2 rounded text-sm font-bold hover:bg-primary/90 transition-colors"
+              className="mt-2 bg-primary text-on-primary px-4 py-2 rounded text-sm font-bold hover:bg-primary/90 transition-colors"
             >
               Chiudi
             </button>
@@ -165,7 +165,7 @@ export default function SegnalazioneModal({
                       onChange={() => setTipo(t)}
                       className="sr-only peer"
                     />
-                    <span className="flex h-full items-center justify-center text-center rounded border border-border-base bg-bg-main px-2 py-2 text-xs font-semibold text-text-main transition-colors hover:bg-item-hover peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-primary/60">
+                    <span className="flex h-full items-center justify-center text-center rounded border border-border-base bg-bg-main px-2 py-2 text-xs font-semibold text-text-main transition-colors hover:bg-item-hover peer-checked:bg-primary peer-checked:border-primary peer-checked:text-on-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/60">
                       {TIPO_SEGNALAZIONE_LABELS[t]}
                     </span>
                   </label>
@@ -298,7 +298,7 @@ export default function SegnalazioneModal({
               <button
                 type="submit"
                 disabled={mutation.isPending}
-                className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 <Send className="h-4 w-4" aria-hidden="true" />
                 {mutation.isPending ? "Invio..." : "Invia segnalazione"}

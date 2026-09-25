@@ -43,7 +43,7 @@ const SegnaturaPortata = ({ row, onSegnala }: { row: any; onSegnala?: CatastoRow
           e.stopPropagation();
           onSegnala(row, "segnatura");
         }}
-        className="text-[10px] md:text-xs text-text-accent hover:text-primary underline underline-offset-2 transition-colors"
+        className="py-3.5 -my-3.5 text-[10px] md:text-xs text-text-accent hover:text-primary underline underline-offset-2 transition-colors"
       >
         Segnatura della portata non nota — contribuisci
       </button>
@@ -71,7 +71,7 @@ const SegnalaButton = ({ row, onSegnala }: { row: any; onSegnala?: CatastoRowPro
         e.stopPropagation();
         onSegnala(row, "dato_errato");
       }}
-      className="flex items-center gap-1 text-[10px] md:text-xs text-text-accent hover:text-primary transition-colors uppercase tracking-wider"
+      className="flex items-center gap-1 py-3.5 -my-3.5 text-[10px] md:text-xs text-text-accent hover:text-primary transition-colors uppercase tracking-wider"
       title="Segnala un errore in questa scheda"
     >
       <FlagIcon className="h-3.5 w-3.5" /> Segnala un errore
@@ -96,8 +96,8 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
   ({ row, expanded, onRowClick, loadingParenti, parentiData, onViewArchivio, onSegnala }, ref) => {
 
     const rowClasses = expanded
-      ? "bg-primary/10 border-l-4 border-l-primary"
-      : "hover:bg-primary/5 border-l-4 border-l-transparent";
+      ? "bg-primary/10"
+      : "hover:bg-primary/5";
 
     return (
       <>
@@ -202,7 +202,7 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
         </tr>
 
         {expanded && (
-          <tr className="bg-primary/5 border-l-4 border-l-primary">
+          <tr className="bg-primary/5">
             <td colSpan={5} className="px-4 py-4 md:px-6 md:py-6 border-b-2 border-text-accent/30">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
                 <div>

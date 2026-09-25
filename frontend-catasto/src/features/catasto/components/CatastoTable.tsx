@@ -106,7 +106,7 @@ export default function CatastoTable({
         <h2 className="text-lg md:text-xl font-bold text-primary flex items-center gap-2 font-serif">
           <BookOpen className="h-5 w-5 md:h-6 md:w-6" /> Registri Fuochi
         </h2>
-        <span className="bg-primary text-white px-2 py-1 md:px-3 text-xs md:text-sm font-bold rounded-full">
+        <span className="bg-primary text-on-primary px-2 py-1 md:px-3 text-xs md:text-sm font-bold rounded-full">
           {totalRecords} Risultati
         </span>
       </div>
@@ -142,7 +142,7 @@ export default function CatastoTable({
             <tbody className="bg-bg-main divide-y divide-border-base">
               {error ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-red-900 font-serif bg-red-100 border-l-4 border-red-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-text-main font-serif bg-red-500/10 border border-red-500/40 rounded">
                     <p className="font-bold text-lg mb-2">Errore Server</p>
                     <p>{error}</p>
                   </td>
@@ -151,7 +151,7 @@ export default function CatastoTable({
                 [...Array(5)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     <td className="px-6 py-4" colSpan={5}>
-                      <div className="h-8 bg-gray-200 rounded opacity-50 flex items-center px-4">
+                      <div className="h-8 bg-border-base rounded opacity-50 flex items-center px-4">
                         {i === 0 && <span className="text-text-accent font-serif text-sm">Caricamento dati in corso...</span>}
                       </div>
                     </td>
@@ -185,16 +185,16 @@ export default function CatastoTable({
         {/* Mobile View */}
         <div className="block lg:hidden divide-y divide-border-base">
           {error ? (
-            <div className="px-4 py-8 text-center text-red-900 font-serif bg-red-100 border-l-4 border-red-500">
+            <div className="px-4 py-8 text-center text-text-main font-serif bg-red-500/10 border border-red-500/40 rounded">
               <p className="font-bold text-base mb-1">Errore Server</p>
               <p className="text-sm">{error}</p>
             </div>
           ) : loading ? (
             [...Array(5)].map((_, i) => (
               <div key={i} className="animate-pulse p-4 space-y-3 bg-bg-main border-b border-border-base">
-                <div className="h-5 bg-gray-200 rounded w-1/3 opacity-50"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2 opacity-50"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/4 opacity-50"></div>
+                <div className="h-5 bg-border-base rounded w-1/3 opacity-50"></div>
+                <div className="h-4 bg-border-base rounded w-1/2 opacity-50"></div>
+                <div className="h-4 bg-border-base rounded w-1/4 opacity-50"></div>
               </div>
             ))
           ) : data.length > 0 ? (

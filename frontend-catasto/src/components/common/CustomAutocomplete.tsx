@@ -13,6 +13,8 @@ interface CustomAutocompleteProps {
   placeholder?: string;
   icon?: React.ReactNode;
   className?: string;
+  /** Collega il trigger a una <label htmlFor>. */
+  id?: string;
 }
 
 export default function CustomAutocomplete({
@@ -22,6 +24,7 @@ export default function CustomAutocomplete({
   placeholder = "Cerca...",
   icon = null,
   className = "",
+  id,
 }: CustomAutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,7 +73,10 @@ export default function CustomAutocomplete({
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       <button
+        id={id}
         type="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         onClick={() => setIsOpen(!isOpen)}
         className="block w-full text-left pl-8 pr-10 py-2 border border-border-base bg-bg-card text-text-main focus:outline-none focus:ring-1 focus:ring-primary text-sm relative transition-colors min-h-[38px]"
       >
@@ -111,7 +117,7 @@ export default function CustomAutocomplete({
           </div>
           <div className="overflow-y-auto flex-1">
             <div
-              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-primary hover:text-white text-sm ${value === "" ? "font-semibold bg-bg-sidebar" : ""}`}
+              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-primary hover:text-on-primary text-sm ${value === "" ? "font-semibold bg-bg-sidebar" : ""}`}
               onClick={() => handleSelect("")}
             >
               Tutti
@@ -120,7 +126,7 @@ export default function CustomAutocomplete({
               filteredOptions.slice(0, 100).map((option) => (
                 <div
                   key={option.id}
-                  className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-primary hover:text-white text-sm border-t border-border-base/10 ${value?.toString() === option.id.toString() ? "font-semibold bg-bg-sidebar/50" : ""}`}
+                  className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-primary hover:text-on-primary text-sm border-t border-border-base/10 ${value?.toString() === option.id.toString() ? "font-semibold bg-bg-sidebar/50" : ""}`}
                   onClick={() => handleSelect(option.id)}
                 >
                   <span className="block whitespace-normal leading-tight">{option.label}</span>

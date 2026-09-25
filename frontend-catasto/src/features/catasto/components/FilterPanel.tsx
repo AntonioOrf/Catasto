@@ -111,7 +111,7 @@ export default function FilterPanel({
   const inputClasses =
     "block w-full pl-9 md:pl-10 pr-3 py-2 md:py-3 border border-border-base bg-bg-main text-text-main focus:outline-none focus:ring-2 focus:ring-bg-header font-serif text-base md:text-lg placeholder:text-text-accent placeholder:opacity-50 transition-colors";
   const labelClasses =
-    "block text-xs md:text-sm font-semibold text-item-selected mb-1 md:mb-2 uppercase tracking-wider";
+    "block text-xs md:text-sm font-semibold text-accent-strong mb-1 md:mb-2 uppercase tracking-wider";
 
   return (
     <div className="bg-bg-sidebar rounded-sm shadow-md border border-border-base mb-6 relative transition-colors duration-300">
@@ -122,10 +122,11 @@ export default function FilterPanel({
             significherebbe mostrare controlli che non fanno nulla. */}
         <div className={`flex flex-col md:flex-row gap-4 md:gap-6 items-end mb-4 ${advancedMode ? "hidden" : ""}`}>
           <div className="flex-1 w-full">
-            <label className={labelClasses}>Cerca Persona</label>
+            <label htmlFor="f-persona" className={labelClasses}>Cerca Persona</label>
             <div className="relative">
               <Search className="absolute left-3 top-3 md:top-3.5 h-4 w-4 md:h-5 md:w-5 text-text-accent" />
               <input
+                id="f-persona"
                 type="text"
                 className={inputClasses}
                 placeholder="Nome capofamiglia..."
@@ -136,10 +137,11 @@ export default function FilterPanel({
           </div>
 
           <div className="flex-1 w-full">
-            <label className={labelClasses}>Cerca Località</label>
+            <label htmlFor="f-localita" className={labelClasses}>Cerca Località</label>
             <div className="relative">
               <MapPin className="absolute left-3 top-3 md:top-3.5 h-4 w-4 md:h-5 md:w-5 text-text-accent" />
               <input
+                id="f-localita"
                 type="text"
                 className={inputClasses}
                 placeholder="Quartiere, Popolo..."
@@ -150,10 +152,11 @@ export default function FilterPanel({
           </div>
 
           <div className="flex-1 w-full md:max-w-[150px]">
-            <label className={labelClasses}>Volume</label>
+            <label htmlFor="f-volume" className={labelClasses}>Volume</label>
             <div className="relative">
               <BookOpen className="absolute left-3 top-3 md:top-3.5 h-4 w-4 md:h-5 md:w-5 text-text-accent" />
               <input
+                id="f-volume"
                 type="text"
                 className={inputClasses}
                 placeholder="Es. 15"
@@ -165,7 +168,7 @@ export default function FilterPanel({
 
           <button
             onClick={() => fetchData(1)}
-            className="w-full md:w-auto p-2 md:p-3 border bg-primary text-white hover:bg-primary/90 transition-all shadow-sm flex justify-center h-[42px] md:h-[54px] items-center"
+            className="w-full md:w-auto p-2 md:p-3 border bg-primary text-on-primary hover:bg-primary/90 transition-all shadow-sm flex justify-center h-[42px] md:h-[54px] items-center"
             title="Aggiorna Ricerca"
             aria-label="Aggiorna ricerca"
           >
@@ -179,7 +182,7 @@ export default function FilterPanel({
           <button
             onClick={resetFilters}
             disabled={activeFilterCount === 0}
-            className="flex items-center gap-2 text-text-accent font-bold text-xs md:text-sm uppercase tracking-wider hover:underline focus:outline-none transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
+            className="flex items-center gap-2 text-text-accent font-bold text-xs md:text-sm uppercase tracking-wider hover:underline transition-colors min-h-11 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
             title="Azzera tutti i filtri e l'ordinamento"
           >
             <RotateCcw className="h-4 w-4" />
@@ -193,7 +196,7 @@ export default function FilterPanel({
 
           <button
             onClick={() => setAdvancedMode(!advancedMode)}
-            className="flex items-center gap-2 text-text-accent font-bold text-xs md:text-sm uppercase tracking-wider hover:underline focus:outline-none transition-colors"
+            className="flex items-center gap-2 text-text-accent font-bold text-xs md:text-sm uppercase tracking-wider hover:underline transition-colors min-h-11"
             aria-pressed={advancedMode}
             title="Costruisci query con AND/OR, gruppi e negazioni"
           >
@@ -209,13 +212,13 @@ export default function FilterPanel({
           {!advancedMode && (
             <button
               onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              className="flex items-center gap-2 text-primary font-bold text-xs md:text-sm uppercase tracking-wider hover:underline focus:outline-none transition-colors"
+              className="flex items-center gap-2 text-primary font-bold text-xs md:text-sm uppercase tracking-wider hover:underline transition-colors min-h-11"
               aria-expanded={isFiltersOpen}
             >
               <Filter className="h-4 w-4" />
               {isFiltersOpen ? "Nascondi Filtri" : "Mostra Filtri Avanzati"}
               {advancedFilterCount > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-primary text-white text-[10px] leading-none">
+                <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-primary text-on-primary text-[10px] leading-none">
                   {advancedFilterCount}
                 </span>
               )}
@@ -237,11 +240,12 @@ export default function FilterPanel({
             {/* Griglia Mestieri e Status */}
             <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
               <div className="col-span-1">
-                <label className="flex items-center justify-between text-xs font-semibold text-text-main mb-1">
+                <label htmlFor="f-mestiere" className="flex items-center justify-between text-xs font-semibold text-text-main mb-1">
                   <span>Mestiere</span>
                 </label>
                 <div className="relative">
                   <CustomAutocomplete
+                    id="f-mestiere"
                     value={filterMestiere}
                     onChange={(e: any) => setFilterMestiere(e.target.value)}
                     options={filterOptions.mestieri}
@@ -251,11 +255,12 @@ export default function FilterPanel({
                 </div>
               </div>
               <div className="col-span-1">
-                <label className="block text-xs font-semibold text-text-main mb-1">
+                <label htmlFor="f-rapporto-mestiere" className="block text-xs font-semibold text-text-main mb-1">
                   Rapporto Mestiere
                 </label>
                 <div className="relative">
                   <CustomAutocomplete
+                    id="f-rapporto-mestiere"
                     value={filterRapporto}
                     onChange={(e: any) => setFilterRapporto(e.target.value)}
                     options={filterOptions.rapporto}
@@ -265,11 +270,12 @@ export default function FilterPanel({
                 </div>
               </div>
               <div className="col-span-1">
-                <label className="block text-xs font-semibold text-text-main mb-1">
+                <label htmlFor="f-bestiame" className="block text-xs font-semibold text-text-main mb-1">
                   Bestiame
                 </label>
                 <div className="relative">
                   <CustomAutocomplete
+                    id="f-bestiame"
                     value={filterBestiame}
                     onChange={(e: any) => setFilterBestiame(e.target.value)}
                     options={filterOptions.bestiame}
@@ -279,11 +285,12 @@ export default function FilterPanel({
                 </div>
               </div>
               <div className="col-span-1">
-                <label className="block text-xs font-semibold text-text-main mb-1">
+                <label htmlFor="f-immigrazione" className="block text-xs font-semibold text-text-main mb-1">
                   Immigrazione
                 </label>
                 <div className="relative">
                   <CustomAutocomplete
+                    id="f-immigrazione"
                     value={filterImmigrazione}
                     onChange={(e: any) => setFilterImmigrazione(e.target.value)}
                     options={filterOptions.immigrazione}
@@ -293,11 +300,12 @@ export default function FilterPanel({
                 </div>
               </div>
               <div className="col-span-1">
-                <label className="block text-xs font-semibold text-text-main mb-1">
+                <label htmlFor="f-particolarita-parente" className="block text-xs font-semibold text-text-main mb-1">
                   Particolarità Parente
                 </label>
                 <div className="relative">
                   <CustomAutocomplete
+                    id="f-particolarita-parente"
                     value={filterParticolaritaParente}
                     onChange={(e: any) => setFilterParticolaritaParente(e.target.value)}
                     options={filterOptions.particolaritaParente}
@@ -307,11 +315,12 @@ export default function FilterPanel({
                 </div>
               </div>
               <div className="col-span-1">
-                <label className="block text-xs font-semibold text-text-main mb-1">
+                <label htmlFor="f-casa" className="block text-xs font-semibold text-text-main mb-1">
                   Casa
                 </label>
                 <div className="relative">
                   <CustomAutocomplete
+                    id="f-casa"
                     value={filterCasa}
                     onChange={(e: any) => setFilterCasa(e.target.value)}
                     options={filterOptions.casa}
@@ -329,8 +338,9 @@ export default function FilterPanel({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="col-span-1">
-                  <label className={labelClasses.replace("md:text-sm", "text-[10px]")}>Serie</label>
+                  <label htmlFor="f-serie" className={labelClasses.replace("md:text-sm", "text-[10px]")}>Serie</label>
                   <CustomAutocomplete
+                    id="f-serie"
                     value={filterSerie}
                     onChange={(e: any) => {
                       setFilterSerie(e.target.value);
@@ -344,8 +354,9 @@ export default function FilterPanel({
                   />
                 </div>
                 <div className="col-span-1">
-                  <label className={labelClasses.replace("md:text-sm", "text-[10px]")}>Quartiere</label>
+                  <label htmlFor="f-quartiere" className={labelClasses.replace("md:text-sm", "text-[10px]")}>Quartiere</label>
                   <CustomAutocomplete
+                    id="f-quartiere"
                     value={filterQuartiere}
                     onChange={(e: any) => {
                       setFilterQuartiere(e.target.value);
@@ -358,8 +369,9 @@ export default function FilterPanel({
                   />
                 </div>
                 <div className="col-span-1">
-                  <label className={labelClasses.replace("md:text-sm", "text-[10px]")}>Piviere (Gonfalone, Podesetria)</label>
+                  <label htmlFor="f-piviere" className={labelClasses.replace("md:text-sm", "text-[10px]")}>Piviere (Gonfalone, Podesetria)</label>
                   <CustomAutocomplete
+                    id="f-piviere"
                     value={filterPiviere}
                     onChange={(e: any) => {
                       setFilterPiviere(e.target.value);
@@ -371,8 +383,9 @@ export default function FilterPanel({
                   />
                 </div>
                 <div className="col-span-1">
-                  <label className={labelClasses.replace("md:text-sm", "text-[10px]")}>Popolo</label>
+                  <label htmlFor="f-popolo" className={labelClasses.replace("md:text-sm", "text-[10px]")}>Popolo</label>
                   <CustomAutocomplete
+                    id="f-popolo"
                     value={filterPopolo}
                     onChange={(e: any) => setFilterPopolo(e.target.value)}
                     options={filterOptions.popoli}
@@ -435,13 +448,16 @@ export default function FilterPanel({
 }
 
 function RangeInput({ label, min, max, setMin, setMax }: any) {
+  const id = `f-${String(label).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   return (
     <div>
-      <label className="block text-xs font-semibold text-text-main mb-1">
+      <label htmlFor={`${id}-min`} className="block text-xs font-semibold text-text-main mb-1">
         {label}
       </label>
       <div className="flex items-center gap-2">
         <CustomNumberInput
+          id={`${id}-min`}
+          ariaLabel={`${label} minimo`}
           value={min}
           onChange={(e: any) => setMin(e.target.value)}
           placeholder="Min"
@@ -449,6 +465,7 @@ function RangeInput({ label, min, max, setMin, setMax }: any) {
         />
         <span className="text-text-accent">-</span>
         <CustomNumberInput
+          ariaLabel={`${label} massimo`}
           value={max}
           onChange={(e: any) => setMax(e.target.value)}
           placeholder="Max"

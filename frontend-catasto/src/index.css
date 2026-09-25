@@ -65,6 +65,13 @@ body {
 
   --primary: #1a3d7f;
   --accent: #7a9bde;
+  /* Testo e icone sopra una superficie primary. Token separato perché nel
+     tema scuro primary è chiaro: il bianco sopra scenderebbe a 2.8:1. */
+  --on-primary: #ffffff;
+  /* Accento usato come colore di testo (etichette, titoli di sezione).
+     item-selected resta per le superfici: nel tema scuro è troppo scuro
+     per stare sul fondo come testo (1.7:1). */
+  --accent-strong: #1a3d7f;
 
   background-color: var(--color-bg-main);
   color: var(--color-text-main);
@@ -105,6 +112,8 @@ body {
 
   --primary: #7a9bde;
   --accent: #a3b3d9;
+  --on-primary: #10172b;
+  --accent-strong: #a9bfee;
 }
 
 /* Le opzioni dei <select> non ereditano in modo affidabile lo sfondo del
@@ -131,6 +140,8 @@ select option {
 
   --color-primary: var(--primary);
   --color-accent: var(--accent);
+  --color-on-primary: var(--on-primary);
+  --color-accent-strong: var(--accent-strong);
 
   --color-item-hover: var(--color-item-hover);
   --color-item-selected: var(--color-item-selected);
@@ -140,4 +151,31 @@ select option {
   --color-border-selected: var(--color-border-selected);
   --color-bg-header-border: var(--color-bg-header-border);
   --color-border-dark: var(--color-border-dark);
+}
+
+/* Superfici del browser: focus, selezione e cursore seguono il tema invece
+   dei default di sistema. Il ring vale per tutti i controlli, così nessun
+   elemento raggiungibile da tastiera resta senza indicatore. */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+::selection {
+  background-color: var(--primary);
+  color: var(--on-primary);
+}
+
+input,
+textarea {
+  caret-color: var(--primary);
+}
+
+html {
+  accent-color: var(--primary);
+}
+
+/* Cifre allineate in colonna: fiorini ed età si confrontano a colpo d'occhio. */
+table {
+  font-variant-numeric: tabular-nums;
 }

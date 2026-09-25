@@ -60,7 +60,7 @@ export default function CustomSelect({
       {isOpen && (
         <div className="absolute z-50 w-full mt-1 bg-bg-card border border-border-base shadow-lg max-h-[60vh] overflow-y-auto rounded-sm">
           <div
-            className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-primary hover:text-white text-sm ${value === "" ? "font-semibold bg-bg-sidebar" : ""}`}
+            className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-primary hover:text-on-primary text-sm ${value === "" ? "font-semibold bg-bg-sidebar" : ""}`}
             onClick={() => handleSelect("")}
           >
             {placeholder}
@@ -68,7 +68,7 @@ export default function CustomSelect({
           {options.map((option) => (
             <div
               key={option.id}
-              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-primary hover:text-white text-sm border-t border-border-base/30 ${value?.toString() === option.id.toString() ? "font-semibold bg-bg-sidebar/50" : ""}`}
+              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-primary hover:text-on-primary text-sm border-t border-border-base/30 ${value?.toString() === option.id.toString() ? "font-semibold bg-bg-sidebar/50" : ""}`}
               onClick={() => handleSelect(option.id)}
             >
               <span className="block whitespace-normal break-words leading-tight">{option.label}</span>
