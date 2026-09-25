@@ -11,6 +11,7 @@ export class FuocoModel {
       ${usedTables.has("tp") ? "LEFT JOIN t_popoli tp ON ts.id_popolo = tp.id_popolo" : ""}
       ${usedTables.has("tpi") ? "LEFT JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere" : ""}
       ${usedTables.has("tser") ? "LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie" : ""}
+      ${usedTables.has("fs") ? "LEFT JOIN fuoco_segnature fs ON fs.id_fuoco = f.ID_Fuochi" : ""}
     `;
     const sql = `SELECT COUNT(*) as total ${countJoins} ${conditions}`;
     const [rows]: any = await pool.query(sql, params);
@@ -32,10 +33,11 @@ export class FuocoModel {
       LEFT JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere
       LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie
       LEFT JOIN t_archivio_volumi tav ON f.Volume_Fuoco = CAST(tav.volume AS UNSIGNED)
+      LEFT JOIN fuoco_segnature fs ON fs.id_fuoco = f.ID_Fuochi
     `;
     const sql = `
-      SELECT 
-        f.ID_Fuochi as id, f.Nome_Fuoco as nome, 
+      SELECT
+        f.ID_Fuochi as id, f.Nome_Fuoco as nome,
         f.Imponibile_Fuoco as imponibile, f.Credito_Fuoco as credito, 
         f.CreditoM_Fuoco as credito_m, f.Fortune_Fuoco as fortune, f.Deduzioni_Fuoco as deduzioni,
         f.Volume_Fuoco as volume, f.Foglio_Fuoco as foglio, 
@@ -44,7 +46,8 @@ export class FuocoModel {
         m.Mestiere as mestiere, c.Casa as casa, 
         tq.nome_quartiere as quartiere, tp.nome_popolo as popolo, 
         tpi.nome_piviere as piviere, tser.nome_serie as serie,
-        tav.codice_archivio
+        tav.codice_archivio,
+        fs.segnatura as segnatura_portata
       ${baseJoins} ${conditions} ${orderByClause} LIMIT ? OFFSET ?
     `;
     const [rows]: any = await pool.query(sql, [...params, limit, offset]);
@@ -60,6 +63,7 @@ export class FuocoModel {
       ${usedTables.has("tp") ? "LEFT JOIN t_popoli tp ON ts.id_popolo = tp.id_popolo" : ""}
       ${usedTables.has("tpi") ? "LEFT JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere" : ""}
       ${usedTables.has("tser") ? "LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie" : ""}
+      ${usedTables.has("fs") ? "LEFT JOIN fuoco_segnature fs ON fs.id_fuoco = f.ID_Fuochi" : ""}
     `;
     const sql = `SELECT f.ID_Fuochi as id, f.Nome_Fuoco as nome, m.Mestiere as mestiere ${sidebarJoins} ${conditions} ${orderByClause} LIMIT ? OFFSET ?`;
     const [rows]: any = await pool.query(sql, [...params, limit, offset]);

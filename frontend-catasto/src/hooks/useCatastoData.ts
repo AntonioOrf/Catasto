@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchCatastoData, fetchParentiData } from "../api/catastoService";
+import { fetchCatastoAuto, fetchParentiData } from "../api/catastoService";
 
 export function useCatastoData(filters: any) {
   const [page, setPage] = useState(1);
@@ -15,7 +15,7 @@ export function useCatastoData(filters: any) {
     refetch,
   } = useQuery({
     queryKey: ["catastoData", filters, page],
-    queryFn: ({ signal }) => fetchCatastoData(filters, page, 50, signal),
+    queryFn: ({ signal }) => fetchCatastoAuto(filters, page, 50, signal),
     placeholderData: (previousData: any) => previousData,
   });
 
@@ -57,6 +57,8 @@ export function useCatastoData(filters: any) {
     filters.filterDeduzioniMax,
     filters.sortBy,
     filters.sortOrder,
+    filters.advancedMode,
+    filters.ast,
   ]);
 
   const fetchData = useCallback(() => {

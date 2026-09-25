@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsup src/server.ts --format esm --clean --minify",
+    "build": "tsup src/server.ts src/scripts/migrate.ts --format esm --clean --minify",
     "start": "node dist/server.js",
+    "db:migrate": "tsx src/scripts/migrate.ts",
+    "db:migrate:prod": "node dist/scripts/migrate.js",
     "test": "vitest run"
   },
   "dependencies": {

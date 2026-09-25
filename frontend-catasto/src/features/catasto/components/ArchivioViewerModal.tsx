@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, ZoomIn, ZoomOut, Maximize, AlertCircle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, Maximize, AlertCircle, ExternalLink, ChevronLeft, ChevronRight, Flag } from 'lucide-react';
 import { API_URL } from '../../../api/client';
 
 const SPLIT_VOLUMES: Record<string, { part1: { max: number; id: string }; part2: { min: number; id: string } }> = {
@@ -26,6 +26,8 @@ interface ArchivioViewerModalProps {
   foglio: string | number;
   volume: string | number;
   nome: string;
+  /** Apre la segnalazione della segnatura con volume/foglio correnti già noti. */
+  onSegnalaSegnatura?: () => void;
 }
 
 const getIiifImageUrl = (url: string, width?: number) => {
@@ -36,7 +38,7 @@ const getIiifImageUrl = (url: string, width?: number) => {
   return url;
 };
 
-const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClose, codiceArchivio, foglio, volume, nome }) => {
+const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClose, codiceArchivio, foglio, volume, nome, onSegnalaSegnatura }) => {
   const [pages, setPages] = useState<Page[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -497,8 +499,19 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                <span className="hidden sm:inline">Adatta</span>
              </button>
 
-             <div className="ml-auto">
-                 <a 
+             <div className="ml-auto flex items-center gap-2">
+                 {onSegnalaSegnatura && (
+                   <button
+                     onClick={onSegnalaSegnatura}
+                     className="text-[10px] sm:text-xs text-text-main bg-bg-main hover:bg-border-base px-2 py-1.5 rounded-sm flex items-center gap-1 border border-border-base active:scale-95 transition-all font-semibold"
+                     title="Segnala la segnatura della portata di questo fuoco"
+                   >
+                     <Flag className="h-3 w-3" />
+                     <span className="hidden sm:inline">Segnala segnatura</span>
+                     <span className="sm:hidden">Segnala</span>
+                   </button>
+                 )}
+                 <a
                    href={`https://archiviodigitale-icar.cultura.gov.it/it/185/ricerca/detail/${resolvedCodice}#viewer`}
                    target="_blank" 
                    rel="noopener noreferrer"
