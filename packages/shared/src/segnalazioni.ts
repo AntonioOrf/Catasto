@@ -25,6 +25,13 @@ export const STATO_SEGNALAZIONE_LABELS: Record<StatoSegnalazione, string> = {
   respinta: "Respinta",
 };
 
+/**
+ * Quasi tutte le portate stanno nel fondo Catasto dell'Archivio di Stato di
+ * Firenze: il form antepone questo prefisso e chiede all'utente solo
+ * volume e carta, salvo che indichi esplicitamente un altro fondo.
+ */
+export const SEGNATURA_PREFISSO = "ASFi, Catasto";
+
 /** Limiti di lunghezza: replicati nello schema zod del backend e negli input. */
 export const SEGNALAZIONE_LIMITS = {
   campo: 64,
