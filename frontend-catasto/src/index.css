@@ -35,7 +35,9 @@ body {
 }
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Una sola voce per tutto il portale: prima Home era serif (Georgia di
+     sistema, diverso per dispositivo) e Info/Contatti sans. */
+  font-family: var(--font-serif);
   line-height: 1.5;
   font-weight: 400;
   color-scheme: light;
@@ -124,6 +126,8 @@ select option {
 }
 
 @theme {
+  --font-serif: "Source Serif 4 Variable", Georgia, "Times New Roman", serif;
+
   --color-bg-main: var(--color-bg-main);
   --color-bg-table: var(--color-bg-table);
   --color-bg-sidebar: var(--color-bg-sidebar);

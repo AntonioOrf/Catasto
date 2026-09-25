@@ -48,7 +48,7 @@ export default function CustomNumberInput({
         min={min}
         max={max}
         placeholder={placeholder}
-        className="w-full pl-3 pr-8 py-2 bg-transparent border-none text-sm focus:outline-none focus:ring-0 text-text-main placeholder:text-text-accent placeholder:opacity-50 appearance-none"
+        className="w-full pl-3 pr-8 py-2 bg-transparent border-none text-sm focus:outline-none focus:ring-0 text-text-main placeholder:text-text-accent appearance-none"
       />
       <div className="absolute right-0 inset-y-0 flex flex-col border-l border-border-base">
         <button

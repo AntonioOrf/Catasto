@@ -109,7 +109,7 @@ export default function FilterPanel({
 
   // Classi riutilizzabili per pulizia codice
   const inputClasses =
-    "block w-full pl-9 md:pl-10 pr-3 py-2 md:py-3 border border-border-base bg-bg-main text-text-main focus:outline-none focus:ring-2 focus:ring-bg-header font-serif text-base md:text-lg placeholder:text-text-accent placeholder:opacity-50 transition-colors";
+    "block w-full min-h-11 pl-9 md:pl-10 pr-3 py-2 md:py-3 border border-border-base bg-bg-main text-text-main focus:outline-none focus:ring-2 focus:ring-primary font-serif text-base md:text-lg placeholder:text-text-accent transition-colors";
   const labelClasses =
     "block text-xs md:text-sm font-semibold text-accent-strong mb-1 md:mb-2 uppercase tracking-wider";
 
@@ -168,13 +168,16 @@ export default function FilterPanel({
 
           <button
             onClick={() => fetchData(1)}
-            className="w-full md:w-auto p-2 md:p-3 border bg-primary text-on-primary hover:bg-primary/90 transition-all shadow-sm flex justify-center h-[42px] md:h-[54px] items-center"
-            title="Aggiorna Ricerca"
-            aria-label="Aggiorna ricerca"
+            className="w-full md:w-auto p-2 md:p-3 border bg-primary text-on-primary hover:bg-primary/90 transition-all shadow-sm flex justify-center h-11 md:h-[54px] items-center"
+            title="Aggiorna la ricerca"
           >
             <RefreshCw
+              aria-hidden="true"
               className={`h-5 w-5 md:h-6 md:w-6 ${loading ? "animate-spin" : ""}`}
             />
+            {/* Su mobile il pulsante occupa tutta la riga: un'icona sola non
+                dice cosa fa. Su desktop resta icona, con nome accessibile. */}
+            <span className="ml-2 font-bold md:sr-only">Cerca</span>
           </button>
         </div>
 
@@ -186,9 +189,9 @@ export default function FilterPanel({
             title="Azzera tutti i filtri e l'ordinamento"
           >
             <RotateCcw className="h-4 w-4" />
-            Resetta Filtri
+            Azzera filtri
             {activeFilterCount > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-text-accent/15 text-[10px] leading-none">
+              <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-text-accent/15 text-[11px] leading-none">
                 {activeFilterCount}
               </span>
             )}
@@ -203,7 +206,7 @@ export default function FilterPanel({
             <SlidersHorizontal className="h-4 w-4" />
             {advancedMode ? "Ricerca Semplice" : "Ricerca Avanzata"}
             {advancedMode && astConditionCount > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-text-accent/15 text-[10px] leading-none">
+              <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-text-accent/15 text-[11px] leading-none">
                 {astConditionCount}
               </span>
             )}
@@ -216,9 +219,9 @@ export default function FilterPanel({
               aria-expanded={isFiltersOpen}
             >
               <Filter className="h-4 w-4" />
-              {isFiltersOpen ? "Nascondi Filtri" : "Mostra Filtri Avanzati"}
+              {isFiltersOpen ? "Nascondi altri filtri" : "Altri filtri"}
               {advancedFilterCount > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-primary text-on-primary text-[10px] leading-none">
+                <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-primary text-on-primary text-[11px] leading-none">
                   {advancedFilterCount}
                 </span>
               )}
@@ -338,7 +341,7 @@ export default function FilterPanel({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="col-span-1">
-                  <label htmlFor="f-serie" className={labelClasses.replace("md:text-sm", "text-[10px]")}>Serie</label>
+                  <label htmlFor="f-serie" className={labelClasses.replace("md:text-sm", "text-[11px]")}>Serie</label>
                   <CustomAutocomplete
                     id="f-serie"
                     value={filterSerie}
@@ -354,7 +357,7 @@ export default function FilterPanel({
                   />
                 </div>
                 <div className="col-span-1">
-                  <label htmlFor="f-quartiere" className={labelClasses.replace("md:text-sm", "text-[10px]")}>Quartiere</label>
+                  <label htmlFor="f-quartiere" className={labelClasses.replace("md:text-sm", "text-[11px]")}>Quartiere</label>
                   <CustomAutocomplete
                     id="f-quartiere"
                     value={filterQuartiere}
@@ -369,7 +372,7 @@ export default function FilterPanel({
                   />
                 </div>
                 <div className="col-span-1">
-                  <label htmlFor="f-piviere" className={labelClasses.replace("md:text-sm", "text-[10px]")}>Piviere (Gonfalone, Podesetria)</label>
+                  <label htmlFor="f-piviere" className={labelClasses.replace("md:text-sm", "text-[11px]")}>Piviere (Gonfalone, Podesteria)</label>
                   <CustomAutocomplete
                     id="f-piviere"
                     value={filterPiviere}
@@ -383,7 +386,7 @@ export default function FilterPanel({
                   />
                 </div>
                 <div className="col-span-1">
-                  <label htmlFor="f-popolo" className={labelClasses.replace("md:text-sm", "text-[10px]")}>Popolo</label>
+                  <label htmlFor="f-popolo" className={labelClasses.replace("md:text-sm", "text-[11px]")}>Popolo</label>
                   <CustomAutocomplete
                     id="f-popolo"
                     value={filterPopolo}
