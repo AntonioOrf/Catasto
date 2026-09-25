@@ -31,7 +31,8 @@ if (trustProxy) {
 // Left unset, CORS stays open (current behavior) so this doesn't silently
 // break an existing deployment - set it to lock the API down to the real
 // frontend origin(s).
-const corsOrigin = process.env.CORS_ORIGIN;
+// Stringa vuota = non impostata (docker compose la passa cosi' quando manca).
+const corsOrigin = process.env.CORS_ORIGIN || undefined;
 if (!corsOrigin && process.env.NODE_ENV === "production") {
   console.warn("⚠️  CORS_ORIGIN is not set - the API accepts requests from any origin.");
 }

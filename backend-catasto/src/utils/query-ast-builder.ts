@@ -14,6 +14,7 @@ import {
   type QueryNode,
 } from "@catasto/shared";
 import { ValidationError } from "./validation.js";
+import { escapeLike, LIKE_ESCAPE_CHAR } from "./query-builder.js";
 
 /**
  * Compila l'AST della ricerca avanzata nello stesso contratto di `buildQuery`
@@ -55,10 +56,6 @@ export const astSchema: z.ZodType<QueryGroup> = z.object({
   children: z.array(nodeSchema).max(AST_MAX_CONDITIONS),
 }) as unknown as z.ZodType<QueryGroup>;
 
-/** Escape dei metacaratteri LIKE: senza, un `%` dell'utente scansiona l'intera tabella. */
-const LIKE_ESCAPE_CHAR = "!";
-const escapeLike = (value: string): string =>
-  value.replace(/[!%_]/g, (char) => LIKE_ESCAPE_CHAR + char);
 
 const asString = (value: unknown, field: FieldDef, operator: Operator): string => {
   if (typeof value === "string") return value;

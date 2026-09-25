@@ -86,15 +86,18 @@ export class SegnalazioneService {
       throw error;
     }
 
+    const publishesSegnatura = segnalazione.tipo === "segnatura" && segnalazione.id_fuoco;
+
+    // Validazione prima di qualunque scrittura: altrimenti la segnalazione
+    // resterebbe "accettata" senza che la segnatura sia pubblicata.
+    if (publishesSegnatura && stato === "accettata" && !segnalazione.valore_proposto) {
+      throw new ValidationError("Impossibile accettare una segnatura senza valore proposto");
+    }
+
     await SegnalazioneModel.updateStato(id, stato);
 
-    if (segnalazione.tipo === "segnatura" && segnalazione.id_fuoco) {
-      if (stato === "accettata") {
-        if (!segnalazione.valore_proposto) {
-          throw new ValidationError(
-            "Impossibile accettare una segnatura senza valore proposto",
-          );
-        }
+    if (publishesSegnatura && segnalazione.id_fuoco) {
+      if (stato === "accettata" && segnalazione.valore_proposto) {
         await SegnalazioneModel.upsertSegnatura(
           segnalazione.id_fuoco,
           segnalazione.valore_proposto,
