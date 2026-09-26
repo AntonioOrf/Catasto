@@ -1,14 +1,19 @@
 import React, { useRef, useState, useEffect } from "react";
 import { List } from "lucide-react";
+import type { SidebarItem } from "@catasto/shared";
+import Spinner from "../common/Spinner";
+
+/** Altezza fissa delle voci: la lista è virtualizzata e calcola le posizioni. */
+const ITEM_HEIGHT = 68;
 
 interface SidebarProps {
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
   sidebarLoading: boolean;
-  sidebarData: any[];
+  sidebarData: SidebarItem[];
   expandedId: number | null;
-  targetScrolledId: string | null;
-  handleSidebarClick: (id: any) => void;
+  targetScrolledId: number | null;
+  handleSidebarClick: (id: number) => void;
   loadMoreSidebar: () => void;
   hasMore: boolean;
 }
@@ -51,7 +56,7 @@ export default React.memo(function Sidebar({
     if (expandedId && sidebarData.length > 0) {
       const index = sidebarData.findIndex((item) => item.id === expandedId);
       if (index !== -1 && containerRef.current) {
-        const targetScrollTop = index * 68;
+        const targetScrollTop = index * ITEM_HEIGHT;
         containerRef.current.scrollTo({
           top: targetScrollTop,
           behavior: "smooth",
@@ -68,7 +73,6 @@ export default React.memo(function Sidebar({
     }
   };
 
-  const ITEM_HEIGHT = 68;
   const totalHeight = sidebarData.length * ITEM_HEIGHT;
 
   let startNode = Math.floor(scrollTop / ITEM_HEIGHT);
@@ -82,7 +86,7 @@ export default React.memo(function Sidebar({
     if (index >= sidebarData.length) break;
 
     const row = sidebarData[index];
-    const isSelected = expandedId === row.id || targetScrolledId === String(row.id);
+    const isSelected = expandedId === row.id || targetScrolledId === row.id;
 
     visibleItems.push(
       <div
@@ -96,7 +100,9 @@ export default React.memo(function Sidebar({
         }}
       >
         <button
+          type="button"
           onClick={() => handleSidebarClick(row.id)}
+          aria-current={isSelected ? "true" : undefined}
           className={`
             w-full text-left p-2 rounded text-sm transition-colors h-full flex flex-col justify-center
             ${isSelected ? "bg-primary text-on-primary" : "hover:bg-item-hover text-text-main"}
@@ -122,6 +128,7 @@ export default React.memo(function Sidebar({
 
       <aside
         ref={asideRef}
+        aria-label="Indice dei fuochi"
         className={`
           bg-bg-sidebar border-r border-border-base flex flex-col 
           transition-all duration-300 ease-in-out motion-reduce:transition-none
@@ -134,7 +141,7 @@ export default React.memo(function Sidebar({
           style={{ height: "60px" }}
         >
           <h2 className="font-bold text-text-main uppercase text-xs tracking-wider flex items-center gap-2">
-            <List className="h-4 w-4" /> Indice
+            <List className="h-4 w-4" aria-hidden="true" /> Indice
           </h2>
         </div>
 
@@ -144,7 +151,7 @@ export default React.memo(function Sidebar({
               {visibleItems}
               {sidebarLoading && hasMore && (
                 <div className="absolute w-full flex justify-center py-4" style={{ top: totalHeight - ITEM_HEIGHT }}>
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                  <Spinner className="h-6 w-6" label="Caricamento di altre voci" />
                 </div>
               )}
             </div>

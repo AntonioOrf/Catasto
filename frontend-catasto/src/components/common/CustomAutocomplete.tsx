@@ -1,14 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo, useId } from "react";
 import { ChevronDown, ChevronUp, Check, Search, X } from "lucide-react";
 
-interface Option {
-  id: string | number;
-  label: string;
-}
+import type { FilterOption as Option } from "@catasto/shared";
 
 interface CustomAutocompleteProps {
-  value: string | number;
-  onChange: (e: { target: { value: string | number } }) => void;
+  value: string;
+  /** Riceve l'id dell'opzione scelta come stringa; "" = nessun filtro. */
+  onChange: (value: string) => void;
   options?: Option[];
   placeholder?: string;
   icon?: React.ReactNode;
@@ -59,9 +57,9 @@ export default function CustomAutocomplete({
     [filteredOptions, searchTerm],
   );
 
-  const selectedOption = options.find((opt) => opt.id.toString() === value?.toString());
+  const selectedOption = options.find((opt) => opt.id.toString() === value);
   const displayLabel = selectedOption ? selectedOption.label : placeholder;
-  const hasValue = value !== "" && value !== undefined && value !== null;
+  const hasValue = value !== "";
 
   const close = (restoreFocus: boolean) => {
     setIsOpen(false);
@@ -70,13 +68,13 @@ export default function CustomAutocomplete({
   };
 
   const open = () => {
-    const selectedIndex = visibleOptions.findIndex((o) => o.id.toString() === String(value ?? ""));
+    const selectedIndex = visibleOptions.findIndex((o) => o.id.toString() === value);
     setActiveIndex(Math.max(selectedIndex, 0));
     setIsOpen(true);
   };
 
   const handleSelect = (optionValue: string | number) => {
-    onChange({ target: { value: optionValue } });
+    onChange(String(optionValue));
     close(true);
   };
 
@@ -139,7 +137,7 @@ export default function CustomAutocomplete({
       open();
     } else if ((e.key === "Delete" || e.key === "Backspace") && hasValue) {
       e.preventDefault();
-      onChange({ target: { value: "" } });
+      onChange("");
     }
   };
 
@@ -173,7 +171,7 @@ export default function CustomAutocomplete({
       {hasValue && (
         <button
           type="button"
-          onClick={() => onChange({ target: { value: "" } })}
+          onClick={() => onChange("")}
           aria-label={`Azzera ${selectedOption?.label ?? "selezione"}`}
           title="Azzera"
           className="absolute right-7 top-1/2 -translate-y-1/2 p-2 text-text-accent hover:text-primary rounded"
@@ -206,7 +204,7 @@ export default function CustomAutocomplete({
           </div>
           <ul ref={listRef} id={listId} role="listbox" className="overflow-y-auto flex-1">
             {visibleOptions.map((option, index) => {
-              const selected = option.id.toString() === String(value ?? "");
+              const selected = option.id.toString() === value;
               return (
                 <li
                   key={`${option.id}`}

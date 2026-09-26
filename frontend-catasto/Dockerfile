@@ -31,6 +31,7 @@ COPY --from=build /app/frontend-catasto/dist /usr/share/nginx/html
 
 # Copiamo la configurazione di Nginx specifica del frontend
 COPY frontend-catasto/nginx.conf /etc/nginx/conf.d/default.conf
+COPY frontend-catasto/security-headers.conf /etc/nginx/snippets/security-headers.conf
 
 EXPOSE 80
 

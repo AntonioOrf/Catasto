@@ -1,8 +1,9 @@
 import { ChevronUp, ChevronDown } from "lucide-react";
 
 interface CustomNumberInputProps {
-  value: string | number;
-  onChange: (e: { target: { value: string | number } }) => void;
+  value: string;
+  /** Riceve il valore come stringa; "" = campo vuoto. */
+  onChange: (value: string) => void;
   min?: number;
   max?: number;
   placeholder?: string;
@@ -10,6 +11,9 @@ interface CustomNumberInputProps {
   id?: string;
   ariaLabel?: string;
 }
+
+const clamp = (value: number, min?: number, max?: number) =>
+  Math.min(max ?? Infinity, Math.max(min ?? -Infinity, value));
 
 export default function CustomNumberInput({
   value,
@@ -21,21 +25,14 @@ export default function CustomNumberInput({
   id,
   ariaLabel,
 }: CustomNumberInputProps) {
-  const handleIncrement = () => {
-    const currentValue = value === "" ? 0 : parseInt(value as string, 10);
-    const step = 1;
-    let newValue = currentValue + step;
-    if (max !== undefined && newValue > max) newValue = max;
-    onChange({ target: { value: newValue } });
+  const step = (delta: number) => {
+    const current = Number(value);
+    const base = value === "" || !Number.isFinite(current) ? (min ?? 0) - delta : current;
+    onChange(String(clamp(base + delta, min, max)));
   };
 
-  const handleDecrement = () => {
-    const currentValue = value === "" ? 0 : parseInt(value as string, 10);
-    const step = 1;
-    let newValue = currentValue - step;
-    if (min !== undefined && newValue < min) newValue = min;
-    onChange({ target: { value: newValue } });
-  };
+  const stepButtonClasses =
+    "flex-1 px-1 hover:bg-primary hover:text-on-primary text-text-accent transition-colors flex items-center justify-center";
 
   return (
     <div className={`relative flex items-center border border-border-base bg-bg-card text-text-main rounded-sm focus-within:ring-1 focus-within:ring-primary ${className}`}>
@@ -43,31 +40,33 @@ export default function CustomNumberInput({
         id={id}
         aria-label={ariaLabel}
         type="number"
+        inputMode="decimal"
         value={value}
-        onChange={onChange as any}
+        onChange={(e) => onChange(e.target.value)}
         min={min}
         max={max}
         placeholder={placeholder}
-        className="w-full pl-3 pr-8 py-2 bg-transparent border-none text-sm focus:outline-none focus:ring-0 text-text-main placeholder:text-text-accent appearance-none"
+        className="w-full min-h-11 pl-3 pr-8 py-2 bg-transparent border-none text-sm focus:outline-none focus:ring-0 text-text-main placeholder:text-text-accent appearance-none"
       />
+      {/* Fuori dal Tab: da tastiera le frecce su/giù del campo fanno già lo stesso. */}
       <div className="absolute right-0 inset-y-0 flex flex-col border-l border-border-base">
         <button
           type="button"
-          onClick={handleIncrement}
+          onClick={() => step(1)}
           aria-label="Aumenta"
           tabIndex={-1}
-          className="flex-1 px-1 hover:bg-primary hover:text-on-primary text-text-accent transition-colors flex items-center justify-center border-b border-border-base"
+          className={`${stepButtonClasses} border-b border-border-base`}
         >
-          <ChevronUp size={12} />
+          <ChevronUp size={12} aria-hidden="true" />
         </button>
         <button
           type="button"
-          onClick={handleDecrement}
+          onClick={() => step(-1)}
           aria-label="Diminuisci"
           tabIndex={-1}
-          className="flex-1 px-1 hover:bg-primary hover:text-on-primary text-text-accent transition-colors flex items-center justify-center"
+          className={stepButtonClasses}
         >
-          <ChevronDown size={12} />
+          <ChevronDown size={12} aria-hidden="true" />
         </button>
       </div>
     </div>

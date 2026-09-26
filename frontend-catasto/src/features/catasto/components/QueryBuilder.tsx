@@ -132,6 +132,7 @@ function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp,
               key={op}
               type="button"
               onClick={() => onToggleOp(path, op)}
+              aria-pressed={group.op === op}
               className={`px-2 py-1 text-[11px] font-bold uppercase tracking-wider transition-colors ${
                 group.op === op
                   ? "bg-primary text-on-primary"
@@ -174,7 +175,7 @@ function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp,
             <button
               type="button"
               onClick={() => onUpdate(path, () => null)}
-              className="text-text-accent hover:text-red-500 transition-colors"
+              className="p-2 -m-1 text-text-accent hover:text-red-500 transition-colors"
               title="Rimuovi gruppo"
               aria-label="Rimuovi gruppo"
             >
@@ -260,6 +261,7 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
   return (
     <div className="flex flex-wrap items-center gap-2 bg-bg-main border border-border-base rounded px-2 py-2">
       <select
+        aria-label="Campo"
         value={field.key}
         onChange={(e) => handleFieldChange(e.target.value)}
         className={selectClasses}
@@ -272,6 +274,7 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
       </select>
 
       <select
+        aria-label="Operatore"
         value={operator}
         onChange={(e) => handleOperatorChange(e.target.value as Operator)}
         className={selectClasses}
@@ -290,6 +293,7 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
               type="number"
               value={String(range[0] ?? "")}
               onChange={(e) => onChange({ ...condition, value: [e.target.value, range[1] ?? ""] })}
+              aria-label={`${field.label} minimo`}
               placeholder="Min"
               className={inputClasses}
             />
@@ -298,6 +302,7 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
               type="number"
               value={String(range[1] ?? "")}
               onChange={(e) => onChange({ ...condition, value: [range[0] ?? "", e.target.value] })}
+              aria-label={`${field.label} massimo`}
               placeholder="Max"
               className={inputClasses}
             />
@@ -305,6 +310,7 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
         ) : operator === "in" || operator === "not_in" ? (
           <select
             multiple
+            aria-label={`Valori di ${field.label}`}
             value={(Array.isArray(condition.value) ? condition.value : []).map(String)}
             onChange={(e) =>
               onChange({
@@ -322,6 +328,7 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
           </select>
         ) : enumOptions.length > 0 ? (
           <select
+            aria-label={`Valore di ${field.label}`}
             value={String(condition.value ?? "")}
             onChange={(e) => onChange({ ...condition, value: e.target.value })}
             className={inputClasses}
@@ -338,6 +345,7 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
             type={field.type === "number" ? "number" : "text"}
             value={String(condition.value ?? "")}
             onChange={(e) => onChange({ ...condition, value: e.target.value })}
+            aria-label={`Valore di ${field.label}`}
             placeholder="Valore..."
             className={inputClasses}
           />
@@ -346,7 +354,7 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
       <button
         type="button"
         onClick={onRemove}
-        className="text-text-accent hover:text-red-500 transition-colors ml-auto"
+        className="p-2 -m-1 text-text-accent hover:text-red-500 transition-colors ml-auto"
         title="Rimuovi condizione"
         aria-label="Rimuovi condizione"
       >

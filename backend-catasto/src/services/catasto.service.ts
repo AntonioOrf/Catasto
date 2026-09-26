@@ -1,135 +1,163 @@
-import { FuocoModel } from "../models/fuoco.model.js";
+import { FuocoModel, type FuocoQuery } from "../models/fuoco.model.js";
 import { CommonModel } from "../models/common.model.js";
-import { buildQuery, buildOrderBy, QueryFilters } from "../utils/query-builder.js";
+import { buildQuery, buildOrderBy } from "../utils/query-builder.js";
 import { buildQueryFromAst } from "../utils/query-ast-builder.js";
-import { Fuoco, ApiResponse, PaginationInfo, SidebarItem, Parenti, QueryGroup } from "@catasto/shared";
+import { HttpError, type Pagination } from "../utils/validation.js";
+import type {
+  Fuoco,
+  ApiResponse,
+  IiifPage,
+  SidebarItem,
+  Parenti,
+  QueryGroup,
+} from "@catasto/shared";
+
+export type FuochiView = "table" | "sidebar";
+
+interface CompiledFilters {
+  conditions: string;
+  params: unknown[];
+  usedTables: Set<string>;
+}
+
+// Manifests describe already-digitized historical volumes and never change,
+// so caching them avoids re-hitting the upstream government service on
+// every page load of the viewer.
+const MANIFEST_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+// L'id arriva dal client: senza un tetto la cache crescerebbe con ogni id
+// richiesto. La Map conserva l'ordine di inserimento, quindi la prima chiave
+// e' la meno recente.
+const MANIFEST_CACHE_MAX_ENTRIES = 500;
+const MANIFEST_TIMEOUT_MS = 20_000;
+/** Un manifest reale pesa qualche centinaio di KB: oltre questa soglia non lo leggiamo. */
+const MANIFEST_MAX_BYTES = 10 * 1024 * 1024;
+const manifestCache = new Map<string, { data: IiifPage[]; expiresAt: number }>();
+// Richieste in volo per id: dieci utenti che aprono lo stesso volume nello
+// stesso momento producono una sola chiamata all'Archivio.
+const manifestInFlight = new Map<string, Promise<IiifPage[]>>();
+
+const isHttpsUrl = (value: unknown): value is string => {
+  if (typeof value !== "string") return false;
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Del manifest IIIF il visore usa solo etichetta e immagine di ogni carta.
+ * Proiettarlo qui riduce di un ordine di grandezza la risposta e la memoria
+ * della cache, e scarta URL non https che il browser non dovrebbe caricare.
+ */
+export function toPages(manifest: any): IiifPage[] {
+  const canvases = manifest?.sequences?.[0]?.canvases;
+  if (!Array.isArray(canvases)) return [];
+  return canvases.flatMap((canvas: any) => {
+    const image = canvas?.images?.[0]?.resource?.["@id"];
+    if (!isHttpsUrl(image)) return [];
+    const label = typeof canvas?.label === "string" ? canvas.label.slice(0, 200) : "";
+    return [{ label, image }];
+  });
+}
+
+async function fetchManifestPages(id: string): Promise<IiifPage[]> {
+  const targetUrl = `https://archiviodigitale-icar.cultura.gov.it/metadata/${encodeURIComponent(id)}/manifest.json?type=archive`;
+
+  const response = await fetch(targetUrl, {
+    headers: {
+      Accept: "application/json",
+      // Il servizio dell'Archivio risponde in modo affidabile solo a user agent da browser.
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    },
+    signal: AbortSignal.timeout(MANIFEST_TIMEOUT_MS),
+  });
+
+  if (response.status === 404) {
+    throw new HttpError(404, "Volume non trovato nell'Archivio digitale");
+  }
+  if (!response.ok) {
+    throw new HttpError(502, `Archivio digitale non disponibile (errore ${response.status})`);
+  }
+  if (Number(response.headers.get("content-length") ?? 0) > MANIFEST_MAX_BYTES) {
+    throw new HttpError(502, "Manifest dell'Archivio troppo grande");
+  }
+
+  return toPages(await response.json());
+}
 
 export class CatastoService {
-  static async getAllFuochi(
-    filters: QueryFilters,
-    page: number = 1,
-    limit: number = 50,
-    sort_by: string = "nome",
-    order: string = "ASC"
-  ): Promise<ApiResponse<Fuoco[]>> {
-    const offset = (page - 1) * limit;
-    const { conditions, params, usedTables: queryTables } = buildQuery(filters);
-    const { clause: orderByClause, usedTables: orderTables } = buildOrderBy(sort_by, order);
-
-    const allUsedTables = new Set([...queryTables, ...orderTables]);
-
-    const [total, data] = await Promise.all([
-      FuocoModel.count(conditions, params, allUsedTables),
-      FuocoModel.findAll(conditions, params, orderByClause, limit, offset)
-    ]);
-
-    const pagination: PaginationInfo = {
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
-
-    return { data, pagination };
-  }
-
-  static async getSidebar(
-    filters: QueryFilters,
-    page: number = 1,
-    limit: number = 1000,
-    sort_by: string = "nome",
-    order: string = "ASC"
-  ): Promise<SidebarItem[]> {
-    const offset = (page - 1) * limit;
-    const { conditions, params, usedTables: queryTables } = buildQuery(filters);
-    const { clause: orderByClause, usedTables: orderTables } = buildOrderBy(sort_by, order);
-    const allUsedTables = new Set([...queryTables, ...orderTables]);
-
-    return await FuocoModel.getSidebar(conditions, params, orderByClause, limit, offset, allUsedTables);
-  }
-
   /**
-   * Ricerca avanzata: stessa pipeline della ricerca semplice, cambia solo il
-   * compilatore delle condizioni. `view` evita di duplicare l'endpoint per la
-   * sidebar, che filtra sugli stessi criteri ma proietta meno colonne.
+   * Pipeline comune a ricerca semplice e avanzata: cambia solo il compilatore
+   * delle condizioni. `view` evita di duplicare l'endpoint per la sidebar, che
+   * filtra sugli stessi criteri ma proietta meno colonne e non conta i totali.
    */
-  static async queryFuochi(
-    ast: QueryGroup,
-    page: number = 1,
-    limit: number = 50,
-    sort_by: string = "nome",
-    order: string = "ASC",
-    view: "table" | "sidebar" = "table"
+  private static async runQuery(
+    filters: CompiledFilters,
+    { page, limit, sort_by, order }: Pagination,
+    view: FuochiView,
   ): Promise<ApiResponse<Fuoco[]> | SidebarItem[]> {
-    const offset = (page - 1) * limit;
-    const { conditions, params, usedTables: queryTables } = buildQueryFromAst(ast);
-    const { clause: orderByClause, usedTables: orderTables } = buildOrderBy(sort_by, order);
-    const allUsedTables = new Set([...queryTables, ...orderTables]);
-
-    if (view === "sidebar") {
-      return await FuocoModel.getSidebar(conditions, params, orderByClause, limit, offset, allUsedTables);
-    }
-
-    const [total, data] = await Promise.all([
-      FuocoModel.count(conditions, params, allUsedTables),
-      FuocoModel.findAll(conditions, params, orderByClause, limit, offset)
-    ]);
-
-    const pagination: PaginationInfo = {
-      total,
-      page,
+    const { clause, usedTables: orderTables } = buildOrderBy(sort_by, order);
+    const query: FuocoQuery = {
+      conditions: filters.conditions,
+      params: filters.params,
+      usedTables: new Set([...filters.usedTables, ...orderTables]),
+      orderByClause: clause,
       limit,
-      totalPages: Math.ceil(total / limit),
+      offset: (page - 1) * limit,
     };
 
-    return { data, pagination };
+    if (view === "sidebar") return FuocoModel.getSidebar(query);
+
+    const [total, data] = await Promise.all([
+      FuocoModel.count(filters.conditions, filters.params, filters.usedTables),
+      FuocoModel.findAll(query),
+    ]);
+
+    return {
+      data,
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
-  static async getParenti(fuocoId: number): Promise<Parenti[]> {
-    return await CommonModel.getParenti(fuocoId);
+  static searchFuochi(filters: Record<string, unknown>, pagination: Pagination, view: FuochiView) {
+    return this.runQuery(buildQuery(filters), pagination, view);
   }
 
-  static async getMestieri(): Promise<any[]> {
-    return await CommonModel.getMestieriList();
+  static queryFuochi(ast: QueryGroup, pagination: Pagination, view: FuochiView) {
+    return this.runQuery(buildQueryFromAst(ast), pagination, view);
   }
 
-  // Manifests describe already-digitized historical volumes and never change,
-  // so caching them avoids re-hitting the upstream government service on
-  // every page load of the viewer.
-  private static manifestCache = new Map<string, { data: any; expiresAt: number }>();
-  private static readonly MANIFEST_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-  // L'id arriva dal client: senza un tetto la cache crescerebbe con ogni id
-  // richiesto. La Map conserva l'ordine di inserimento, quindi la prima chiave
-  // e' la meno recente.
-  private static readonly MANIFEST_CACHE_MAX_ENTRIES = 500;
+  static getParenti(fuocoId: number): Promise<Parenti[]> {
+    return CommonModel.getParenti(fuocoId);
+  }
 
-  static async getManifest(id: string): Promise<any> {
-    const cached = this.manifestCache.get(id);
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached.data;
-    }
+  static getMestieri(): Promise<Record<string, unknown>[]> {
+    return CommonModel.getMestieriList();
+  }
 
-    const targetUrl = `https://archiviodigitale-icar.cultura.gov.it/metadata/${id}/manifest.json?type=archive`;
+  static async getManifest(id: number): Promise<IiifPage[]> {
+    const key = String(id);
+    const cached = manifestCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) return cached.data;
 
-    const response = await fetch(targetUrl, {
-      method: "GET",
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-      },
-      signal: AbortSignal.timeout(60000),
-    });
+    const pending = manifestInFlight.get(key);
+    if (pending) return pending;
 
-    if (!response.ok) {
-      throw new Error(`Archivio Icar error: ${response.status}`);
-    }
+    const request = fetchManifestPages(key)
+      .then((data) => {
+        manifestCache.delete(key);
+        if (manifestCache.size >= MANIFEST_CACHE_MAX_ENTRIES) {
+          const oldest = manifestCache.keys().next().value;
+          if (oldest !== undefined) manifestCache.delete(oldest);
+        }
+        manifestCache.set(key, { data, expiresAt: Date.now() + MANIFEST_CACHE_TTL_MS });
+        return data;
+      })
+      .finally(() => manifestInFlight.delete(key));
 
-    const data = await response.json();
-    this.manifestCache.delete(id);
-    if (this.manifestCache.size >= this.MANIFEST_CACHE_MAX_ENTRIES) {
-      const oldest = this.manifestCache.keys().next().value;
-      if (oldest !== undefined) this.manifestCache.delete(oldest);
-    }
-    this.manifestCache.set(id, { data, expiresAt: Date.now() + this.MANIFEST_CACHE_TTL_MS });
-    return data;
+    manifestInFlight.set(key, request);
+    return request;
   }
 }

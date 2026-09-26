@@ -14,7 +14,7 @@ import {
   type QueryNode,
 } from "@catasto/shared";
 import { ValidationError } from "./validation.js";
-import { escapeLike, LIKE_ESCAPE_CHAR } from "./query-builder.js";
+import { LIKE_SQL, likePattern } from "./query-builder.js";
 
 /**
  * Compila l'AST della ricerca avanzata nello stesso contratto di `buildQuery`
@@ -133,16 +133,16 @@ function compileCondition(condition: QueryCondition, usedTables: Set<string>): C
       params.push(coerceScalar(condition.value, field, operator));
       break;
     case "contains":
-      sql = `${col} LIKE ? ESCAPE '${LIKE_ESCAPE_CHAR}'`;
-      params.push(`%${escapeLike(asString(condition.value, field, operator))}%`);
+      sql = `${col} ${LIKE_SQL}`;
+      params.push(likePattern(asString(condition.value, field, operator)));
       break;
     case "not_contains":
-      sql = `(${col} NOT LIKE ? ESCAPE '${LIKE_ESCAPE_CHAR}' OR ${col} IS NULL)`;
-      params.push(`%${escapeLike(asString(condition.value, field, operator))}%`);
+      sql = `(${col} NOT ${LIKE_SQL} OR ${col} IS NULL)`;
+      params.push(likePattern(asString(condition.value, field, operator)));
       break;
     case "starts_with":
-      sql = `${col} LIKE ? ESCAPE '${LIKE_ESCAPE_CHAR}'`;
-      params.push(`${escapeLike(asString(condition.value, field, operator))}%`);
+      sql = `${col} ${LIKE_SQL}`;
+      params.push(likePattern(asString(condition.value, field, operator), "starts_with"));
       break;
     case "gt":
     case "gte":
