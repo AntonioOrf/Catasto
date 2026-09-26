@@ -70,6 +70,7 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSave()}
+          aria-label="Nome del filtro da salvare"
           placeholder="Nome del filtro..."
           maxLength={60}
           className="bg-bg-sidebar border border-border-base text-text-main text-xs md:text-sm rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40"
@@ -121,7 +122,7 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
                 <button
                   type="button"
                   onClick={() => setSaved(deleteQuery(query.id))}
-                  className="text-text-accent hover:text-red-500 p-0.5"
+                  className="text-text-accent hover:text-red-500 p-1.5 -my-1"
                   title="Elimina filtro"
                   aria-label={`Elimina filtro ${query.nome}`}
                 >

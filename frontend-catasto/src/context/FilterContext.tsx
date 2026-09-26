@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from 'react';
-import { useCatastoFilters } from '../hooks/useCatastoFilters';
+import { useCatastoFilters, type FiltersState } from '../hooks/useCatastoFilters';
 
-const FilterContext = createContext<any>(null);
+const FilterContext = createContext<FiltersState | null>(null);
 
 export const FilterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const filters = useCatastoFilters();
@@ -14,7 +14,7 @@ export const FilterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 };
 
 // eslint-disable-next-line react-refresh/only-export-components -- hook colocated with its provider, common pattern
-export const useFilters = () => {
+export const useFilters = (): FiltersState => {
   const context = useContext(FilterContext);
   if (!context) {
     throw new Error('useFilters must be used within a FilterProvider');

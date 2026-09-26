@@ -1,12 +1,21 @@
-import { useState, useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { fetchCatastoAuto, fetchParentiData } from "../api/catastoService";
+import { useState, useCallback } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { fetchFuochi, fetchParentiData } from "../api/catastoService";
+import { userMessage } from "../api/client";
+import type { SearchParams } from "../features/catasto/lib/simple-filters";
 
-export function useCatastoData(filters: any) {
-  const [page, setPage] = useState(1);
+export const TABLE_PAGE_SIZE = 50;
+
+export function useCatastoData(search: SearchParams) {
+  // La pagina è legata alla ricerca che l'ha prodotta: con una ricerca nuova
+  // si riparte da 1 nello stesso render, senza un fetch intermedio della
+  // vecchia pagina con i nuovi filtri.
+  const [pageState, setPageState] = useState({ search, page: 1 });
+  const page = pageState.search === search ? pageState.page : 1;
+  const setPage = useCallback((next: number) => setPageState({ search, page: next }), [search]);
+
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  // 1. Fetch main table data
   const {
     data: queryResult,
     isLoading: loading,
@@ -14,86 +23,39 @@ export function useCatastoData(filters: any) {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["catastoData", filters, page],
-    queryFn: ({ signal }) => fetchCatastoAuto(filters, page, 50, signal),
-    placeholderData: (previousData: any) => previousData,
+    queryKey: ["catastoData", search, page],
+    queryFn: ({ signal }) => fetchFuochi(search, "table", page, TABLE_PAGE_SIZE, signal),
+    placeholderData: keepPreviousData,
   });
 
-  const data = queryResult?.data || [];
-  const totalPages = queryResult?.pagination?.totalPages || 1;
-  const totalRecords = queryResult?.pagination?.total || 0;
-  // Un fetch fallito per rete lancia TypeError("Failed to fetch"): messaggio
-  // tecnico e in inglese, che l'utente non deve vedere.
-  const error = isError
-    ? queryError instanceof TypeError || !queryError?.message
-      ? "Il server non risponde. Controlla la connessione e riprova."
-      : queryError.message
-    : null;
-
-  // 2. Fetch Parenti data
-  const { data: parentiResult, isLoading: loadingParenti } = useQuery({
+  const { data: parentiData = [], isLoading: loadingParenti } = useQuery({
     queryKey: ["parenti", expandedId],
-    queryFn: ({ signal }) => fetchParentiData(expandedId, signal),
-    enabled: !!expandedId,
+    queryFn: ({ signal }) => fetchParentiData(expandedId as number, signal),
+    enabled: expandedId !== null,
     staleTime: 10 * 60 * 1000,
   });
 
-  const parentiData = parentiResult || [];
+  const handleRowClick = useCallback(
+    (idFuoco: number) => setExpandedId((current) => (current === idFuoco ? null : idFuoco)),
+    [],
+  );
 
-  // Reset page to 1 when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [
-    filters.searchPersona,
-    filters.searchLocalita,
-    filters.filterMestiere,
-    filters.filterBestiame,
-    filters.filterImmigrazione,
-    filters.filterRapporto,
-    filters.filterVolume,
-    filters.filterFortuneMin,
-    filters.filterFortuneMax,
-    filters.filterCreditoMin,
-    filters.filterCreditoMax,
-    filters.filterCreditoMMin,
-    filters.filterCreditoMMax,
-    filters.filterImponibileMin,
-    filters.filterImponibileMax,
-    filters.filterDeduzioniMin,
-    filters.filterDeduzioniMax,
-    filters.sortBy,
-    filters.sortOrder,
-    filters.advancedMode,
-    filters.ast,
-  ]);
-
-  const fetchData = useCallback(() => {
+  const retry = useCallback(() => {
     refetch();
   }, [refetch]);
 
-  const handleRowClick = useCallback(
-    (idFuoco: number) => {
-      if (expandedId === idFuoco) {
-        setExpandedId(null);
-      } else {
-        setExpandedId(idFuoco);
-      }
-    },
-    [expandedId],
-  );
-
   return {
-    data,
+    data: queryResult?.data ?? [],
     loading,
-    error,
+    error: isError ? userMessage(queryError, "Impossibile caricare i fuochi") : null,
     page,
     setPage,
-    totalPages,
-    totalRecords,
+    totalPages: queryResult?.pagination?.totalPages || 1,
+    totalRecords: queryResult?.pagination?.total ?? 0,
     expandedId,
     parentiData,
     loadingParenti,
     handleRowClick,
-    fetchData,
+    retry,
   };
 }

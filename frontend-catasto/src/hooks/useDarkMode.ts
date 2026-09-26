@@ -4,19 +4,23 @@ const STORAGE_KEY = 'theme';
 
 // localStorage può lanciare (storage bloccato, alcune modalità private): qui
 // verrebbe eseguito durante il primo render e lascerebbe la pagina bianca.
-const readStoredTheme = (): string | null => {
+type Theme = 'light' | 'dark';
+
+const readStoredTheme = (): Theme | null => {
     try {
-        return localStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(STORAGE_KEY);
+        return stored === 'light' || stored === 'dark' ? stored : null;
     } catch {
         return null;
     }
 };
 
-const systemTheme = (): string =>
+const systemTheme = (): Theme =>
     window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 
-export default function useDarkMode(): [string, React.Dispatch<React.SetStateAction<string>>] {
-    const [theme, setTheme] = useState(() => {
+// public/theme-init.js applica la stessa scelta prima del primo paint.
+export default function useDarkMode(): [Theme, React.Dispatch<React.SetStateAction<Theme>>] {
+    const [theme, setTheme] = useState<Theme>(() => {
         if (typeof window === 'undefined') return 'light';
         return readStoredTheme() ?? systemTheme();
     });

@@ -9,6 +9,11 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // Script classici serviti così come sono (es. theme-init.js), fuori dal bundle.
+    files: ['public/**/*.js'],
+    languageOptions: { globals: globals.browser, sourceType: 'script' },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     extends: [reactHooks.configs['recommended-latest'], reactRefresh.configs.vite],
     languageOptions: {

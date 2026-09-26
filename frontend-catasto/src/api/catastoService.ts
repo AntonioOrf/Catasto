@@ -1,117 +1,96 @@
-import { API_URL, buildParams } from "./client";
-import type { QueryGroup } from "@catasto/shared";
+import { apiRequest } from "./client";
+import type {
+  ApiResponse,
+  FilterOptions,
+  Fuoco,
+  IiifPage,
+  Parenti,
+  SidebarItem,
+} from "@catasto/shared";
+import { buildParams, type SearchParams } from "../features/catasto/lib/simple-filters";
 
-const parseError = async (response: Response, fallback: string): Promise<never> => {
-  let message = fallback;
-  try {
-    const body = await response.json();
-    message = body.error || message;
-  } catch {
-    // il body non è JSON: teniamo il messaggio generico
-  }
-  throw new Error(message);
-};
+type View = "table" | "sidebar";
+type ViewResult<V extends View> = V extends "table" ? ApiResponse<Fuoco[]> : SidebarItem[];
 
 /**
  * Ricerca avanzata: l'AST viaggia nel body, non in query string. Stessa forma
  * di risposta della ricerca semplice, così i consumatori non si accorgono di
  * quale dei due percorsi è stato usato.
  */
-export const fetchCatastoQuery = async (
-  ast: QueryGroup,
+const fetchAdvanced = <V extends View>(
+  search: SearchParams,
+  view: V,
   page: number,
   limit: number,
-  sortBy: string,
-  order: string,
-  view: "table" | "sidebar" = "table",
   signal?: AbortSignal,
-) => {
-  const response = await fetch(`${API_URL}/api/catasto/query`, {
+) =>
+  apiRequest<ViewResult<V>>("/api/catasto/query", "La ricerca avanzata non è riuscita", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ast, view, page, limit, sort_by: sortBy, order }),
+    body: JSON.stringify({
+      ast: search.ast,
+      view,
+      page,
+      limit,
+      sort_by: search.sortBy,
+      order: search.sortOrder,
+    }),
     signal,
   });
 
-  if (!response.ok) {
-    await parseError(response, `La ricerca avanzata non è riuscita (errore ${response.status}).`);
-  }
-  return await response.json();
+const fetchSimple = <V extends View>(
+  search: SearchParams,
+  view: V,
+  page: number,
+  limit: number,
+  signal?: AbortSignal,
+) => {
+  const params = buildParams(search);
+  params.append("page", String(page));
+  params.append("limit", String(limit));
+  const path = view === "sidebar" ? "/api/catasto/sidebar" : "/api/catasto";
+  const fallback =
+    view === "sidebar" ? "Impossibile caricare l'indice" : "Il server non ha risposto correttamente";
+  return apiRequest<ViewResult<V>>(`${path}?${params}`, fallback, { signal });
 };
 
 /**
- * Punto di ingresso unico per la tabella: sceglie l'endpoint in base alla
- * modalità attiva. Il branch sta qui e non negli hook, che restano ignari.
+ * Punto di ingresso unico per tabella e indice: sceglie l'endpoint in base
+ * alla modalità attiva. Il branch sta qui e non negli hook, che restano ignari.
  */
-export const fetchCatastoAuto = async (
-  filters: any,
+export const fetchFuochi = <V extends View>(
+  search: SearchParams,
+  view: V,
   page: number,
   limit: number,
   signal?: AbortSignal,
 ) =>
-  filters.advancedMode && filters.ast
-    ? fetchCatastoQuery(filters.ast, page, limit, filters.sortBy, filters.sortOrder, "table", signal)
-    : fetchCatastoData(filters, page, limit, signal);
+  search.advancedMode
+    ? fetchAdvanced(search, view, page, limit, signal)
+    : fetchSimple(search, view, page, limit, signal);
 
-export const fetchSidebarAuto = async (
-  filters: any,
-  page: number,
-  limit: number,
+export const fetchParentiData = (idFuoco: number, signal?: AbortSignal) =>
+  apiRequest<Parenti[]>(`/api/parenti/${idFuoco}`, "Impossibile caricare la composizione familiare", {
+    signal,
+  });
+
+export const fetchFilterOptions = (
+  geo: { serie?: string; quartiere?: string; piviere?: string },
   signal?: AbortSignal,
-) =>
-  filters.advancedMode && filters.ast
-    ? fetchCatastoQuery(filters.ast, page, limit, filters.sortBy, filters.sortOrder, "sidebar", signal)
-    : fetchSidebarData(filters, page, limit, signal);
-
-export const fetchCatastoData = async (filters: any, page: number, limit: number, signal?: AbortSignal) => {
-  const params = buildParams(filters);
-  params.append("page", page.toString());
-  params.append("limit", limit.toString());
-
-  const response = await fetch(`${API_URL}/api/catasto?${params.toString()}`, { signal });
-  if (!response.ok) {
-    let errorMsg = `Il server non ha risposto correttamente (errore ${response.status}).`;
-    try {
-      const errorData = await response.json();
-      errorMsg = errorData.error || errorMsg;
-    } catch {
-      // response body isn't JSON, keep the generic errorMsg
-    }
-    throw new Error(errorMsg);
-  }
-  return await response.json();
-};
-
-export const fetchSidebarData = async (filters: any, page = 1, limit = 1000, signal?: AbortSignal) => {
-  const params = buildParams(filters);
-  params.append("page", page.toString());
-  params.append("limit", limit.toString());
-  const response = await fetch(
-    `${API_URL}/api/catasto/sidebar?${params.toString()}`,
-    { signal }
-  );
-  if (!response.ok) throw new Error("Impossibile caricare l'indice.");
-  return await response.json();
-};
-
-export const fetchParentiData = async (idFuoco: number | null, signal?: AbortSignal) => {
-  if (!idFuoco) return [];
-  const response = await fetch(`${API_URL}/api/parenti/${idFuoco}`, { signal });
-  if (!response.ok) throw new Error("Impossibile caricare la composizione familiare.");
-  return await response.json();
-};
-
-export const fetchFilterOptions = async (
-  geoFilters?: { serie?: string; quartiere?: string; piviere?: string },
-  signal?: AbortSignal
 ) => {
   const params = new URLSearchParams();
-  if (geoFilters?.serie) params.append("serie", geoFilters.serie);
-  if (geoFilters?.quartiere) params.append("quartiere", geoFilters.quartiere);
-  if (geoFilters?.piviere) params.append("piviere", geoFilters.piviere);
-
-  const queryString = params.toString() ? `?${params.toString()}` : "";
-  const response = await fetch(`${API_URL}/api/filters${queryString}`, { signal });
-  if (!response.ok) throw new Error("Impossibile caricare le opzioni dei filtri.");
-  return await response.json();
+  for (const [key, value] of Object.entries(geo)) {
+    if (value) params.append(key, value);
+  }
+  const query = params.toString() ? `?${params}` : "";
+  return apiRequest<FilterOptions>(`/api/filters${query}`, "Impossibile caricare le opzioni dei filtri", {
+    signal,
+  });
 };
+
+export const fetchManifestPages = (archiveId: string, signal?: AbortSignal) =>
+  apiRequest<IiifPage[]>(
+    `/api/catasto/manifest/${encodeURIComponent(archiveId)}`,
+    "Impossibile scaricare le informazioni del volume dall'Archivio di Stato",
+    { signal },
+  );
