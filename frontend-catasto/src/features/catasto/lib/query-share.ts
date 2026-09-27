@@ -1,4 +1,5 @@
 import type { QueryGroup } from "@catasto/shared";
+import { isQueryGroup } from "./query-ast-validate";
 
 /**
  * Serializzazione dell'AST per l'URL condivisibile.
@@ -32,13 +33,13 @@ export function encodeAst(ast: QueryGroup): string {
 /**
  * Il payload arriva da un URL scritto da terzi: qualunque errore di formato
  * deve degradare a "nessuna query condivisa", mai propagarsi come eccezione.
- * La validazione vera resta lato server, che compila solo campi del registry.
+ * Qui si valida l'intero albero (un nodo malformato romperebbe il render);
+ * campi e operatori ammessi restano verificati dal server.
  */
 export function decodeAst(encoded: string): QueryGroup | null {
   try {
     const parsed = JSON.parse(new TextDecoder().decode(fromBase64Url(encoded)));
-    if (parsed?.kind !== "group" || !Array.isArray(parsed.children)) return null;
-    return parsed as QueryGroup;
+    return isQueryGroup(parsed) ? parsed : null;
   } catch {
     return null;
   }
