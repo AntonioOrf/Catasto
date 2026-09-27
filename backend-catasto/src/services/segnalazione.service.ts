@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { SegnalazioneModel } from "../models/segnalazione.model.js";
-import { ValidationError } from "../utils/validation.js";
+import { HttpError, ValidationError } from "../utils/validation.js";
 import type { SegnalazioneInput, Segnalazione, StatoSegnalazione } from "@catasto/shared";
 
 /** Finestra e soglia del limite applicativo (il rate limit HTTP è la prima barriera). */
@@ -27,11 +27,12 @@ export class SegnalazioneService {
     return createHash("sha256").update(`${salt}:${ip}`).digest("hex");
   }
 
-  static async create(input: SegnalazioneInput, ip: string | undefined): Promise<number> {
+  /** Restituisce l'id creato, oppure null se l'invio è stato scartato dall'honeypot. */
+  static async create(input: SegnalazioneInput, ip: string | undefined): Promise<number | null> {
     // Honeypot: un campo invisibile all'utente e compilato dai bot. Rispondiamo
     // come se fosse andata a buon fine, senza scrivere nulla.
     if (input.website && input.website.trim() !== "") {
-      return -1;
+      return null;
     }
 
     if (input.id_fuoco !== null) {
@@ -45,11 +46,7 @@ export class SegnalazioneService {
     if (ipHash) {
       const recent = await SegnalazioneModel.countRecentByIp(ipHash, ABUSE_WINDOW_MINUTES);
       if (recent >= ABUSE_MAX_PER_WINDOW) {
-        const error = new ValidationError(
-          "Troppe segnalazioni inviate di recente. Riprova più tardi.",
-        );
-        error.status = 429;
-        throw error;
+        throw new HttpError(429, "Troppe segnalazioni inviate di recente. Riprova più tardi.");
       }
     }
 
@@ -77,38 +74,37 @@ export class SegnalazioneService {
    * Cambio di stato con effetto sui dati pubblicati: accettare una segnalazione
    * di tipo `segnatura` pubblica il valore proposto sulla scheda del fuoco,
    * revocarla lo ritira. È l'unico percorso di scrittura su fuoco_segnature.
+   *
+   * Stato e segnatura cambiano nella stessa transazione: un errore a metà non
+   * deve lasciare una segnalazione "accettata" senza dato pubblicato, o
+   * viceversa.
    */
   static async updateStato(id: number, stato: StatoSegnalazione): Promise<Segnalazione> {
-    const segnalazione = await SegnalazioneModel.findById(id);
-    if (!segnalazione) {
-      const error = new ValidationError(`Segnalazione ${id} non trovata`);
-      error.status = 404;
-      throw error;
-    }
-
-    const publishesSegnatura = segnalazione.tipo === "segnatura" && segnalazione.id_fuoco;
-
-    // Validazione prima di qualunque scrittura: altrimenti la segnalazione
-    // resterebbe "accettata" senza che la segnatura sia pubblicata.
-    if (publishesSegnatura && stato === "accettata" && !segnalazione.valore_proposto) {
-      throw new ValidationError("Impossibile accettare una segnatura senza valore proposto");
-    }
-
-    await SegnalazioneModel.updateStato(id, stato);
-
-    if (publishesSegnatura && segnalazione.id_fuoco) {
-      if (stato === "accettata" && segnalazione.valore_proposto) {
-        await SegnalazioneModel.upsertSegnatura(
-          segnalazione.id_fuoco,
-          segnalazione.valore_proposto,
-          id,
-        );
-      } else if (segnalazione.stato === "accettata") {
-        // Era pubblicata e non lo è più: ritiriamo il dato dalla scheda.
-        await SegnalazioneModel.deleteSegnatura(segnalazione.id_fuoco);
+    return SegnalazioneModel.transaction(async (tx) => {
+      const segnalazione = await tx.findByIdForUpdate(id);
+      if (!segnalazione) {
+        throw new HttpError(404, `Segnalazione ${id} non trovata`);
       }
-    }
 
-    return { ...segnalazione, stato };
+      const idFuoco = segnalazione.tipo === "segnatura" ? segnalazione.id_fuoco : null;
+
+      if (idFuoco && stato === "accettata" && !segnalazione.valore_proposto) {
+        throw new ValidationError("Impossibile accettare una segnatura senza valore proposto");
+      }
+
+      await tx.updateStato(id, stato);
+
+      if (idFuoco) {
+        if (stato === "accettata" && segnalazione.valore_proposto) {
+          await tx.upsertSegnatura(idFuoco, segnalazione.valore_proposto, id);
+        } else if (segnalazione.stato === "accettata") {
+          // Era pubblicata e non lo è più: ritiriamo il dato solo se è ancora
+          // quello di questa segnalazione, non una correzione accettata dopo.
+          await tx.deleteSegnatura(idFuoco, id);
+        }
+      }
+
+      return { ...segnalazione, stato };
+    });
   }
 }

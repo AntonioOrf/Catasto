@@ -1,7 +1,7 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import { z } from "zod";
-import { CatastoService } from "../services/catasto.service.js";
-import { paginationSchema, parseNumericId, ValidationError } from "../utils/validation.js";
+import { CatastoService, type FuochiView } from "../services/catasto.service.js";
+import { paginationSchema, parseNumericId, splitPaginationQuery, ValidationError } from "../utils/validation.js";
 import { astSchema } from "../utils/query-ast-builder.js";
 
 const advancedQuerySchema = z.object({
@@ -9,104 +9,51 @@ const advancedQuerySchema = z.object({
   view: z.enum(["table", "sidebar"]).catch("table"),
 });
 
-export class CatastoController {
-  static async getAll(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { page, limit, sort_by, order } = paginationSchema.parse(req.query);
-      const { page: _p, limit: _l, sort_by: _s, order: _o, ...filters } = req.query;
+/** L'indice laterale carica blocchi grandi: il default di pagina è diverso dalla tabella. */
+const SIDEBAR_DEFAULT_LIMIT = "1000";
 
-      const result = await CatastoService.getAllFuochi(
-        filters as any,
-        page,
-        limit,
-        sort_by,
-        order
-      );
+const search = (view: FuochiView) => async (req: Request, res: Response) => {
+  const { pagination, filters } = splitPaginationQuery(
+    req.query,
+    view === "sidebar" ? { limit: SIDEBAR_DEFAULT_LIMIT } : {},
+  );
+  res.json(await CatastoService.searchFuochi(filters, pagination, view));
+};
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
+export const CatastoController = {
+  getAll: search("table"),
 
-  static async getSidebar(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { page, limit, sort_by, order } = paginationSchema.parse({
-        limit: "1000",
-        ...req.query,
-      });
-      const { page: _p, limit: _l, sort_by: _s, order: _o, ...filters } = req.query;
-
-      const data = await CatastoService.getSidebar(
-        filters as any,
-        page,
-        limit,
-        sort_by,
-        order
-      );
-      res.json(data);
-    } catch (error) {
-      next(error);
-    }
-  }
+  getSidebar: search("sidebar"),
 
   /**
    * POST perche' l'AST e' un oggetto annidato: infilarlo in una query string
    * lo renderebbe fragile e soggetto al limite di lunghezza degli URL.
    */
-  static async query(req: Request, res: Response, next: NextFunction) {
-    try {
-      const parsed = advancedQuerySchema.safeParse(req.body);
-      if (!parsed.success) {
-        throw new ValidationError(
-          `Query non valida: ${parsed.error.issues[0]?.message ?? "formato non riconosciuto"}`
-        );
-      }
-
-      const { page, limit, sort_by, order } = paginationSchema.parse(req.body ?? {});
-      const result = await CatastoService.queryFuochi(
-        parsed.data.ast,
-        page,
-        limit,
-        sort_by,
-        order,
-        parsed.data.view
+  async query(req: Request, res: Response) {
+    const parsed = advancedQuerySchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError(
+        `Query non valida: ${parsed.error.issues[0]?.message ?? "formato non riconosciuto"}`,
       );
-
-      res.json(result);
-    } catch (error) {
-      next(error);
     }
-  }
 
-  static async getParenti(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseNumericId(req.params.id, "fuoco id");
-      const data = await CatastoService.getParenti(parseInt(id, 10));
-      res.json(data);
-    } catch (error) {
-      next(error);
-    }
-  }
+    const pagination = paginationSchema.parse(req.body ?? {});
+    res.json(await CatastoService.queryFuochi(parsed.data.ast, pagination, parsed.data.view));
+  },
 
-  static async getMestieri(_req: Request, res: Response, next: NextFunction) {
-    try {
-      const data = await CatastoService.getMestieri();
-      res.json(data);
-    } catch (error) {
-      next(error);
-    }
-  }
+  async getParenti(req: Request, res: Response) {
+    const id = parseNumericId(req.params.id, "fuoco id");
+    res.json(await CatastoService.getParenti(id));
+  },
 
-  static async getManifest(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseNumericId(req.params.id, "archive id");
-      const data = await CatastoService.getManifest(id);
+  async getMestieri(_req: Request, res: Response) {
+    res.json(await CatastoService.getMestieri());
+  },
 
-      res.setHeader("Content-Type", "application/json");
-      res.json(data);
-    } catch (error) {
-      next(error);
-    }
-  }
-}
+  async getManifest(req: Request, res: Response) {
+    const id = parseNumericId(req.params.id, "archive id");
+    // Il contenuto non cambia: anche il browser può tenerlo in cache.
+    res.set("Cache-Control", "public, max-age=86400");
+    res.json(await CatastoService.getManifest(id));
+  },
+};

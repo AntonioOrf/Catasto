@@ -1,111 +1,81 @@
-import { useState, useEffect } from "react";
-import { fetchSidebarAuto } from "../api/catastoService";
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { SidebarItem } from "@catasto/shared";
+import { fetchFuochi } from "../api/catastoService";
+import type { SearchParams } from "../features/catasto/lib/simple-filters";
 
-export function useCatastoSidebar(filters: any) {
-  const [sidebarData, setSidebarData] = useState<any[]>([]);
+/** Righe per richiesta. Le pagine restano allineate: la pagina n parte da (n-1)*size. */
+const SIDEBAR_PAGE_SIZE = 1000;
+/**
+ * Richieste massime per seguire un salto di pagina della tabella: oltre,
+ * l'indice non insegue (una pagina lontana costerebbe decine di richieste).
+ */
+const MAX_SYNC_PAGES = 10;
+
+const isAbort = (err: unknown) => err instanceof DOMException && err.name === "AbortError";
+
+export function useCatastoSidebar(search: SearchParams) {
+  const [sidebarData, setSidebarData] = useState<SidebarItem[]>([]);
   const [sidebarLoading, setSidebarLoading] = useState(false);
-  const [sidebarPage, setSidebarPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  // Trigger load when filters change
+  // Stato letto dai callback senza doverli ricreare a ogni pagina caricata.
+  const loadedPages = useRef(0);
+  const controllerRef = useRef<AbortController | null>(null);
+
+  /** Carica le pagine [from, to] e le accoda; `replace` riparte da zero. */
+  const loadPages = useCallback(
+    async (from: number, to: number, replace: boolean) => {
+      controllerRef.current?.abort();
+      const controller = new AbortController();
+      controllerRef.current = controller;
+      setSidebarLoading(true);
+
+      try {
+        const pageNumbers = Array.from({ length: to - from + 1 }, (_, i) => from + i);
+        const results = await Promise.all(
+          pageNumbers.map((page) =>
+            fetchFuochi(search, "sidebar", page, SIDEBAR_PAGE_SIZE, controller.signal),
+          ),
+        );
+        const items = results.flat();
+
+        loadedPages.current = to;
+        setSidebarData((prev) => (replace ? items : [...prev, ...items]));
+        setHasMore(results[results.length - 1].length === SIDEBAR_PAGE_SIZE);
+      } catch (err) {
+        if (!isAbort(err)) console.error(err);
+      } finally {
+        if (controllerRef.current === controller) setSidebarLoading(false);
+      }
+    },
+    [search],
+  );
+
+  // Ricerca nuova: l'indice riparte dalla prima pagina.
   useEffect(() => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      setSidebarPage(1);
-      setSidebarData([]);
-      setHasMore(true);
-      loadSidebar(1, true, controller.signal);
-    }, 500);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-    // eslint-disable-next-line
-  }, [
-    filters.searchPersona,
-    filters.searchLocalita,
-    filters.filterMestiere,
-    filters.filterBestiame,
-    filters.filterImmigrazione,
-    filters.filterRapporto,
-    filters.filterVolume,
-    filters.filterFortuneMin,
-    filters.filterFortuneMax,
-    filters.filterCreditoMin,
-    filters.filterCreditoMax,
-    filters.filterCreditoMMin,
-    filters.filterCreditoMMax,
-    filters.filterImponibileMin,
-    filters.filterImponibileMax,
-    filters.filterDeduzioniMin,
-    filters.filterDeduzioniMax,
-    filters.sortBy,
-    filters.sortOrder,
-    filters.advancedMode,
-    filters.ast,
-  ]);
+    loadedPages.current = 0;
+    setSidebarData([]);
+    setHasMore(true);
+    loadPages(1, 1, true);
+    return () => controllerRef.current?.abort();
+  }, [loadPages]);
 
-  const loadSidebar = async (pageToLoad: number, isNewSearch = false, signal?: AbortSignal) => {
-    if (!isNewSearch && !hasMore) return;
-    setSidebarLoading(true);
-    try {
-      const limit = 1000;
-      const result = await fetchSidebarAuto(filters, pageToLoad, limit, signal);
-      const newItems = Array.isArray(result) ? result : (result.data || []);
+  const loadMoreSidebar = useCallback(() => {
+    if (sidebarLoading || !hasMore) return;
+    const next = loadedPages.current + 1;
+    loadPages(next, next, false);
+  }, [sidebarLoading, hasMore, loadPages]);
 
-      if (isNewSearch) {
-        setSidebarData(newItems);
-      } else {
-        setSidebarData((prev) => [...prev, ...newItems]);
-      }
-
-      setHasMore(newItems.length === limit);
-    } catch (err: any) {
-      if (err.name !== "AbortError") {
-        console.error(err);
-      }
-    } finally {
-      if (!signal?.aborted) {
-        setSidebarLoading(false);
-      }
-    }
-  };
-
-  const loadMoreSidebar = () => {
-    if (!sidebarLoading && hasMore) {
-      const nextPage = sidebarPage + 1;
-      setSidebarPage(nextPage);
-      loadSidebar(nextPage, false);
-    }
-  };
-
-  const syncSidebarToPage = (targetGridPage: number, pageSize = 50, signal?: AbortSignal) => {
-    const targetRowIndex = targetGridPage * pageSize;
-    const limitSidebar = 1000;
-    const requiredSidebarPages = Math.ceil(targetRowIndex / limitSidebar);
-
-    if (sidebarPage >= requiredSidebarPages && sidebarData.length > 0) return;
-
-    setSidebarLoading(true);
-    const superLimit = targetRowIndex + limitSidebar;
-
-    fetchSidebarAuto(filters, 1, superLimit, signal)
-      .then((result) => {
-        const newItems = Array.isArray(result) ? result : (result.data || []);
-        setSidebarData(newItems);
-        setSidebarPage(Math.ceil(superLimit / limitSidebar));
-        setHasMore(newItems.length === superLimit);
-        if (!signal?.aborted) {
-          setSidebarLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (err.name !== "AbortError") {
-          console.error(err);
-          setSidebarLoading(false);
-        }
-      });
-  };
+  /** Porta l'indice almeno fino alle righe della pagina `gridPage` della tabella. */
+  const syncSidebarToPage = useCallback(
+    (gridPage: number, gridPageSize: number) => {
+      const required = Math.ceil((gridPage * gridPageSize) / SIDEBAR_PAGE_SIZE);
+      const from = loadedPages.current + 1;
+      if (!hasMore || required < from || required - from + 1 > MAX_SYNC_PAGES) return;
+      loadPages(from, required, false);
+    },
+    [hasMore, loadPages],
+  );
 
   return {
     sidebarData,

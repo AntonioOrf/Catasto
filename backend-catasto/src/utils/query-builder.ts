@@ -62,7 +62,7 @@ const num = (value: unknown, name: string): number | undefined => {
 };
 
 /** Lista di id separati da virgola, come la producono i GROUP_CONCAT di /api/filters. */
-const ids = (value: unknown, name: string): number[] | undefined => {
+export const parseIdList = (value: unknown, name: string): number[] | undefined => {
   const str = text(value, name);
   if (str === undefined) return undefined;
   const parts = str.split(",").map((p) => p.trim());
@@ -72,8 +72,13 @@ const ids = (value: unknown, name: string): number[] | undefined => {
   return parts.map(Number);
 };
 
-const like = (value: string) => `%${escapeLike(value)}%`;
-const LIKE = `LIKE ? ESCAPE '${LIKE_ESCAPE_CHAR}'`;
+/** Frammento SQL da usare con un pattern prodotto da `likePattern`. */
+export const LIKE_SQL = `LIKE ? ESCAPE '${LIKE_ESCAPE_CHAR}'`;
+export const likePattern = (value: string, mode: "contains" | "starts_with" = "contains") =>
+  mode === "contains" ? `%${escapeLike(value)}%` : `${escapeLike(value)}%`;
+
+const like = (value: string) => likePattern(value);
+const LIKE = LIKE_SQL;
 
 const EQUALITY_FILTERS = [
   ["mestiere", "f.Mestiere_Fuoco"],
@@ -98,7 +103,11 @@ const GEO_FILTERS = [
   ["popolo", "tp", "tp.id_popolo"],
 ] as const;
 
-export const buildQuery = (filters: QueryFilters) => {
+/**
+ * Accetta la query string grezza di Express: ogni valore viene validato qui,
+ * quindi il tipo documenta i parametri noti senza fidarsi della loro forma.
+ */
+export const buildQuery = (filters: QueryFilters | Record<string, unknown>) => {
   const raw = filters as Record<string, unknown>;
   let conditions = "WHERE 1=1";
   const params: unknown[] = [];
@@ -145,7 +154,7 @@ export const buildQuery = (filters: QueryFilters) => {
   }
 
   for (const [key, table, column] of GEO_FILTERS) {
-    const values = ids(raw[key], key);
+    const values = parseIdList(raw[key], key);
     if (values) {
       usedTables.add(table);
       conditions += ` AND ${column} IN (${values.map(() => "?").join(",")})`;

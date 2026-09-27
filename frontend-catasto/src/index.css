@@ -1,23 +1,18 @@
 @import "tailwindcss";
+
+/* Tailwind v4 usa currentColor come colore di bordo predefinito: qui torna al
+   bordo del tema. Nel layer base e senza !important, così le utility
+   (border-primary, border-red-500/40, ...) restano libere di sovrascriverlo. */
 @layer base {
-  section,
-  article,
-  aside,
-  nav,
-  header,
-  footer,
-  div {
-    border-color: var(--color-border) !important;
-    input {
-      border-color: var(--color-border-base) !important;
-    }
-    select {
-      border-color: var(--color-border-base) !important;
-    }
+  *,
+  ::before,
+  ::after,
+  ::backdrop {
+    border-color: var(--color-border);
   }
 }
 
-/* Nascondi frecce input number */
+/* Frecce native degli input number nascoste: CustomNumberInput ha le sue. */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
@@ -182,4 +177,17 @@ html {
 /* Cifre allineate in colonna: fiorini ed età si confrontano a colpo d'occhio. */
 table {
   font-variant-numeric: tabular-nums;
+}
+
+/* Chi ha chiesto meno movimento al sistema non vede transizioni né scroll
+   animati, anche dove il singolo componente non lo prevede. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

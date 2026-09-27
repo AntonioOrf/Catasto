@@ -38,7 +38,7 @@ The backend follows a **Controller-Service-Model** pattern, fully implemented in
 
 - `GET /api/catasto`: Main search endpoint. Supports extensive query parameters for filtering and sorting.
 - `GET /api/catasto/sidebar`: Optimized endpoint for the sidebar index.
-- `GET /api/catasto/manifest/:id`: Proxy for the IIIF manifest from Archivio di Stato.
+- `GET /api/catasto/manifest/:id`: Pages (`{ label, image }[]`, https images only) projected from the IIIF manifest of the Archivio di Stato. Cached server-side for 24h, concurrent requests for the same volume are coalesced.
 
 ### Supporting Data
 

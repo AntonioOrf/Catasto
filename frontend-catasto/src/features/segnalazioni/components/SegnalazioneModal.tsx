@@ -6,6 +6,7 @@ import {
   SEGNATURA_PREFISSO,
   TIPI_SEGNALAZIONE,
   TIPO_SEGNALAZIONE_LABELS,
+  type Fuoco,
   type TipoSegnalazione,
 } from "@catasto/shared";
 import { useCreateSegnalazione } from "../api/create-segnalazione";
@@ -15,7 +16,7 @@ interface SegnalazioneModalProps {
   isOpen: boolean;
   onClose: () => void;
   /** Riga del catasto da cui parte la segnalazione. */
-  row: any;
+  row: Fuoco | null;
   /** Tipo preselezionato: dal visore si segnala una segnatura, dalla tabella un dato. */
   defaultTipo?: TipoSegnalazione;
   defaultCampo?: string;
@@ -34,8 +35,8 @@ const composeSegnatura = (value: string, altroFondo: boolean): string => {
 };
 
 /** Il valore attualmente mostrato all'utente per il campo scelto. */
-const currentValue = (row: any, campo: string): string => {
-  const raw = row?.[campo];
+const currentValue = (row: Fuoco | null, campo: string): string => {
+  const raw = (row as Record<string, unknown> | null)?.[campo];
   return raw === null || raw === undefined || raw === "" ? "" : String(raw);
 };
 
@@ -141,6 +142,7 @@ export default function SegnalazioneModal({
               Sarà verificata dalla redazione prima di essere pubblicata. Grazie del contributo.
             </p>
             <button
+              type="button"
               onClick={onClose}
               className="mt-2 bg-primary text-on-primary px-4 py-2 rounded text-sm font-bold hover:bg-primary/90 transition-colors"
             >
@@ -220,7 +222,12 @@ export default function SegnalazioneModal({
                   type="text"
                   value={valoreProposto}
                   onChange={(e) => setValoreProposto(e.target.value)}
-                  maxLength={SEGNALAZIONE_LIMITS.valore - SEGNATURA_PREFISSO.length - 1}
+                  // Il prefisso del fondo viene anteposto all'invio: conta nel limite del backend.
+                  maxLength={
+                    tipo === "segnatura" && !altroFondo
+                      ? SEGNALAZIONE_LIMITS.valore - SEGNATURA_PREFISSO.length - 1
+                      : SEGNALAZIONE_LIMITS.valore
+                  }
                   required={tipo === "segnatura"}
                   placeholder={
                     tipo !== "segnatura"
@@ -284,21 +291,21 @@ export default function SegnalazioneModal({
             />
 
             {mutation.isError && (
-              <p className="text-sm text-red-500">{(mutation.error as Error).message}</p>
+              <p role="alert" className="text-sm text-red-600 dark:text-red-400">{(mutation.error as Error).message}</p>
             )}
 
             <div className="flex items-center justify-end gap-3 pt-2 border-t border-border-base">
               <button
                 type="button"
                 onClick={onClose}
-                className="text-sm text-text-accent hover:underline"
+                className="min-h-11 px-2 text-sm text-text-accent hover:underline"
               >
                 Annulla
               </button>
               <button
                 type="submit"
                 disabled={mutation.isPending}
-                className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 min-h-11 bg-primary text-on-primary px-4 rounded text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 <Send className="h-4 w-4" aria-hidden="true" />
                 {mutation.isPending ? "Invio..." : "Invia segnalazione"}
