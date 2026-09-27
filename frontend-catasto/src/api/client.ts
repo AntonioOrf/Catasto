@@ -1,3 +1,5 @@
+import { getLang } from "../i18n/language";
+
 export const API_URL =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.PROD ? "" : "http://localhost:3005");
@@ -22,7 +24,11 @@ export async function apiRequest<T>(
   fallbackError: string,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, init);
+  // Le etichette delle tabelle di lookup (mestieri, casa, ...) il backend le
+  // traduce se chiesto; l'italiano è il default e non serve dichiararlo.
+  const lang = getLang();
+  const url = lang === "it" ? path : `${path}${path.includes("?") ? "&" : "?"}lang=${lang}`;
+  const response = await fetch(`${API_URL}${url}`, init);
 
   if (!response.ok) {
     let message = `${fallbackError} (errore ${response.status})`;
