@@ -63,11 +63,9 @@ export class SegnalazioneService {
       ip_hash: ipHash,
     });
 
-    // Avviso email alla redazione per le proposte di segnatura. Non atteso:
-    // l'utente non deve aspettare (né vedere fallire) un servizio esterno.
-    if (input.tipo === "segnatura") {
-      void NotificaService.inviaSegnatura(id, input);
-    }
+    // Avviso email alla redazione per ogni segnalazione. Non atteso: l'utente
+    // non deve aspettare (né vedere fallire) un servizio esterno.
+    void NotificaService.invia(id, input);
 
     return id;
   }

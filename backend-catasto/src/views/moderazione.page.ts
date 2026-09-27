@@ -1,4 +1,4 @@
-import { STATO_SEGNALAZIONE_LABELS, type Segnalazione } from "@catasto/shared";
+import { getField, STATO_SEGNALAZIONE_LABELS, TIPO_SEGNALAZIONE_LABELS, type Segnalazione } from "@catasto/shared";
 import type { AzioneLink } from "../utils/moderazione-token.js";
 
 /**
@@ -40,11 +40,26 @@ const VERBO: Record<AzioneLink, string> = { accettata: "Accetta", respinta: "Res
 const dettagli = (s: Segnalazione) => `<dl>
   <dt>Segnalazione</dt><dd>#${escape(s.id)}</dd>
   <dt>Fuoco</dt><dd>${s.id_fuoco ? `${escape(s.nome_fuoco ?? "")} (id ${escape(s.id_fuoco)})` : "non indicato"}</dd>
-  <dt>Segnatura</dt><dd class="mono">${escape(s.valore_proposto)}</dd>
+  <dt>Tipo</dt><dd>${escape(TIPO_SEGNALAZIONE_LABELS[s.tipo])}</dd>
+  ${s.campo ? `<dt>Campo</dt><dd>${escape(getField(s.campo)?.label ?? s.campo)}</dd>` : ""}
+  ${s.tipo === "dato_errato" ? `<dt>Valore attuale</dt><dd>${escape(s.valore_attuale ?? "vuoto")}</dd>` : ""}
+  ${s.valore_proposto ? `<dt>${s.tipo === "segnatura" ? "Segnatura" : "Valore proposto"}</dt><dd class="mono">${escape(s.valore_proposto)}</dd>` : ""}
   ${s.note ? `<dt>Note</dt><dd>${escape(s.note)}</dd>` : ""}
   ${s.email ? `<dt>Email</dt><dd>${escape(s.email)}</dd>` : ""}
   <dt>Stato</dt><dd>${escape(STATO_SEGNALAZIONE_LABELS[s.stato])}</dd>
 </dl>`;
+
+/** Cosa comporta la decisione: solo le segnature vengono pubblicate in automatico. */
+const effetto = (s: Segnalazione, azione: AzioneLink): string => {
+  if (s.tipo === "segnatura") {
+    return azione === "accettata"
+      ? "Accettando, la segnatura viene pubblicata sulla scheda del fuoco."
+      : "Respingendo, la segnatura non viene pubblicata.";
+  }
+  return azione === "accettata"
+    ? "Accettando, la segnalazione viene segnata come accettata. La correzione del dato non è automatica: va applicata a mano nella base dati."
+    : "Respingendo, la segnalazione viene archiviata come respinta.";
+};
 
 export const ModerazionePage = {
   /**
@@ -52,29 +67,30 @@ export const ModerazionePage = {
    * di posta aprono i link da soli, e non devono poter pubblicare una segnatura.
    */
   conferma(s: Segnalazione, azione: AzioneLink, token: string, daModerare: boolean): string {
+    const oggetto = s.tipo === "segnatura" ? "la segnatura" : "la segnalazione";
     const azioneBody = daModerare
       ? `<form method="post">
   <input type="hidden" name="t" value="${escape(token)}">
-  <button type="submit" class="${azione}">${VERBO[azione]} la segnatura</button>
+  <button type="submit" class="${azione}">${VERBO[azione]} ${oggetto}</button>
 </form>
-<p class="muted">${
-          azione === "accettata"
-            ? "Accettando, la segnatura viene pubblicata sulla scheda del fuoco."
-            : "Respingendo, la segnatura non viene pubblicata."
-        }</p>`
+<p class="muted">${escape(effetto(s, azione))}</p>`
       : `<p>Questa segnalazione è già stata moderata: il link non è più utilizzabile.</p>`;
 
     return layout(
-      `${VERBO[azione]} la segnatura`,
-      `<h1>${VERBO[azione]} la proposta di segnatura?</h1>${dettagli(s)}${azioneBody}`,
+      `${VERBO[azione]} ${oggetto}`,
+      `<h1>${VERBO[azione]} ${s.tipo === "segnatura" ? "la proposta di segnatura" : "la segnalazione"}?</h1>${dettagli(s)}${azioneBody}`,
     );
   },
 
   esito(s: Segnalazione): string {
     const testo =
-      s.stato === "accettata"
-        ? "Segnatura accettata e pubblicata sulla scheda del fuoco."
-        : "Segnatura respinta.";
+      s.tipo === "segnatura"
+        ? s.stato === "accettata"
+          ? "Segnatura accettata e pubblicata sulla scheda del fuoco."
+          : "Segnatura respinta."
+        : s.stato === "accettata"
+          ? "Segnalazione accettata."
+          : "Segnalazione respinta.";
     return layout("Moderazione registrata", `<h1>${escape(testo)}</h1>${dettagli(s)}`);
   },
 
