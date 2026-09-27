@@ -11,6 +11,7 @@ import {
   findFoglioIndex,
   iiifImageUrl,
   resolveArchiveId,
+  type RiferimentoArchivio,
 } from '../lib/archivio';
 
 interface ArchivioViewerModalProps {
@@ -20,6 +21,8 @@ interface ArchivioViewerModalProps {
   foglio: string | number;
   volume: string | number;
   nome: string;
+  /** Volume aperto: campione del fuoco o portata. Cambia solo l'intestazione. */
+  riferimento?: RiferimentoArchivio;
   /** Apre la segnalazione della segnatura con volume/foglio correnti già noti. */
   onSegnalaSegnatura?: () => void;
 }
@@ -35,7 +38,7 @@ const SWIPE_MAX_Y = 50;
 const clampScale = (value: number) => Math.min(Math.max(value, MIN_SCALE), MAX_SCALE);
 const touchDistance = (a: Touch, b: Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
 
-const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClose, codiceArchivio, foglio, volume, nome, onSegnalaSegnatura }) => {
+const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClose, codiceArchivio, foglio, volume, nome, riferimento = 'campione', onSegnalaSegnatura }) => {
   const archiveId = resolveArchiveId(codiceArchivio, volume, foglio);
 
   // Il manifest di un volume non cambia: in cache per tutta la sessione, così
@@ -221,7 +224,8 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
             <h2 id="viewer-title" className="text-sm sm:text-base md:text-xl font-serif font-bold text-accent-strong flex items-center gap-1.5 sm:gap-2">
               <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" aria-hidden="true" />
               <span className="hidden sm:inline">Archivio di Stato di Firenze - </span>
-              Volume {volume || '?'}, Foglio {foglio || '?'}
+              {riferimento === 'portata' ? 'Portata: ' : ''}
+              Volume {volume || '?'}, {riferimento === 'portata' ? 'Carta' : 'Foglio'} {foglio || '?'}
             </h2>
             {nome && (
               <p className="text-xs sm:text-sm text-text-main font-semibold mt-0.5 sm:mt-1 truncate">

@@ -16,6 +16,9 @@ const SPLIT_VOLUMES: Record<string, { part1: { max: number; id: string }; part2:
   "193": { part1: { max: 328, id: "2722408" }, part2: { min: 329, id: "2722409" } },
 };
 
+/** Volume aperto nel visore: il campione del fuoco o la sua portata. */
+export type RiferimentoArchivio = "campione" | "portata";
+
 /** Carte mostrate nel visore a partire da quella del fuoco. */
 export const PAGES_TO_SHOW = 4;
 
@@ -44,9 +47,16 @@ export function findFoglioIndex(pages: IiifPage[], foglio: string | number): num
   if (!foglioStr) return -1;
   const padded = foglioStr.padStart(4, "0");
 
-  const matches = pages
-    .map((page, index) => ({ label: normalizeLabel(page.label), index }))
-    .filter(({ label }) => label.endsWith(padded) || label.endsWith(foglioStr));
+  const labels = pages.map((page, index) => ({ label: normalizeLabel(page.label), index }));
+  let matches = labels.filter(({ label }) => label.endsWith(padded) || label.endsWith(foglioStr));
+
+  // Le carte delle portate hanno spesso recto/verso ("245r"), le etichette
+  // dell'Archivio quasi mai: in mancanza si cerca il solo numero.
+  const numero = foglioStr.match(/^(\d+)\s*[rv]$/i)?.[1];
+  if (matches.length === 0 && numero) {
+    const paddedNumero = numero.padStart(4, "0");
+    matches = labels.filter(({ label }) => label.endsWith(paddedNumero) || label.endsWith(numero));
+  }
 
   if (matches.length === 0) return -1;
 
