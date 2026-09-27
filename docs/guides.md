@@ -114,3 +114,26 @@ Dovresti vedere tre container: `catasto-db`, `catasto-backend`, e `catasto-front
 ---
 
 <p align="center">Per ulteriori domande, consulta la documentazione specifica del <a href="backend.md">Backend</a> o del <a href="frontend.md">Frontend</a>.</p>
+
+## Immagini Docker automatiche
+
+`.github/workflows/docker.yml` costruisce e pubblica su Docker Hub
+`ipavon/catasto1427-backend` e `ipavon/catasto1427-frontend` a ogni merge su
+`main`, dopo che la CI è passata. Ogni immagine ha due tag: `latest` e lo SHA
+corto del commit (per tornare a una versione precedente).
+
+Una tantum, nel repository GitHub → Settings → Secrets and variables → Actions:
+
+- `DOCKERHUB_USERNAME`: utente Docker Hub (`ipavon`)
+- `DOCKERHUB_TOKEN`: access token creato su Docker Hub → Account settings →
+  Personal access tokens, con permesso *Read & Write*
+
+Si può anche lanciare a mano da Actions → Docker images → Run workflow.
+
+Sul server, per aggiornare:
+
+```bash
+cd ~/docker/catasto
+docker compose pull backend frontend
+docker compose up -d backend frontend
+```
