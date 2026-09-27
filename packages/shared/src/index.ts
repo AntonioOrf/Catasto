@@ -1,6 +1,7 @@
 export * from "./fields.js";
 export * from "./query-ast.js";
 export * from "./segnalazioni.js";
+export * from "./segnatura.js";
 
 export interface Fuoco {
   id: number;
@@ -29,6 +30,12 @@ export interface Fuoco {
    * La UI non deve mostrare nulla quando manca.
    */
   segnatura_portata?: string | null;
+  /**
+   * Id d'archivio del volume della portata, quando la segnatura accettata
+   * indica un volume del fondo Catasto digitalizzato: permette di aprire la
+   * portata nel visore come il campione.
+   */
+  codice_archivio_portata?: string | null;
 }
 
 export interface SidebarItem {
