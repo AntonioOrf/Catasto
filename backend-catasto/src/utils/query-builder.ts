@@ -185,28 +185,36 @@ export const buildQuery = (filters: QueryFilters | Record<string, unknown>) => {
   return { conditions, params, usedTables };
 };
 
+/**
+ * Le colonne ordinabili non sono univoche (molti fuochi con fortune 0): senza
+ * `f.ID_Fuochi` come ultimo criterio MySQL puo' restituire i pari merito in
+ * ordine diverso a ogni pagina, ripetendo o saltando righe con LIMIT/OFFSET.
+ */
+const TIEBREAKER = "f.ID_Fuochi ASC";
+
 export const buildOrderBy = (sort_by: string | undefined, order: string | undefined) => {
   const safeOrder = order && order.toUpperCase() === "DESC" ? "DESC" : "ASC";
   const usedTables = new Set<string>();
+  const orderBy = (...columns: string[]) => ({
+    clause: `ORDER BY ${[...columns.map((c) => `${c} ${safeOrder}`), TIEBREAKER].join(", ")}`,
+    usedTables,
+  });
 
   switch (sort_by) {
     case "fortune":
-      return { clause: `ORDER BY f.Fortune_Fuoco ${safeOrder}`, usedTables };
+      return orderBy("f.Fortune_Fuoco");
     case "credito":
-      return { clause: `ORDER BY f.Credito_Fuoco ${safeOrder}`, usedTables };
+      return orderBy("f.Credito_Fuoco");
     case "creditoM":
-      return { clause: `ORDER BY f.CreditoM_Fuoco ${safeOrder}`, usedTables };
+      return orderBy("f.CreditoM_Fuoco");
     case "imponibile":
-      return { clause: `ORDER BY f.Imponibile_Fuoco ${safeOrder}`, usedTables };
+      return orderBy("f.Imponibile_Fuoco");
     case "deduzioni":
-      return { clause: `ORDER BY f.Deduzioni_Fuoco ${safeOrder}`, usedTables };
+      return orderBy("f.Deduzioni_Fuoco");
     case "localita":
       usedTables.add("tq").add("tp");
-      return {
-        clause: `ORDER BY tq.nome_quartiere ${safeOrder}, tp.nome_popolo ${safeOrder}`,
-        usedTables,
-      };
+      return orderBy("tq.nome_quartiere", "tp.nome_popolo");
     default:
-      return { clause: `ORDER BY f.Nome_Fuoco ${safeOrder}`, usedTables };
+      return orderBy("f.Nome_Fuoco");
   }
 };
