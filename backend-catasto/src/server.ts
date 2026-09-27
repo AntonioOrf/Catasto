@@ -11,6 +11,7 @@ import filterRoutes from "./routes/filter.routes.js";
 import parentiRoutes from "./routes/parenti.routes.js";
 import mestieriRoutes from "./routes/mestieri.routes.js";
 import segnalazioneRoutes from "./routes/segnalazione.routes.js";
+import { NotificaService } from "./services/notifica.service.js";
 
 dotenv.config({ quiet: true });
 
@@ -85,6 +86,7 @@ app.use(errorHandler);
 
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server started on port ${PORT}`);
+  NotificaService.logConfigurazione();
 });
 
 // docker stop invia SIGTERM: chiudiamo le connessioni in corso e il pool

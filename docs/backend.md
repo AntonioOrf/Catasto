@@ -81,6 +81,15 @@ PUBLIC_API_URL=                           # base di /api, se diversa dal sito
 Al primo invio FormSubmit manda un'email di conferma all'indirizzo: va
 attivata una volta, poi si può sostituire l'indirizzo con l'alias casuale.
 
+Se le email non arrivano, i log del backend dicono dove si ferma l'invio:
+
+- all'avvio `⚠️ FORMSUBMIT_EMAIL non impostata` → la variabile non arriva al
+  container (in `.env` accanto a `docker-compose.yml`, poi `docker compose up -d`);
+- a ogni segnalazione `⚠️ FormSubmit: invio ... non riuscito` → FormSubmit ha
+  rifiutato l'invio, il motivo è nel messaggio (es. form da attivare);
+- `📧 FormSubmit: segnalazione #N inoltrata` → FormSubmit l'ha accettata:
+  controllare lo spam e l'email di attivazione.
+
 #### Accetta / Respingi dall'email
 
 Con `MODERAZIONE_SECRET` impostato, l'email contiene due link firmati

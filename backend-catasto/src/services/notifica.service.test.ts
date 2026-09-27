@@ -24,6 +24,7 @@ describe("NotificaService.invia", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
     fetchMock.mockReset();
     findFuocoRiepilogo.mockReset().mockResolvedValue(null);
   });
@@ -54,6 +55,7 @@ describe("NotificaService.invia", () => {
     expect(body["Segnatura proposta"]).toBe("ASFi, Catasto 81, c. 245r");
     expect(body._replyto).toBe("studioso@example.org");
     expect(console.warn).not.toHaveBeenCalled();
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("#7 inoltrata"));
   });
 
   it("un errore di rete viene loggato, non propagato", async () => {
@@ -149,5 +151,11 @@ describe("NotificaService.invia", () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.Fuoco).toBe("id 42");
     expect(body["Località"]).toBeUndefined();
+  });
+
+  it("all'avvio segnala se FORMSUBMIT_EMAIL manca", () => {
+    vi.stubEnv("FORMSUBMIT_EMAIL", "");
+    NotificaService.logConfigurazione();
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("FORMSUBMIT_EMAIL non impostata"));
   });
 });
