@@ -13,10 +13,11 @@ API REST in **TypeScript** su **Node.js 20 + Express 4**, con **MySQL 8** tramit
 3. [Riferimento API](#riferimento-api)
 4. [Ricerca avanzata: formato dell'AST](#ricerca-avanzata-formato-dellast)
 5. [Segnalazioni e moderazione](#segnalazioni-e-moderazione)
-6. [Migrazioni](#migrazioni)
-7. [Variabili d'ambiente](#variabili-dambiente)
-8. [Script e test](#script-e-test)
-9. [Limiti noti](#limiti-noti)
+6. [Traduzioni (`lang=en`)](#traduzioni-langen)
+7. [Migrazioni](#migrazioni)
+8. [Variabili d'ambiente](#variabili-dambiente)
+9. [Script e test](#script-e-test)
+10. [Limiti noti](#limiti-noti)
 
 ---
 
@@ -27,7 +28,9 @@ Pattern **route → controller → service → model**, con le regole di dominio
 ```
 backend-catasto/
 ├── migrations/
-│   └── 001_segnalazioni.sql      # tabelle applicative (segnalazioni, fuoco_segnature)
+│   ├── 001_segnalazioni.sql      # tabelle applicative (segnalazioni, fuoco_segnature)
+│   ├── 002_traduzioni_lookup.sql # traduzioni delle etichette di lookup
+│   └── 003_traduzioni_lookup_seed.sql # traduzioni inglesi iniziali
 └── src/
     ├── server.ts                  # bootstrap Express: helmet, CORS, rate limit, rotte, /health
     ├── config/db.ts               # pool mysql2 (connectionLimit 50, TLS opzionale)
@@ -48,6 +51,7 @@ backend-catasto/
     ├── models/
     │   ├── fuoco.model.ts         # SELECT sui fuochi, join, segnatura della portata
     │   ├── common.model.ts        # lookup, filtri (con cache), parenti, mestieri
+    │   ├── traduzioni.model.ts    # lingua (`lang`), traduzioni delle etichette (con cache)
     │   └── segnalazione.model.ts
     ├── middlewares/
     │   ├── admin.middleware.ts    # Bearer ADMIN_TOKEN, confronto timing-safe
@@ -55,11 +59,15 @@ backend-catasto/
     │   └── error.middleware.ts    # 404 + gestione errori (maschera i 5xx in produzione)
     ├── utils/
     │   ├── validation.ts          # paginazione, id numerici, liste di id, HttpError
+    │   ├── csv.ts, traduzioni-csv.ts # CSV di export/import delle traduzioni
     │   ├── query-builder.ts       # ricerca semplice (query string) → SQL parametrico
     │   ├── query-ast-builder.ts   # ricerca avanzata (AST) → SQL parametrico
     │   └── moderazione-token.ts   # token HMAC per i link Accetta/Respingi
     ├── views/moderazione.page.ts  # pagine HTML di conferma/esito della moderazione
-    └── scripts/migrate.ts         # runner delle migrazioni
+    └── scripts/
+        ├── migrate.ts             # runner delle migrazioni
+        ├── export-traduzioni.ts   # CSV dei valori di lookup senza traduzione
+        └── import-traduzioni.ts   # import del CSV compilato dalla redazione
 ```
 
 Il pacchetto **`packages/shared`** contiene ciò che frontend e backend devono vedere allo stesso modo:
@@ -116,6 +124,8 @@ Base URL: stessa origine del sito (`/api`, proxato da nginx) oppure `http://loca
 | PATCH | `/api/segnalazioni/:id` | admin | Cambia lo stato di una segnalazione |
 | GET | `/api/segnalazioni/moderazione?t=` | token firmato | Pagina di conferma (non modifica nulla) |
 | POST | `/api/segnalazioni/moderazione` | token firmato | Applica la decisione |
+
+Tutti gli endpoint di lettura accettano `?lang=en` (anche `POST /api/catasto/query`, nella query string): vedi [Traduzioni](#traduzioni-langen).
 
 ### Limiti di frequenza
 
@@ -427,9 +437,48 @@ curl -X PATCH -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: applicat
 
 ---
 
+## Traduzioni (`lang=en`)
+
+Il sito ha una versione inglese: il frontend aggiunge `?lang=en` a ogni richiesta quando l'inglese è attivo (in italiano non manda nulla). È riconosciuto solo `en`; qualunque altro valore, o nessuno, vale italiano e non produce mai un errore.
+
+**Cosa si traduce.** Solo le etichette delle tabelle di lookup del dump; id, filtri e semantica delle ricerche restano identici. Luoghi (serie, quartieri, pivieri, popoli) e nomi di persona sono nomi propri e restano in italiano, come i messaggi di errore.
+
+| Endpoint | Campi tradotti |
+|---|---|
+| `GET /api/filters` | `bestiame`, `rapporto`, `immigrazione`, `mestieri`, `particolaritaParente`, `casa` (`mestieri`, `casa` e `particolaritaParente` riordinati per etichetta tradotta) |
+| `GET /api/catasto`, `POST /api/catasto/query` | `mestiere`, `bestiame`, `immigrazione`, `rapporto_mestiere`, `casa`, `particolarita_fuoco` |
+| `GET /api/catasto/sidebar` | `mestiere` |
+| `GET /api/parenti/:id` | `parentela_desc`, `sesso`, `stato_civile`, `particolarita` |
+| `GET /api/mestieri` | `Mestiere` (riordinato) |
+
+Un valore senza traduzione resta in italiano. L'ordinamento SQL della tabella (`sort_by=mestiere`) resta quello dell'etichetta italiana.
+
+**Tabella `traduzioni_lookup`** (migrazione `002`): `tabella` (nome della tabella del dump: `mestieri`, `bestiame`, `rapporto_mestiere`, `immigrazione`, `casa`, `particolarita_fuoco`, `particolarita_parenti`, `rapporti_parentela`, `sesso_parenti`, `statocivile_parenti`), `valore_it`, `lingua` (`en`), `valore`. La chiave è l'**etichetta italiana**, non l'id: la tabella sta fuori dal dump, sopravvive ai reimport e si popola senza conoscere gli id. Il confronto ignora maiuscole, accenti e spazi superflui (collation `utf8mb4_unicode_ci` nel DB, stessa normalizzazione nel backend).
+
+**Seed** (migrazione `003`): circa 590 traduzioni di valori plausibili — sesso, stato civile, parentela, casa, rapporto di lavoro, bestiame, immigrazione, particolarità e circa 250 grafie di mestieri del vocabolario del Catasto del 1427 (Herlihy e Klapisch-Zuber). Le righe che non corrispondono a valori del dump sono innocue; `INSERT IGNORE` non sovrascrive traduzioni già corrette.
+
+**Cache.** Le traduzioni restano in memoria 10 minuti per lingua (la copia italiana dei filtri in cache non viene mai modificata: la traduzione ne fa una copia). Se la tabella non esiste (migrazione non applicata) o il DB dà errore, le risposte restano in italiano invece di andare in 500.
+
+**Completare le traduzioni.** La redazione lavora su un CSV `tabella,valore_it,valore_en`:
+
+```bash
+# valori distinti del dump ancora senza traduzione (--tutte: anche quelli tradotti)
+npm run db:export-traduzioni -w catasto-backend -- mancanti.csv
+# compilata la colonna valore_en, import (righe vuote ignorate, esistenti aggiornate)
+npm run db:import-traduzioni -w catasto-backend -- mancanti.csv
+
+# dalla build (container)
+node backend-catasto/dist/scripts/export-traduzioni.js > mancanti.csv
+node backend-catasto/dist/scripts/import-traduzioni.js mancanti.csv
+```
+
+Il CSV segue RFC 4180 (campi con virgole o apici fra doppi apici). L'import è transazionale e il backend vede le nuove traduzioni entro 10 minuti.
+
+---
+
 ## Migrazioni
 
-Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici. Le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `schema_migrations`) sono create dal runner in `src/scripts/migrate.ts`, che applica in ordine i file `migrations/*.sql` non ancora registrati.
+Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici. Le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `schema_migrations`) sono create dal runner in `src/scripts/migrate.ts`, che applica in ordine i file `migrations/*.sql` non ancora registrati.
 
 La ricerca in tabella legge `fuoco_segnature`: senza migrazioni risponde 500.
 
@@ -473,13 +522,15 @@ Esempio completo per la produzione: [`.env.prod.example`](../.env.prod.example).
 | Comando (in `backend-catasto/`) | Effetto |
 |---|---|
 | `npm run dev` | `tsx watch src/server.ts` |
-| `npm run build` | `tsup` → `dist/server.js` e `dist/scripts/migrate.js` |
+| `npm run build` | `tsup` → `dist/server.js` e `dist/scripts/*.js` (migrazioni, export/import traduzioni) |
 | `npm start` | avvia `dist/server.js` |
 | `npm run db:migrate` | migrazioni da sorgente (`tsx`) |
 | `npm run db:migrate:prod` | migrazioni dalla build |
+| `npm run db:export-traduzioni [-- file.csv]` | CSV dei valori di lookup senza traduzione inglese |
+| `npm run db:import-traduzioni -- file.csv` | importa il CSV compilato in `traduzioni_lookup` |
 | `npm test` | `vitest run` |
 
-I test (vitest, database sempre simulato) coprono query builder semplice e AST (compresi liste geografiche, ordinamento stabile e AST troppo annidati), token di moderazione, servizio di notifica, cambi di stato delle segnalazioni (con il ripristino della segnatura precedente), validazione della creazione, rotte di moderazione, `TRUST_PROXY`, `toPages` del manifest e l'associazione portata→volume. Non ci sono ancora test per i controller di ricerca, i middleware o test di integrazione su MySQL.
+I test (vitest, database sempre simulato) coprono query builder semplice e AST (compresi liste geografiche, ordinamento stabile e AST troppo annidati), token di moderazione, servizio di notifica, cambi di stato delle segnalazioni (con il ripristino della segnatura precedente), validazione della creazione, rotte di moderazione, `TRUST_PROXY`, `toPages` del manifest, l'associazione portata→volume e le traduzioni (parsing di `lang`, normalizzazione, fallback, cache, CSV di export/import). Non ci sono ancora test per i controller di ricerca, i middleware o test di integrazione su MySQL.
 
 ---
 
