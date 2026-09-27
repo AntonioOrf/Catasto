@@ -167,32 +167,45 @@ const DetailRow = ({ icon: Icon, label, value }: { icon: LucideIcon; label: stri
 /**
  * La segnatura della portata non esiste nel dump dell'Archivio: compare solo
  * per i fuochi in cui una segnalazione è stata verificata e accettata. Quando
- * manca non si mostra nulla - né etichetta né placeholder - perché un "N/D"
- * suggerirebbe un dato assente per quel fuoco invece che per l'intera fonte.
+ * c'è sta accanto al riferimento campione (Vol./c.), perché è anch'essa una
+ * segnatura archivistica; quando manca non si mostra nulla - né etichetta né
+ * placeholder - perché un "N/D" suggerirebbe un dato assente per quel fuoco
+ * invece che per l'intera fonte.
  */
-const SegnaturaPortata = ({ row, onSegnala }: Pick<CatastoRowProps, "row" | "onSegnala">) => {
-  if (!row.segnatura_portata) {
-    return onSegnala ? (
-      <button
-        type="button"
-        onClick={stop(() => onSegnala(row, "segnatura"))}
-        className="min-h-11 text-left text-[11px] md:text-xs text-text-accent hover:text-primary underline underline-offset-2 transition-colors"
-      >
-        Segnatura della portata non nota — contribuisci
-      </button>
-    ) : null;
-  }
-
-  return (
-    <div className="flex items-start gap-2">
-      <ScrollText className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" aria-hidden="true" />
-      <div>
-        <span className={smallLabel}>Segnatura della portata</span>
-        <span className="text-text-main font-mono text-xs md:text-sm">{row.segnatura_portata}</span>
-      </div>
-    </div>
+const PortataReference = ({ row, variant }: { row: Fuoco; variant: "block" | "inline" }) => {
+  if (!row.segnatura_portata) return null;
+  return variant === "block" ? (
+    <span
+      title="Segnatura della portata"
+      className="flex items-start gap-2 text-sm text-text-main font-mono p-2 rounded w-fit max-w-56 border border-border-base bg-bg-sidebar"
+    >
+      <ScrollText className="h-3 w-3 text-primary mt-1 flex-shrink-0" aria-hidden="true" />
+      <span className="sr-only">Segnatura della portata:</span>
+      <span>{row.segnatura_portata}</span>
+    </span>
+  ) : (
+    <span
+      title="Segnatura della portata"
+      className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded border text-text-accent bg-bg-sidebar border-border-base"
+    >
+      <ScrollText className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+      <span className="sr-only">Segnatura della portata:</span>
+      <span>{row.segnatura_portata}</span>
+    </span>
   );
 };
+
+/** Invito a contribuire, nel dettaglio espanso, solo se la portata non è nota. */
+const SegnaturaPortataMancante = ({ row, onSegnala }: Pick<CatastoRowProps, "row" | "onSegnala">) =>
+  !row.segnatura_portata && onSegnala ? (
+    <button
+      type="button"
+      onClick={stop(() => onSegnala(row, "segnatura"))}
+      className="min-h-11 text-left text-[11px] md:text-xs text-text-accent hover:text-primary underline underline-offset-2 transition-colors"
+    >
+      Segnatura della portata non nota — contribuisci
+    </button>
+  ) : null;
 
 const SegnalaButton = ({ row, onSegnala }: Pick<CatastoRowProps, "row" | "onSegnala">) => {
   if (!onSegnala) return null;
@@ -233,7 +246,7 @@ const EconomicDetails = ({ row, onSegnala }: Pick<CatastoRowProps, "row" | "onSe
         </p>
       </div>
       <div className={`${dashedSection} flex flex-wrap items-center justify-between gap-2`}>
-        <SegnaturaPortata row={row} onSegnala={onSegnala} />
+        <SegnaturaPortataMancante row={row} onSegnala={onSegnala} />
         <SegnalaButton row={row} onSegnala={onSegnala} />
       </div>
     </div>
@@ -332,7 +345,10 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
         </td>
 
         <td className="px-6 py-4">
-          <ArchiveReference row={row} onViewArchivio={onViewArchivio} variant="block" />
+          <div className="flex flex-col gap-2">
+            <ArchiveReference row={row} onViewArchivio={onViewArchivio} variant="block" />
+            <PortataReference row={row} variant="block" />
+          </div>
         </td>
 
         <td className="px-6 py-4 text-right">
@@ -389,8 +405,9 @@ export const CatastoMobileCard = React.memo(
             <div className="flex items-center gap-1 text-text-main opacity-80 pl-1">
               <Home className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" /> {row.casa || "N/D"}
             </div>
-            <div className="mt-1.5 pl-1">
+            <div className="mt-1.5 pl-1 flex flex-wrap gap-1">
               <ArchiveReference row={row} onViewArchivio={onViewArchivio} variant="inline" />
+              <PortataReference row={row} variant="inline" />
             </div>
           </div>
         </div>
