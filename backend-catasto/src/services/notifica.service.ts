@@ -1,8 +1,31 @@
 import { getField, TIPO_SEGNALAZIONE_LABELS, type SegnalazioneInput } from "@catasto/shared";
+import { SegnalazioneModel, type FuocoRiepilogo } from "../models/segnalazione.model.js";
 import { ModerazioneToken, type AzioneLink } from "../utils/moderazione-token.js";
 
 const FORMSUBMIT_URL = "https://formsubmit.co/ajax";
 const TIMEOUT_MS = 8000;
+
+/** "NOME · Vol. 81, c. 245 (id 42)" e la località in un'unica riga. */
+const descriviFuoco = (id: number, f: FuocoRiepilogo | null) => {
+  if (!f) return { Fuoco: `id ${id}` };
+  const carta = f.volume ? `Vol. ${f.volume}${f.foglio ? `, c. ${f.foglio}` : ""}` : null;
+  const fuoco = [f.nome, carta].filter(Boolean).join(" · ");
+  const localita = [f.serie, f.quartiere, f.piviere, f.popolo].filter(Boolean).join(" › ");
+  return {
+    Fuoco: `${fuoco || "senza nome"} (id ${id})`,
+    ...(localita ? { "Località": localita } : {}),
+  };
+};
+
+/** Il riepilogo arricchisce l'email ma non è indispensabile: un errore del DB non blocca l'invio. */
+const riepilogoFuoco = async (id: number) => {
+  try {
+    return await SegnalazioneModel.findFuocoRiepilogo(id);
+  } catch (err) {
+    console.warn(`⚠️  Riepilogo del fuoco ${id} non disponibile: ${(err as Error).message}`);
+    return null;
+  }
+};
 
 /**
  * Inoltro via email di ogni segnalazione (dato errato, segnatura della
@@ -31,7 +54,9 @@ export class NotificaService {
       _template: "table",
       Segnalazione: `#${id}`,
       Tipo: tipo,
-      Fuoco: input.id_fuoco !== null ? String(input.id_fuoco) : "non indicato",
+      ...(input.id_fuoco !== null
+        ? descriviFuoco(input.id_fuoco, await riepilogoFuoco(input.id_fuoco))
+        : { Fuoco: "non indicato" }),
     };
     if (input.tipo === "segnatura") {
       body["Segnatura proposta"] = input.valore_proposto ?? "";
