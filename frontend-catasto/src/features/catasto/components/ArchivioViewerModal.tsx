@@ -13,6 +13,8 @@ import {
   resolveArchiveId,
   type RiferimentoArchivio,
 } from '../lib/archivio';
+import { useLanguage, useT } from '../../../i18n';
+import { archivioViewerMessages } from './ArchivioViewerModal.messages';
 
 interface ArchivioViewerModalProps {
   isOpen: boolean;
@@ -39,6 +41,8 @@ const clampScale = (value: number) => Math.min(Math.max(value, MIN_SCALE), MAX_S
 const touchDistance = (a: Touch, b: Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
 
 const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClose, codiceArchivio, foglio, volume, nome, riferimento = 'campione', onSegnalaSegnatura }) => {
+  const t = useT(archivioViewerMessages);
+  const { lang } = useLanguage();
   const archiveId = resolveArchiveId(codiceArchivio, volume, foglio);
 
   // Il manifest di un volume non cambia: in cache per tutta la sessione, così
@@ -60,12 +64,12 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
   // deve saperlo, altrimenti la scambia per la carta del fuoco.
   const notice =
     manifest.isSuccess && allPages.length > 0 && foglioIndex === -1
-      ? `La carta ${foglio} non è stata individuata nel volume digitalizzato: viene mostrata la prima pagina. Usa "Sito Originale" per sfogliare il volume.`
+      ? t('notice', { foglio })
       : null;
   const error = manifest.isError
-    ? userMessage(manifest.error, "Impossibile scaricare le informazioni del volume.")
+    ? userMessage(manifest.error, t('manifestError'), lang)
     : manifest.isSuccess && pages.length === 0
-      ? 'Il volume risulta vuoto o privo di pagine digitalizzate.'
+      ? t('emptyVolume')
       : null;
   const loading = manifest.isLoading;
 
@@ -225,22 +229,22 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
             <h2 id="viewer-title" className="text-sm sm:text-base md:text-xl font-serif font-bold text-accent-strong flex items-center gap-1.5 sm:gap-2">
               <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" aria-hidden="true" />
               <span className="hidden sm:inline">Archivio di Stato di Firenze - </span>
-              {riferimento === 'portata' ? 'Portata: ' : ''}
-              Volume {volume || '?'}, {riferimento === 'portata' ? 'Carta' : 'Foglio'} {foglio || '?'}
+              {riferimento === 'portata' ? t('portataPrefix') : ''}
+              {t('volume')} {volume || '?'}, {riferimento === 'portata' ? t('carta') : t('foglio')} {foglio || '?'}
             </h2>
             {nome && (
               <p className="text-xs sm:text-sm text-text-main font-semibold mt-0.5 sm:mt-1 truncate">
-                Fuoco: {nome}
+                {t('fuoco', { nome })}
               </p>
             )}
             <p className="text-[11px] sm:text-xs text-text-accent font-mono mt-0.5 sm:mt-1">
-              ID Archivio: {archiveId}
+              {t('archiveId', { id: archiveId })}
             </p>
           </div>
           <button
             type="button"
-            title="Chiudi visore"
-            aria-label="Chiudi visore"
+            title={t('close')}
+            aria-label={t('close')}
             onClick={onClose}
             className="text-text-main hover:text-red-500 hover:bg-border-base/50 p-2.5 rounded transition-colors flex-shrink-0"
           >
@@ -253,14 +257,14 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10 gap-4">
               <Spinner className="h-12 w-12" />
-              <p className="font-mono text-sm text-white/80" role="status">Recupero informazioni manoscritto...</p>
+              <p className="font-mono text-sm text-white/80" role="status">{t('loadingManifest')}</p>
             </div>
           )}
 
           {error && !loading && (
             <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center bg-bg-sidebar p-8 text-center z-10">
               <AlertCircle className="h-16 w-16 text-orange-500 mb-4" aria-hidden="true" />
-              <h3 className="text-xl font-bold text-text-main mb-2">Impossibile visualizzare il foglio</h3>
+              <h3 className="text-xl font-bold text-text-main mb-2">{t('cannotView')}</h3>
               <p className="text-text-accent max-w-md">{error}</p>
               <a
                 href={detailUrl}
@@ -268,7 +272,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                 rel="noopener noreferrer"
                 className="mt-6 flex items-center gap-2 bg-primary text-on-primary px-4 min-h-11 rounded font-bold hover:bg-primary/90 transition-colors"
               >
-                <span>Apri sul sito dell'Archivio</span>
+                <span>{t('openArchive')}</span>
                 <ExternalLink className="h-4 w-4" aria-hidden="true" />
               </a>
             </div>
@@ -293,14 +297,13 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
               {imageLoading && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none gap-2">
                   <Spinner className="h-10 w-10" />
-                  <p className="text-xs text-white/80 font-mono drop-shadow-md">Caricamento immagine in corso...</p>
+                  <p className="text-xs text-white/80 font-mono drop-shadow-md">{t('loadingImage')}</p>
                 </div>
               )}
 
               <img
                 src={activeImageUrl}
-                alt={`Volume ${volume}, foglio ${foglio}${pages[currentIndex]?.label ? ` (${pages[currentIndex].label})` : ''}`}
-               
+                alt={t('imageAlt', { volume, foglio, label: pages[currentIndex]?.label ? ` (${pages[currentIndex].label})` : '' })}
                 style={{
                   transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
                   transition: isDragging ? 'none' : 'transform 0.2s ease-out, opacity 0.3s',
@@ -318,8 +321,8 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                   onClick={(e) => { e.stopPropagation(); goToPage(currentIndex - 1); }}
                   onMouseDown={(e) => e.stopPropagation()}
                   className={`${navArrow} left-2 sm:left-4`}
-                  title="Pagina precedente"
-                  aria-label="Pagina precedente"
+                  title={t('prevPage')}
+                  aria-label={t('prevPage')}
                 >
                   <ChevronLeft className="h-5 w-5 sm:h-8 sm:w-8" aria-hidden="true" />
                 </button>
@@ -331,8 +334,8 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                   onClick={(e) => { e.stopPropagation(); goToPage(currentIndex + 1); }}
                   onMouseDown={(e) => e.stopPropagation()}
                   className={`${navArrow} right-2 sm:right-4`}
-                  title="Pagina successiva"
-                  aria-label="Pagina successiva"
+                  title={t('nextPage')}
+                  aria-label={t('nextPage')}
                 >
                   <ChevronRight className="h-5 w-5 sm:h-8 sm:w-8" aria-hidden="true" />
                 </button>
@@ -349,8 +352,8 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
         </div>
 
         {showImage && pages.length > 1 && (
-          <nav aria-label="Carte del volume" className="bg-bg-main border-t border-border-base p-2 flex items-center gap-2 overflow-x-auto">
-            <span className="text-xs text-text-accent font-semibold ml-2 whitespace-nowrap">Pagine:</span>
+          <nav aria-label={t('pagesNav')} className="bg-bg-main border-t border-border-base p-2 flex items-center gap-2 overflow-x-auto">
+            <span className="text-xs text-text-accent font-semibold ml-2 whitespace-nowrap">{t('pages')}</span>
             {pages.map((p, idx) => (
               <button
                 type="button"
@@ -360,7 +363,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                 title={p.label || undefined}
                 className={`px-3 min-h-9 text-xs rounded transition-colors whitespace-nowrap ${idx === currentIndex ? 'bg-primary text-on-primary font-bold shadow-md' : 'bg-bg-sidebar text-text-main border border-border-base hover:bg-item-hover'}`}
               >
-                {idx === 0 ? 'Attuale' : `Succ. ${idx}`}
+                {idx === 0 ? t('current') : t('nextN', { n: idx })}
               </button>
             ))}
           </nav>
@@ -368,19 +371,19 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
 
         {showImage && (
           <div className="bg-bg-sidebar border-t border-border-base p-2 sm:p-3 flex items-center justify-center gap-2 sm:gap-4">
-            <button type="button" onClick={() => zoomBy(-0.3)} className={toolbarButton} title="Riduci zoom" aria-label="Riduci zoom">
+            <button type="button" onClick={() => zoomBy(-0.3)} className={toolbarButton} title={t('zoomOut')} aria-label={t('zoomOut')}>
               <ZoomOut className="h-5 w-5" aria-hidden="true" />
             </button>
             <span className="text-text-accent font-mono text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3rem] text-center tabular-nums" aria-live="polite">
               {Math.round(scale * 100)}%
             </span>
-            <button type="button" onClick={() => zoomBy(0.3)} className={toolbarButton} title="Aumenta zoom" aria-label="Aumenta zoom">
+            <button type="button" onClick={() => zoomBy(0.3)} className={toolbarButton} title={t('zoomIn')} aria-label={t('zoomIn')}>
               <ZoomIn className="h-5 w-5" aria-hidden="true" />
             </button>
             <div className="w-px h-5 sm:h-6 bg-border-base mx-1 sm:mx-2" aria-hidden="true"></div>
-            <button type="button" onClick={resetView} className={`${toolbarButton} gap-1.5 sm:gap-2 text-xs sm:text-sm`} title="Reimposta zoom">
+            <button type="button" onClick={resetView} className={`${toolbarButton} gap-1.5 sm:gap-2 text-xs sm:text-sm`} title={t('resetZoom')}>
               <Maximize className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Adatta</span>
+              <span className="hidden sm:inline">{t('fit')}</span>
             </button>
 
             <div className="ml-auto flex items-center gap-2">
@@ -389,11 +392,11 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                   type="button"
                   onClick={onSegnalaSegnatura}
                   className="text-[11px] sm:text-xs text-text-main bg-bg-main hover:bg-item-hover px-2 min-h-9 rounded-sm flex items-center gap-1 border border-border-base transition-colors font-semibold"
-                  title="Segnala la segnatura della portata di questo fuoco"
+                  title={t('reportTitle')}
                 >
                   <Flag className="h-3 w-3" aria-hidden="true" />
-                  <span className="hidden sm:inline">Segnala segnatura</span>
-                  <span className="sm:hidden">Segnala</span>
+                  <span className="hidden sm:inline">{t('reportLong')}</span>
+                  <span className="sm:hidden">{t('reportShort')}</span>
                 </button>
               )}
               <a
@@ -403,8 +406,8 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                 className="text-[11px] sm:text-xs text-on-primary bg-primary hover:bg-primary/90 px-2 min-h-9 rounded-sm flex items-center gap-1 transition-colors shadow-sm font-semibold"
               >
                 <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                <span className="hidden sm:inline">Sito Originale</span>
-                <span className="sm:hidden">Originale</span>
+                <span className="hidden sm:inline">{t('originalLong')}</span>
+                <span className="sm:hidden">{t('originalShort')}</span>
               </a>
             </div>
           </div>
