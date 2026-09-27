@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { Fuoco, Parenti, TipoSegnalazione } from "@catasto/shared";
+import { parseSegnaturaPortata } from "../lib/segnatura";
 
 export interface CatastoRowProps {
   row: Fuoco;
@@ -65,8 +66,38 @@ const ExpandIcon = ({ expanded }: { expanded: boolean }) =>
     <ChevronRight className="h-5 w-5 text-text-accent opacity-50" aria-hidden="true" />
   );
 
+/** Etichetta che distingue campione e portata, uguale nei due riquadri. */
+const RefLabel = ({ children }: { children: string }) => (
+  <span className="font-sans text-[10px] uppercase tracking-wider text-text-accent">{children}</span>
+);
+
+/** Righe "Vol." e "c." del riquadro, identiche per campione e portata. */
+const VolumeCarta = ({ volume, carta, link = false }: { volume: string; carta: string; link?: boolean }) => (
+  <>
+    <span className="flex items-center gap-2">
+      <Bookmark className="h-3 w-3 text-primary flex-shrink-0" aria-hidden="true" />
+      <span className="font-bold">Vol.</span>
+      <span className={link ? "text-primary underline underline-offset-2" : ""}>{volume}</span>
+    </span>
+    <span className="flex items-center gap-2">
+      <FileText className="h-3 w-3 text-primary flex-shrink-0" aria-hidden="true" />
+      <span className="font-bold">c.</span>
+      <span className={link ? "text-primary underline underline-offset-2" : ""}>{carta}</span>
+    </span>
+  </>
+);
+
+const refBase = {
+  block: "flex flex-col gap-1 text-sm text-text-main font-mono p-2 rounded w-fit border text-left",
+  inline: "inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded border",
+};
+const refStatic = {
+  block: "border-border-base bg-bg-sidebar",
+  inline: "text-text-accent bg-bg-sidebar border-border-base",
+};
+
 /**
- * Riferimento archivistico: pulsante verso il visore quando il volume è
+ * Riferimento del campione: pulsante verso il visore quando il volume è
  * digitalizzato, testo semplice altrimenti.
  */
 const ArchiveReference = ({
@@ -85,19 +116,12 @@ const ArchiveReference = ({
   const content =
     variant === "block" ? (
       <>
-        <span className="flex items-center gap-2">
-          <Bookmark className="h-3 w-3 text-primary" aria-hidden="true" />
-          <span className="font-bold">Vol.</span>
-          <span className={canView ? "text-primary underline underline-offset-2" : ""}>{volume}</span>
-        </span>
-        <span className="flex items-center gap-2">
-          <FileText className="h-3 w-3 text-primary" aria-hidden="true" />
-          <span className="font-bold">c.</span>
-          <span className={canView ? "text-primary underline underline-offset-2" : ""}>{foglio}</span>
-        </span>
+        <RefLabel>Campione</RefLabel>
+        <VolumeCarta volume={volume} carta={foglio} link={canView} />
       </>
     ) : (
       <>
+        <RefLabel>Campione</RefLabel>
         <span>
           Vol. {volume} c. {foglio}
         </span>
@@ -105,17 +129,8 @@ const ArchiveReference = ({
       </>
     );
 
-  const base =
-    variant === "block"
-      ? "flex flex-col gap-1 text-sm text-text-main font-mono p-2 rounded w-fit border text-left"
-      : "inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded border";
-
   if (!canView) {
-    return (
-      <span className={`${base} ${variant === "block" ? "border-border-base bg-bg-sidebar" : "text-text-accent bg-bg-sidebar border-border-base"}`}>
-        {content}
-      </span>
-    );
+    return <span className={`${refBase[variant]} ${refStatic[variant]}`}>{content}</span>;
   }
 
   return (
@@ -123,8 +138,8 @@ const ArchiveReference = ({
       type="button"
       onClick={stop(() => onViewArchivio?.(row))}
       title="Visualizza il manoscritto originale"
-      aria-label={`Visualizza il manoscritto: volume ${volume}, carta ${foglio}`}
-      className={`${base} ${
+      aria-label={`Campione: visualizza il manoscritto, volume ${volume}, carta ${foglio}`}
+      className={`${refBase[variant]} ${
         variant === "block"
           ? "border-primary/50 bg-primary/5 hover:bg-primary/10 shadow-sm"
           : "text-primary bg-primary/10 hover:bg-primary/20 border-primary/20 min-h-8"
@@ -132,6 +147,49 @@ const ArchiveReference = ({
     >
       {content}
     </button>
+  );
+};
+
+/**
+ * La segnatura della portata non esiste nel dump dell'Archivio: compare solo
+ * per i fuochi in cui una segnalazione è stata verificata e accettata. Sta
+ * accanto al campione, nello stesso formato; il fondo compare solo se non è
+ * ASFi, Catasto. Quando manca non si mostra nulla - né etichetta né
+ * placeholder - perché un "N/D" suggerirebbe un dato assente per quel fuoco
+ * invece che per l'intera fonte.
+ */
+const PortataReference = ({ row, variant }: { row: Fuoco; variant: "block" | "inline" }) => {
+  if (!row.segnatura_portata) return null;
+  const { fondo, volume, carta, testo } = parseSegnaturaPortata(row.segnatura_portata);
+
+  if (variant === "inline") {
+    const rif = volume && carta ? `Vol. ${volume} c. ${carta}` : testo;
+    return (
+      <span className={`${refBase.inline} ${refStatic.inline}`} title={`Portata: ${row.segnatura_portata}`}>
+        <RefLabel>Portata</RefLabel>
+        <span>{fondo ? `${fondo}, ${rif}` : rif}</span>
+      </span>
+    );
+  }
+
+  return (
+    <span className={`${refBase.block} ${refStatic.block} max-w-48`} title={row.segnatura_portata}>
+      <RefLabel>Portata</RefLabel>
+      {fondo && (
+        <span className="flex items-start gap-2">
+          <ScrollText className="h-3 w-3 text-primary flex-shrink-0 mt-1" aria-hidden="true" />
+          <span>{fondo}</span>
+        </span>
+      )}
+      {volume && carta ? (
+        <VolumeCarta volume={volume} carta={carta} />
+      ) : (
+        <span className="flex items-start gap-2">
+          <Bookmark className="h-3 w-3 text-primary flex-shrink-0 mt-1" aria-hidden="true" />
+          <span>{testo}</span>
+        </span>
+      )}
+    </span>
   );
 };
 
@@ -163,37 +221,6 @@ const DetailRow = ({ icon: Icon, label, value }: { icon: LucideIcon; label: stri
     </div>
   </div>
 );
-
-/**
- * La segnatura della portata non esiste nel dump dell'Archivio: compare solo
- * per i fuochi in cui una segnalazione è stata verificata e accettata. Quando
- * c'è sta accanto al riferimento campione (Vol./c.), perché è anch'essa una
- * segnatura archivistica; quando manca non si mostra nulla - né etichetta né
- * placeholder - perché un "N/D" suggerirebbe un dato assente per quel fuoco
- * invece che per l'intera fonte.
- */
-const PortataReference = ({ row, variant }: { row: Fuoco; variant: "block" | "inline" }) => {
-  if (!row.segnatura_portata) return null;
-  return variant === "block" ? (
-    <span
-      title="Segnatura della portata"
-      className="flex items-start gap-2 text-sm text-text-main font-mono p-2 rounded w-fit max-w-56 border border-border-base bg-bg-sidebar"
-    >
-      <ScrollText className="h-3 w-3 text-primary mt-1 flex-shrink-0" aria-hidden="true" />
-      <span className="sr-only">Segnatura della portata:</span>
-      <span>{row.segnatura_portata}</span>
-    </span>
-  ) : (
-    <span
-      title="Segnatura della portata"
-      className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded border text-text-accent bg-bg-sidebar border-border-base"
-    >
-      <ScrollText className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
-      <span className="sr-only">Segnatura della portata:</span>
-      <span>{row.segnatura_portata}</span>
-    </span>
-  );
-};
 
 /** Invito a contribuire, nel dettaglio espanso, solo se la portata non è nota. */
 const SegnaturaPortataMancante = ({ row, onSegnala }: Pick<CatastoRowProps, "row" | "onSegnala">) =>
@@ -345,7 +372,7 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
         </td>
 
         <td className="px-6 py-4">
-          <div className="flex flex-col gap-2">
+          <div className="flex items-start gap-2">
             <ArchiveReference row={row} onViewArchivio={onViewArchivio} variant="block" />
             <PortataReference row={row} variant="block" />
           </div>

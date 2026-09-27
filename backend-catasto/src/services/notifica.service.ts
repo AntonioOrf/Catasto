@@ -38,6 +38,22 @@ const riepilogoFuoco = async (id: number) => {
  * anche per le email.
  */
 export class NotificaService {
+  /**
+   * Riga di log all'avvio: senza FORMSUBMIT_EMAIL `invia` esce in silenzio, e
+   * un'email che non arriva sarebbe indistinguibile da un invio fallito.
+   */
+  static logConfigurazione(): void {
+    if (!process.env.FORMSUBMIT_EMAIL) {
+      console.warn("⚠️  FORMSUBMIT_EMAIL non impostata: le segnalazioni non vengono inoltrate via email.");
+      return;
+    }
+    const origin = process.env.FORMSUBMIT_ORIGIN || process.env.CORS_ORIGIN?.split(",")[0]?.trim();
+    if (!origin) {
+      console.warn("⚠️  FORMSUBMIT_ORIGIN non impostata: FormSubmit potrebbe rifiutare gli invii senza dominio di provenienza.");
+    }
+    console.log(`📧 Notifiche email delle segnalazioni attive (FormSubmit${origin ? `, origin ${origin}` : ""}).`);
+  }
+
   static async invia(id: number, input: SegnalazioneInput): Promise<void> {
     // FORMSUBMIT_EMAIL può essere l'indirizzo o l'alias casuale che FormSubmit
     // fornisce dopo l'attivazione (consigliato: non espone l'email).
@@ -97,6 +113,10 @@ export class NotificaService {
       const data = (await res.json().catch(() => null)) as { success?: string | boolean; message?: string } | null;
       if (!res.ok || String(data?.success) !== "true") {
         console.warn(`⚠️  FormSubmit: invio segnalazione #${id} non riuscito (${res.status}): ${data?.message ?? "risposta inattesa"}`);
+      } else {
+        // FormSubmit conferma la presa in carico, non la consegna: se questa
+        // riga c'è e l'email no, il problema è a valle (attivazione, spam).
+        console.log(`📧 FormSubmit: segnalazione #${id} inoltrata${data?.message ? ` (${data.message})` : ""}.`);
       }
     } catch (err) {
       console.warn(`⚠️  FormSubmit: invio segnalazione #${id} non riuscito: ${(err as Error).message}`);
