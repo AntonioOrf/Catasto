@@ -13,6 +13,16 @@ export interface SegnalazioneRow {
   ip_hash: string | null;
 }
 
+export interface FuocoRiepilogo {
+  nome: string | null;
+  volume: string | number | null;
+  foglio: string | number | null;
+  serie: string | null;
+  quartiere: string | null;
+  piviere: string | null;
+  popolo: string | null;
+}
+
 export class SegnalazioneModel {
   static async create(row: SegnalazioneRow): Promise<number> {
     const [result]: any = await pool.query(
@@ -79,6 +89,25 @@ export class SegnalazioneModel {
       [id],
     );
     return (rows[0] as Segnalazione) ?? null;
+  }
+
+  /** Dati del fuoco da mostrare nell'email alla redazione: nome, carta e località. */
+  static async findFuocoRiepilogo(id: number): Promise<FuocoRiepilogo | null> {
+    const [rows]: any = await pool.query(
+      `SELECT f.Nome_Fuoco as nome, TRIM(f.Volume_Fuoco) as volume, f.Foglio_Fuoco as foglio,
+              tser.nome_serie as serie, tq.nome_quartiere as quartiere,
+              tpi.nome_piviere as piviere, tp.nome_popolo as popolo
+       FROM fuochi f
+       LEFT JOIN t_struttura_catastale ts ON f.id_registrazione = ts.id_registrazione
+       LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie
+       LEFT JOIN t_quartieri tq ON ts.id_quartiere = tq.id_quartiere
+       LEFT JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere
+       LEFT JOIN t_popoli tp ON ts.id_popolo = tp.id_popolo
+       WHERE f.ID_Fuochi = ?
+       LIMIT 1`,
+      [id],
+    );
+    return (rows[0] as FuocoRiepilogo) ?? null;
   }
 
   /** Esegue `work` in una transazione; rollback automatico se lancia. */
