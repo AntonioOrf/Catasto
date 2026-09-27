@@ -6,6 +6,8 @@ import { describeNode, type OptionsByKey } from "../lib/query-describe";
 import { pruneAst } from "../lib/query-ast-utils";
 import { buildShareUrl, MAX_SHARE_URL_LENGTH } from "../lib/query-share";
 import { deleteQuery, loadSavedQueries, saveQuery } from "../lib/saved-queries";
+import { useLanguage, useT } from "../../../i18n";
+import { advancedSearchPanelMessages } from "./AdvancedSearchPanel.messages";
 
 interface AdvancedSearchPanelProps {
   ast: QueryGroup;
@@ -14,6 +16,8 @@ interface AdvancedSearchPanelProps {
 }
 
 export default function AdvancedSearchPanel({ ast, onChange, options }: AdvancedSearchPanelProps) {
+  const t = useT(advancedSearchPanelMessages);
+  const { lang } = useLanguage();
   const [saved, setSaved] = useState<SavedQuery[]>([]);
   const [nome, setNome] = useState("");
   const [shareState, setShareState] = useState<"idle" | "copied" | "too-long" | "error">("idle");
@@ -22,7 +26,7 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
   // (modalità privata con policy restrittive): leggiamo dopo il mount.
   useEffect(() => setSaved(loadSavedQueries()), []);
 
-  const preview = describeNode(pruneAst(ast), options);
+  const preview = describeNode(pruneAst(ast), options, 0, lang);
 
   const handleSave = useCallback(() => {
     if (!nome.trim()) return;
@@ -42,10 +46,10 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
     } catch {
       // Clipboard API negata o contesto non sicuro (http): non è un errore
       // dell'utente, mostriamo l'URL da copiare a mano.
-      window.prompt("Copia il link della ricerca:", url);
+      window.prompt(t("copyPrompt"), url);
       setShareState("idle");
     }
-  }, [ast]);
+  }, [ast, t]);
 
   useEffect(() => {
     if (shareState === "idle") return;
@@ -59,9 +63,9 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
 
       <div className="border-t border-dashed border-border-base pt-3">
         <span className="text-[11px] uppercase tracking-wider text-text-accent block mb-1">
-          Ricerca corrente
+          {t("currentSearch")}
         </span>
-        <p className="text-xs md:text-sm text-text-main italic">Mostra i fuochi dove {preview}.</p>
+        <p className="text-xs md:text-sm text-text-main italic">{t("preview", { preview })}</p>
       </div>
 
       <div className="border-t border-border-base pt-3 flex flex-wrap items-center gap-2">
@@ -70,8 +74,8 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSave()}
-          aria-label="Nome del filtro da salvare"
-          placeholder="Nome del filtro..."
+          aria-label={t("filterNameAria")}
+          placeholder={t("filterNamePlaceholder")}
           maxLength={60}
           className="bg-bg-sidebar border border-border-base text-text-main text-xs md:text-sm rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
@@ -81,7 +85,7 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
           disabled={!nome.trim()}
           className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-primary hover:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
         >
-          <Bookmark className="h-3.5 w-3.5" /> Salva filtro
+          <Bookmark className="h-3.5 w-3.5" /> {t("saveFilter")}
         </button>
 
         <button
@@ -90,7 +94,7 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
           className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-text-accent hover:underline ml-auto"
         >
           {shareState === "copied" ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
-          {shareState === "copied" ? "Link copiato" : "Condividi ricerca"}
+          {shareState === "copied" ? t("linkCopied") : t("shareSearch")}
         </button>
       </div>
 
@@ -98,13 +102,13 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
           cambi di contenuto di una regione già presente nel DOM. */}
       <p role="status" aria-live="polite" className="text-xs text-amber-800 dark:text-amber-300 empty:hidden">
         {shareState === "too-long" &&
-          "La ricerca è troppo lunga per essere condivisa via link. Riducila o salvala come filtro."}
+          t("tooLong")}
       </p>
 
       {saved.length > 0 && (
         <div className="border-t border-dashed border-border-base pt-3">
           <span className="text-[11px] uppercase tracking-wider text-text-accent block mb-2">
-            Filtri salvati su questo dispositivo
+            {t("savedFilters")}
           </span>
           <div className="flex flex-wrap gap-2">
             {saved.map((query) => (
@@ -116,7 +120,7 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
                   type="button"
                   onClick={() => onChange(query.ast)}
                   className="hover:text-primary transition-colors"
-                  title="Applica questo filtro"
+                  title={t("applyFilter")}
                 >
                   {query.nome}
                 </button>
@@ -124,8 +128,8 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
                   type="button"
                   onClick={() => setSaved(deleteQuery(query.id))}
                   className="text-text-accent hover:text-red-500 p-1.5 -my-1"
-                  title="Elimina filtro"
-                  aria-label={`Elimina filtro ${query.nome}`}
+                  title={t("deleteFilter")}
+                  aria-label={t("deleteFilterNamed", { nome: query.nome })}
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>

@@ -8,6 +8,8 @@ import { useFilters } from "../../../context/FilterContext";
 import type { Fuoco, Parenti, TipoSegnalazione } from "@catasto/shared";
 import type { RiferimentoArchivio } from "../lib/archivio";
 import { parseSegnaturaPortata } from "../lib/segnatura";
+import { useLanguage, useT } from "../../../i18n";
+import { catastoTableMessages } from "./CatastoTable.messages";
 
 interface CatastoTableProps {
   /** Tabella sopra il breakpoint lg, card sotto: se ne monta una sola. */
@@ -67,6 +69,8 @@ export default function CatastoTable({
   onRetry,
 }: CatastoTableProps) {
   const { sortBy, sortOrder, handleSort, resetFilters } = useFilters();
+  const t = useT(catastoTableMessages);
+  const { locale } = useLanguage();
 
   // Riga aperta nel visore: serve intera anche alla segnalazione lanciata da
   // lì, perché davanti alla carta originale l'utente può trascrivere la
@@ -156,7 +160,7 @@ export default function CatastoTable({
 
   const errorState = (compact = false) => (
     <div role="alert" className={`${compact ? "px-4 py-8" : "px-6 py-12"} text-center text-text-main bg-red-500/10 border border-red-500/40 rounded`}>
-      <p className="font-bold text-lg mb-1">Impossibile caricare i fuochi</p>
+      <p className="font-bold text-lg mb-1">{t("loadError")}</p>
       <p className="text-sm text-text-accent mb-4">{error}</p>
       {onRetry && (
         <button
@@ -164,7 +168,7 @@ export default function CatastoTable({
           onClick={onRetry}
           className="inline-flex items-center min-h-11 px-4 rounded bg-primary text-on-primary text-sm font-bold hover:bg-primary/90 transition-colors"
         >
-          Riprova
+          {t("retry")}
         </button>
       )}
     </div>
@@ -172,15 +176,15 @@ export default function CatastoTable({
 
   const emptyState = () => (
     <div className="px-6 py-12 text-center">
-      <p className="text-text-main font-bold mb-1">Nessun fuoco corrisponde ai filtri</p>
-      <p className="text-sm text-text-accent mb-4">Allarga la ricerca togliendo qualche condizione, oppure ricomincia da capo.</p>
+      <p className="text-text-main font-bold mb-1">{t("emptyTitle")}</p>
+      <p className="text-sm text-text-accent mb-4">{t("emptyHint")}</p>
       {resetFilters && (
         <button
           type="button"
           onClick={resetFilters}
           className="inline-flex items-center min-h-11 px-4 rounded border border-border-base bg-bg-main text-accent-strong text-sm font-bold hover:bg-item-hover transition-colors"
         >
-          Azzera i filtri
+          {t("resetFilters")}
         </button>
       )}
     </div>
@@ -190,7 +194,7 @@ export default function CatastoTable({
     <div className="space-y-4 pb-12">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-border-base pb-2 gap-2">
         <h2 className="text-lg md:text-xl font-bold text-primary flex items-center gap-2 font-serif">
-          <BookOpen className="h-5 w-5 md:h-6 md:w-6" /> Registri Fuochi
+          <BookOpen className="h-5 w-5 md:h-6 md:w-6" /> {t("heading")}
         </h2>
         {/* Annunciato ai lettori di schermo: è l'unico riscontro che una
             ricerca è andata a buon fine senza guardare la tabella. */}
@@ -199,7 +203,7 @@ export default function CatastoTable({
           aria-live="polite"
           className="bg-primary text-on-primary px-2 py-1 md:px-3 text-xs md:text-sm font-bold rounded-full tabular-nums"
         >
-          {Number(totalRecords || 0).toLocaleString("it-IT")} {totalRecords === 1 ? "risultato" : "risultati"}
+          {Number(totalRecords || 0).toLocaleString(locale)} {totalRecords === 1 ? t("result") : t("results")}
         </span>
       </div>
 
@@ -209,14 +213,14 @@ export default function CatastoTable({
             <table className="min-w-full divide-y divide-border-base" aria-busy={fetching}>
               <thead className="bg-bg-sidebar">
                 <tr>
-                  {sortableHeader("nome", "Capofamiglia")}
-                  {sortableHeader("localita", "Località")}
-                  {sortableHeader("fortune", "Dati Sintetici")}
+                  {sortableHeader("nome", t("colHead"))}
+                  {sortableHeader("localita", t("colPlace"))}
+                  {sortableHeader("fortune", t("colSummary"))}
                   <th scope="col" className={thClasses}>
-                    Riferimenti
+                    {t("colRefs")}
                   </th>
                   <th scope="col" className="px-6 py-4 w-10">
-                    <span className="sr-only">Espandi</span>
+                    <span className="sr-only">{t("expand")}</span>
                   </th>
                 </tr>
               </thead>
@@ -233,7 +237,7 @@ export default function CatastoTable({
                     <tr key={i} className="animate-pulse motion-reduce:animate-none">
                       <td className="px-6 py-4" colSpan={5}>
                         <div className="h-8 bg-border-base/50 rounded flex items-center px-4">
-                          {i === 0 && <span className="text-text-accent font-serif text-sm">Caricamento dati in corso...</span>}
+                          {i === 0 && <span className="text-text-accent font-serif text-sm">{t("loading")}</span>}
                         </div>
                       </td>
                     </tr>

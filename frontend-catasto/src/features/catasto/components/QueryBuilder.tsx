@@ -4,7 +4,6 @@ import {
   AST_MAX_DEPTH,
   FIELD_REGISTRY,
   NO_VALUE_OPERATORS,
-  OPERATOR_LABELS,
   getField,
   type Operator,
   type QueryCondition,
@@ -12,6 +11,8 @@ import {
   type QueryNode,
 } from "@catasto/shared";
 import type { OptionsByKey } from "../lib/query-describe";
+import { fieldLabel, operatorLabel, useLanguage, useT } from "../../../i18n";
+import { queryBuilderMessages } from "./QueryBuilder.messages";
 
 interface QueryBuilderProps {
   value: QueryGroup;
@@ -112,6 +113,7 @@ interface GroupEditorProps {
 }
 
 function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp, onToggleNot }: GroupEditorProps) {
+  const t = useT(queryBuilderMessages);
   const isRoot = path.length === 0;
   // Il limite di annidamento è imposto anche dal backend: meglio non offrire
   // un pulsante che produrrebbe una query rifiutata.
@@ -139,7 +141,7 @@ function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp,
                   : "bg-bg-main text-text-accent hover:bg-border-base"
               }`}
             >
-              {op === "AND" ? "Tutte" : "Almeno una"}
+              {op === "AND" ? t("all") : t("atLeastOne")}
             </button>
           ))}
         </div>
@@ -151,7 +153,7 @@ function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp,
             onChange={(e) => onToggleNot(path, e.target.checked)}
             className="accent-primary"
           />
-          Escludi
+          {t("exclude")}
         </label>
 
         <div className="ml-auto flex items-center gap-2">
@@ -160,7 +162,7 @@ function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp,
             onClick={() => onAdd(path, newCondition())}
             className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-primary hover:underline"
           >
-            <Plus className="h-3.5 w-3.5" /> Condizione
+            <Plus className="h-3.5 w-3.5" /> {t("condition")}
           </button>
           {canNest && (
             <button
@@ -168,7 +170,7 @@ function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp,
               onClick={() => onAdd(path, newGroup())}
               className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-text-accent hover:underline"
             >
-              <FolderPlus className="h-3.5 w-3.5" /> Gruppo
+              <FolderPlus className="h-3.5 w-3.5" /> {t("group")}
             </button>
           )}
           {!isRoot && (
@@ -176,8 +178,8 @@ function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp,
               type="button"
               onClick={() => onUpdate(path, () => null)}
               className="p-2 -m-1 text-text-accent hover:text-red-500 transition-colors"
-              title="Rimuovi gruppo"
-              aria-label="Rimuovi gruppo"
+              title={t("removeGroup")}
+              aria-label={t("removeGroup")}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -187,7 +189,7 @@ function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp,
 
       {group.children.length === 0 ? (
         <p className="text-xs text-text-accent italic">
-          Nessuna condizione: la ricerca restituisce tutti i fuochi.
+          {t("noConditions")}
         </p>
       ) : (
         group.children.map((child, index) =>
@@ -226,7 +228,10 @@ interface ConditionEditorProps {
 }
 
 function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEditorProps) {
+  const t = useT(queryBuilderMessages);
+  const { lang } = useLanguage();
   const field = getField(condition.field) ?? DEFAULT_FIELD;
+  const label = fieldLabel(field.key, lang);
   const operator = condition.operator as Operator;
   const needsValue = !NO_VALUE_OPERATORS.includes(operator);
   const enumOptions = field.optionsKey ? (options[field.optionsKey] ?? []) : [];
@@ -261,27 +266,27 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
   return (
     <div className="flex flex-wrap items-center gap-2 bg-bg-main border border-border-base rounded px-2 py-2">
       <select
-        aria-label="Campo"
+        aria-label={t("field")}
         value={field.key}
         onChange={(e) => handleFieldChange(e.target.value)}
         className={selectClasses}
       >
         {FIELD_REGISTRY.map((f) => (
           <option key={f.key} value={f.key}>
-            {f.label}
+            {fieldLabel(f.key, lang)}
           </option>
         ))}
       </select>
 
       <select
-        aria-label="Operatore"
+        aria-label={t("operator")}
         value={operator}
         onChange={(e) => handleOperatorChange(e.target.value as Operator)}
         className={selectClasses}
       >
         {field.operators.map((op) => (
           <option key={op} value={op}>
-            {OPERATOR_LABELS[op]}
+            {operatorLabel(op, lang)}
           </option>
         ))}
       </select>
@@ -293,8 +298,8 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
               type="number"
               value={String(range[0] ?? "")}
               onChange={(e) => onChange({ ...condition, value: [e.target.value, range[1] ?? ""] })}
-              aria-label={`${field.label} minimo`}
-              placeholder="Min"
+              aria-label={t("minAria", { field: label })}
+              placeholder={t("min")}
               className={inputClasses}
             />
             <span className="text-text-accent">-</span>
@@ -302,15 +307,15 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
               type="number"
               value={String(range[1] ?? "")}
               onChange={(e) => onChange({ ...condition, value: [range[0] ?? "", e.target.value] })}
-              aria-label={`${field.label} massimo`}
-              placeholder="Max"
+              aria-label={t("maxAria", { field: label })}
+              placeholder={t("max")}
               className={inputClasses}
             />
           </div>
         ) : operator === "in" || operator === "not_in" ? (
           <select
             multiple
-            aria-label={`Valori di ${field.label}`}
+            aria-label={t("valuesOf", { field: label })}
             value={(Array.isArray(condition.value) ? condition.value : []).map(String)}
             onChange={(e) =>
               onChange({
@@ -328,12 +333,12 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
           </select>
         ) : enumOptions.length > 0 ? (
           <select
-            aria-label={`Valore di ${field.label}`}
+            aria-label={t("valueOf", { field: label })}
             value={String(condition.value ?? "")}
             onChange={(e) => onChange({ ...condition, value: e.target.value })}
             className={inputClasses}
           >
-            <option value="">Seleziona...</option>
+            <option value="">{t("select")}</option>
             {enumOptions.map((o) => (
               <option key={String(o.id)} value={String(o.id)}>
                 {o.label}
@@ -345,8 +350,8 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
             type={field.type === "number" ? "number" : "text"}
             value={String(condition.value ?? "")}
             onChange={(e) => onChange({ ...condition, value: e.target.value })}
-            aria-label={`Valore di ${field.label}`}
-            placeholder="Valore..."
+            aria-label={t("valueOf", { field: label })}
+            placeholder={t("valuePlaceholder")}
             className={inputClasses}
           />
         ))}
@@ -355,8 +360,8 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
         type="button"
         onClick={onRemove}
         className="p-2 -m-1 text-text-accent hover:text-red-500 transition-colors ml-auto"
-        title="Rimuovi condizione"
-        aria-label="Rimuovi condizione"
+        title={t("removeCondition")}
+        aria-label={t("removeCondition")}
       >
         <Trash2 className="h-4 w-4" />
       </button>

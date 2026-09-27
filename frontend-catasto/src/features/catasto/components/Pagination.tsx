@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useLanguage, useT } from "../../../i18n";
+import { paginationMessages } from "./Pagination.messages";
 
 interface PaginationProps {
   page: number;
@@ -22,6 +24,8 @@ export default function Pagination({
   loading,
   handlePageChange,
 }: PaginationProps) {
+  const t = useT(paginationMessages);
+  const { locale } = useLanguage();
   // Bozza locale: la pagina cambia solo su Invio o all'uscita dal campo, non
   // a ogni cifra digitata (scrivere "120" non deve caricare 1, 12 e 120).
   const [draft, setDraft] = useState(String(page));
@@ -43,24 +47,24 @@ export default function Pagination({
 
   return (
     <nav
-      aria-label="Paginazione dei risultati"
+      aria-label={t("nav")}
       className="bg-bg-sidebar px-4 py-3 md:px-6 md:py-4 border-t border-border-base flex items-center justify-between rounded-b-sm"
     >
       <button
         type="button"
         onClick={() => handlePageChange(page - 1)}
         disabled={isFirst || loading}
-        aria-label="Pagina precedente"
+        aria-label={t("prevAria")}
         className={navButtonClasses(isFirst || loading)}
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        <span className="hidden sm:inline">Precedente</span>
+        <span className="hidden sm:inline">{t("prev")}</span>
       </button>
 
       {/* Un campo e non una select: con 60.000 fuochi le pagine sono oltre
           mille, e una select con mille opzioni non si usa né si naviga. */}
       <div className="flex items-center gap-2 text-xs md:text-sm text-text-accent">
-        <label htmlFor="pagination-page">Pagina</label>
+        <label htmlFor="pagination-page">{t("page")}</label>
         <input
           id="pagination-page"
           type="number"
@@ -78,7 +82,7 @@ export default function Pagination({
           className="w-16 md:w-20 min-h-11 border border-border-base rounded px-2 bg-bg-main text-text-main font-bold text-center tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <span>
-          di <b className="text-text-main tabular-nums">{totalPages.toLocaleString("it-IT")}</b>
+          {t("of")} <b className="text-text-main tabular-nums">{totalPages.toLocaleString(locale)}</b>
         </span>
       </div>
 
@@ -86,10 +90,10 @@ export default function Pagination({
         type="button"
         onClick={() => handlePageChange(page + 1)}
         disabled={isLast || loading}
-        aria-label="Pagina successiva"
+        aria-label={t("nextAria")}
         className={navButtonClasses(isLast || loading)}
       >
-        <span className="hidden sm:inline">Successivo</span>
+        <span className="hidden sm:inline">{t("next")}</span>
         <ArrowRight className="h-4 w-4" aria-hidden="true" />
       </button>
     </nav>
