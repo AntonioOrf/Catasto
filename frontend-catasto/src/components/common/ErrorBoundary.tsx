@@ -1,5 +1,10 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertCircle, RotateCw } from "lucide-react";
+import { translate } from "../../i18n";
+import { errorBoundaryMessages } from "./ErrorBoundary.messages";
+
+// Componente a classe: niente hook, legge la lingua attiva al momento del render.
+const t = (key: keyof (typeof errorBoundaryMessages)["it"]) => translate(errorBoundaryMessages, key);
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -34,16 +39,16 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
           className="bg-bg-card border border-border-base rounded-lg p-8 shadow-lg max-w-md text-center space-y-4"
         >
           <AlertCircle className="h-10 w-10 mx-auto text-primary" aria-hidden="true" />
-          <h1 className="text-2xl font-bold text-primary">Si è verificato un errore</h1>
+          <h1 className="text-2xl font-bold text-primary">{t("title")}</h1>
           <p className="text-text-accent">
-            La pagina non può essere visualizzata. Ricaricala per riprovare.
+            {t("body")}
           </p>
           <button
             type="button"
             onClick={() => window.location.reload()}
             className="inline-flex items-center gap-2 px-4 py-2 rounded bg-primary text-on-primary font-bold hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            <RotateCw className="h-4 w-4" aria-hidden="true" /> Ricarica la pagina
+            <RotateCw className="h-4 w-4" aria-hidden="true" /> {t("reload")}
           </button>
         </div>
       </div>
