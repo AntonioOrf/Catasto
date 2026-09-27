@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { SegnalazioneController } from "../controllers/segnalazione.controller.js";
 import { requireAdmin } from "../middlewares/admin.middleware.js";
@@ -27,6 +27,17 @@ const adminLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: true,
 });
+
+// Link "Accetta" / "Respingi" dell'email: il token firmato sostituisce
+// l'header di autenticazione. Stesso limitatore delle rotte admin, così i
+// tentativi con token falsi consumano la stessa quota.
+router.get("/moderazione", adminLimiter, asyncHandler(SegnalazioneController.linkConferma));
+router.post(
+  "/moderazione",
+  adminLimiter,
+  express.urlencoded({ extended: false, limit: "2kb" }),
+  asyncHandler(SegnalazioneController.linkApplica),
+);
 
 router.get("/", adminLimiter, requireAdmin, asyncHandler(SegnalazioneController.list));
 router.patch("/:id", adminLimiter, requireAdmin, asyncHandler(SegnalazioneController.updateStato));

@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { SegnalazioneModel } from "../models/segnalazione.model.js";
+import { NotificaService } from "./notifica.service.js";
 import { HttpError, ValidationError } from "../utils/validation.js";
+import { STATO_SEGNALAZIONE_LABELS } from "@catasto/shared";
 import type { SegnalazioneInput, Segnalazione, StatoSegnalazione } from "@catasto/shared";
 
 /** Finestra e soglia del limite applicativo (il rate limit HTTP è la prima barriera). */
@@ -50,7 +52,7 @@ export class SegnalazioneService {
       }
     }
 
-    return await SegnalazioneModel.create({
+    const id = await SegnalazioneModel.create({
       id_fuoco: input.id_fuoco,
       tipo: input.tipo,
       campo: input.campo ?? null,
@@ -60,6 +62,26 @@ export class SegnalazioneService {
       email: input.email ?? null,
       ip_hash: ipHash,
     });
+
+    // Avviso email alla redazione per le proposte di segnatura. Non atteso:
+    // l'utente non deve aspettare (né vedere fallire) un servizio esterno.
+    if (input.tipo === "segnatura") {
+      void NotificaService.inviaSegnatura(id, input);
+    }
+
+    return id;
+  }
+
+  static isDaModerare(stato: StatoSegnalazione): boolean {
+    return stato === "nuova" || stato === "in_esame";
+  }
+
+  static async findById(id: number): Promise<Segnalazione> {
+    const segnalazione = await SegnalazioneModel.findById(id);
+    if (!segnalazione) {
+      throw new HttpError(404, `Segnalazione ${id} non trovata`);
+    }
+    return segnalazione;
   }
 
   static async list(
@@ -79,11 +101,21 @@ export class SegnalazioneService {
    * deve lasciare una segnalazione "accettata" senza dato pubblicato, o
    * viceversa.
    */
-  static async updateStato(id: number, stato: StatoSegnalazione): Promise<Segnalazione> {
+  static async updateStato(
+    id: number,
+    stato: StatoSegnalazione,
+    { soloSeDaModerare = false } = {},
+  ): Promise<Segnalazione> {
     return SegnalazioneModel.transaction(async (tx) => {
       const segnalazione = await tx.findByIdForUpdate(id);
       if (!segnalazione) {
         throw new HttpError(404, `Segnalazione ${id} non trovata`);
+      }
+
+      // I link dell'email valgono una volta sola: una segnalazione già decisa
+      // si ricambia solo dall'area di moderazione, non con un vecchio link.
+      if (soloSeDaModerare && !this.isDaModerare(segnalazione.stato)) {
+        throw new HttpError(409, `Segnalazione già ${STATO_SEGNALAZIONE_LABELS[segnalazione.stato].toLowerCase()}`);
       }
 
       const idFuoco = segnalazione.tipo === "segnatura" ? segnalazione.id_fuoco : null;
