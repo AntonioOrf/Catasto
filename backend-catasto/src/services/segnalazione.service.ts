@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { SegnalazioneModel } from "../models/segnalazione.model.js";
+import { NotificaService } from "./notifica.service.js";
 import { HttpError, ValidationError } from "../utils/validation.js";
 import type { SegnalazioneInput, Segnalazione, StatoSegnalazione } from "@catasto/shared";
 
@@ -50,7 +51,7 @@ export class SegnalazioneService {
       }
     }
 
-    return await SegnalazioneModel.create({
+    const id = await SegnalazioneModel.create({
       id_fuoco: input.id_fuoco,
       tipo: input.tipo,
       campo: input.campo ?? null,
@@ -60,6 +61,14 @@ export class SegnalazioneService {
       email: input.email ?? null,
       ip_hash: ipHash,
     });
+
+    // Avviso email alla redazione per le proposte di segnatura. Non atteso:
+    // l'utente non deve aspettare (né vedere fallire) un servizio esterno.
+    if (input.tipo === "segnatura") {
+      void NotificaService.inviaSegnatura(id, input);
+    }
+
+    return id;
   }
 
   static async list(
