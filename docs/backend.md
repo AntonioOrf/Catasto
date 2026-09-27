@@ -64,9 +64,9 @@ DB_PORT=3306
 PORT=3005
 ```
 
-### Notifica email delle proposte di segnatura (FormSubmit)
+### Notifica email delle segnalazioni (FormSubmit)
 
-Ogni segnalazione di tipo `segnatura` viene salvata nel DB e, se è impostata
+Ogni segnalazione (`dato_errato`, `segnatura`, `altro`) viene salvata nel DB e, se è impostata
 `FORMSUBMIT_EMAIL`, inoltrata alla redazione tramite [FormSubmit](https://formsubmit.co)
 (`src/services/notifica.service.ts`). L'invio parte dal backend, non blocca la
 risposta all'utente e un eventuale errore viene solo loggato.
@@ -89,7 +89,9 @@ Con `MODERAZIONE_SECRET` impostato, l'email contiene due link firmati
 1. il link apre una pagina di conferma con i dati della proposta, **senza
    modificare nulla** (i filtri antispam aprono i link delle email da soli);
 2. il pulsante "Conferma" invia un `POST` allo stesso indirizzo, che applica la
-   decisione come `PATCH /api/segnalazioni/:id` (accettare pubblica la segnatura);
+   decisione come `PATCH /api/segnalazioni/:id` (accettare una `segnatura` la
+   pubblica sulla scheda; per `dato_errato` e `altro` cambia solo lo stato,
+   la correzione del dato resta manuale);
 3. il link funziona solo finché la segnalazione è `nuova` o `in_esame`: una
    segnalazione già decisa si cambia solo con l'API di moderazione.
 
