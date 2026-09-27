@@ -29,13 +29,15 @@ export function useCatastoData(search: SearchParams) {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["catastoData", search, page],
+    // La lingua è nella chiave: le etichette di lookup arrivano tradotte dal
+    // backend, e tornare a una lingua già vista non rifà la richiesta.
+    queryKey: ["catastoData", lang, search, page],
     queryFn: ({ signal }) => fetchFuochi(search, "table", page, TABLE_PAGE_SIZE, signal),
     placeholderData: keepPreviousData,
   });
 
   const { data: parentiData = [], isLoading: loadingParenti } = useQuery({
-    queryKey: ["parenti", expandedId],
+    queryKey: ["parenti", lang, expandedId],
     queryFn: ({ signal }) => fetchParentiData(expandedId as number, signal),
     enabled: expandedId !== null,
     staleTime: 10 * 60 * 1000,
