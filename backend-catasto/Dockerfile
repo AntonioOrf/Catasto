@@ -52,5 +52,7 @@ EXPOSE 3005
 # Utente non privilegiato già presente nell'immagine node
 USER node
 
-# Avviamo il server puntando al file compilato nel workspace del backend
-CMD ["node", "backend-catasto/dist/server.js"]
+# Applichiamo le migrazioni mancanti e avviamo il server: senza le tabelle
+# applicative la ricerca fallisce. Se una migrazione fallisce il container si
+# ferma (e il compose lo riavvia) invece di servire un'API rotta.
+CMD ["sh", "-c", "node backend-catasto/dist/scripts/migrate.js && exec node backend-catasto/dist/server.js"]
