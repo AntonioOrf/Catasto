@@ -79,25 +79,17 @@ export const likePattern = (value: string, mode: "contains" | "starts_with" = "c
 
 const like = (value: string) => likePattern(value);
 
-/** Particelle del patronimico: nel DB nome e patronimico sono uniti senza "di". */
-const PARTICELLE = new Set(["di", "de", "del", "dello", "della", "dei", "degli", "delle", "da", "e"]);
-
 /**
  * Parole da cercare nel nome del fuoco. Nel DB nome e patronimico sono un
- * unico campo senza particelle ("NUTO NARDO"), mentre chi cerca scrive
- * "Nuto di Nardo": le particelle (anche elise, "d'Antonio") si scartano e
- * ogni parola restante deve comparire nel nome, in qualunque ordine. Dalle
- * parole lunghe si toglie la vocale finale, così il patronimico trova sia
- * "Nardo" sia "Nardi" e "Nuccio" trova "Nucci".
+ * unico campo senza "di" ("NUTO NARDO"), mentre chi cerca scrive "Nuto di
+ * Nardo": il "di" si scarta e ogni parola restante deve comparire nel nome,
+ * in qualunque ordine.
  */
 export const nameTerms = (search: string): string[] => {
-  const words = search
-    .split(/\s+/)
-    .map((w) => w.replace(/^d['’]/i, "").replace(/^[,.;]+|[,.;]+$/g, ""))
-    .filter((w) => w && !PARTICELLE.has(w.toLowerCase()));
-  if (words.length === 0) return [search];
-  return words.map((w) => (w.length >= 5 ? w.replace(/[aeiou]$/i, "") : w));
+  const words = search.split(/\s+/).filter((w) => w && w.toLowerCase() !== "di");
+  return words.length > 0 ? words : [search];
 };
+
 const LIKE = LIKE_SQL;
 
 const EQUALITY_FILTERS = [
