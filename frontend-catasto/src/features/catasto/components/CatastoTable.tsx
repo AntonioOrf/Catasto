@@ -6,6 +6,8 @@ import ArchivioViewerModal from "./ArchivioViewerModal";
 import SegnalazioneModal from "../../segnalazioni/components/SegnalazioneModal";
 import { useFilters } from "../../../context/FilterContext";
 import type { Fuoco, Parenti, TipoSegnalazione } from "@catasto/shared";
+import type { RiferimentoArchivio } from "../lib/archivio";
+import { parseSegnaturaPortata } from "../lib/segnatura";
 
 interface CatastoTableProps {
   /** Tabella sopra il breakpoint lg, card sotto: se ne monta una sola. */
@@ -24,6 +26,21 @@ interface CatastoTableProps {
   handlePageChange: (page: number) => void;
   /** Ripete l'ultima richiesta dopo un errore. */
   onRetry?: () => void;
+}
+
+/**
+ * Volume e carta da aprire nel visore. La portata ha volume e carta solo
+ * nella segnatura accettata, e un codice d'archivio solo se il suo volume è
+ * fra quelli digitalizzati del fondo Catasto: altrimenti non si apre.
+ */
+function viewerVolume(row: Fuoco, riferimento: RiferimentoArchivio) {
+  if (riferimento === "campione") {
+    return { codiceArchivio: row.codice_archivio ?? "", volume: row.volume ?? "", foglio: row.foglio ?? "" };
+  }
+  if (!row.codice_archivio_portata || !row.segnatura_portata) return null;
+  const { volume, carta } = parseSegnaturaPortata(row.segnatura_portata);
+  if (!volume || !carta) return null;
+  return { codiceArchivio: row.codice_archivio_portata, volume, foglio: carta };
 }
 
 export default function CatastoTable({
@@ -46,9 +63,15 @@ export default function CatastoTable({
 
   // Riga aperta nel visore: serve intera anche alla segnalazione lanciata da
   // lì, perché davanti alla carta originale l'utente può trascrivere la
-  // segnatura.
-  const [viewerRow, setViewerRow] = useState<Fuoco | null>(null);
-  const closeViewer = useCallback(() => setViewerRow(null), []);
+  // segnatura. Il riferimento dice se aprire il campione o la portata.
+  const [viewer, setViewer] = useState<{ row: Fuoco; riferimento: RiferimentoArchivio } | null>(null);
+  const openViewer = useCallback(
+    (row: Fuoco, riferimento: RiferimentoArchivio) => setViewer({ row, riferimento }),
+    [],
+  );
+  const closeViewer = useCallback(() => setViewer(null), []);
+  const viewerRow = viewer?.row ?? null;
+  const viewerTarget = viewer ? viewerVolume(viewer.row, viewer.riferimento) : null;
 
   // La modale di segnalazione vive qui e non nella riga: una sola istanza per
   // tabella invece di una per ognuna delle 50 righe della pagina.
@@ -79,7 +102,7 @@ export default function CatastoTable({
     onRowClick: handleRowClick,
     loadingParenti,
     parentiData,
-    onViewArchivio: setViewerRow,
+    onViewArchivio: openViewer,
     onSegnala: handleSegnala,
   });
 
@@ -247,11 +270,12 @@ export default function CatastoTable({
       </div>
 
       <ArchivioViewerModal
-        isOpen={viewerRow !== null}
+        isOpen={viewerTarget !== null}
         onClose={closeViewer}
-        codiceArchivio={viewerRow?.codice_archivio ?? ""}
-        foglio={viewerRow?.foglio ?? ""}
-        volume={viewerRow?.volume ?? ""}
+        codiceArchivio={viewerTarget?.codiceArchivio ?? ""}
+        foglio={viewerTarget?.foglio ?? ""}
+        volume={viewerTarget?.volume ?? ""}
+        riferimento={viewer?.riferimento ?? "campione"}
         nome={viewerRow?.nome ?? ""}
         onSegnalaSegnatura={viewerRow ? () => handleSegnala(viewerRow, "segnatura") : undefined}
       />

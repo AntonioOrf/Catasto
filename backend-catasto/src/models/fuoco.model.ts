@@ -1,5 +1,5 @@
 import pool from "../config/db.js";
-import { Fuoco, SidebarItem } from "@catasto/shared";
+import { Fuoco, SidebarItem, volumeCatastoPortata } from "@catasto/shared";
 
 /**
  * Join opzionali, in ordine di dipendenza: `requires` indica il join che deve
@@ -70,7 +70,34 @@ export class FuocoModel {
       ${buildFrom(TABLE_VIEW_ALIASES)} ${q.conditions} ${q.orderByClause} LIMIT ? OFFSET ?
     `;
     const [rows]: any = await pool.query(sql, [...q.params, q.limit, q.offset]);
-    return rows as Fuoco[];
+    return this.attachCodiciPortata(rows as Fuoco[]);
+  }
+
+  /**
+   * La segnatura della portata è testo libero delle segnalazioni: il volume
+   * si ricava con lo stesso parser della UI e si cerca fra i volumi
+   * digitalizzati del fondo Catasto, come fa il join `tav` per il campione.
+   * Una sola query per pagina, e solo se qualche fuoco ha una portata.
+   */
+  static async attachCodiciPortata(rows: Fuoco[]): Promise<Fuoco[]> {
+    const volumi = new Map<Fuoco, number>();
+    for (const row of rows) {
+      const volume = volumeCatastoPortata(row.segnatura_portata);
+      if (volume !== null) volumi.set(row, volume);
+    }
+    if (volumi.size === 0) return rows;
+
+    const [codici]: any = await pool.query(
+      "SELECT CAST(volume AS UNSIGNED) AS volume, codice_archivio FROM t_archivio_volumi WHERE CAST(volume AS UNSIGNED) IN (?)",
+      [[...new Set(volumi.values())]],
+    );
+    const byVolume = new Map<number, string>(
+      (codici as { volume: number | string; codice_archivio: string }[]).map((c) => [Number(c.volume), c.codice_archivio]),
+    );
+    for (const [row, volume] of volumi) {
+      row.codice_archivio_portata = byVolume.get(volume) ?? null;
+    }
+    return rows;
   }
 
   static async getSidebar(q: FuocoQuery): Promise<SidebarItem[]> {
