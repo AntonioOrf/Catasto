@@ -30,7 +30,8 @@ backend-catasto/
 ├── migrations/
 │   ├── 001_segnalazioni.sql      # tabelle applicative (segnalazioni, fuoco_segnature)
 │   ├── 002_traduzioni_lookup.sql # traduzioni delle etichette di lookup
-│   └── 003_traduzioni_lookup_seed.sql # traduzioni inglesi iniziali
+│   ├── 003_traduzioni_lookup_seed.sql # traduzioni inglesi iniziali
+│   └── 004_traduzioni_lookup_dump.sql # traduzioni delle etichette reali del dump (da db:export-traduzioni)
 └── src/
     ├── server.ts                  # bootstrap Express: helmet, CORS, rate limit, rotte, /health
     ├── config/db.ts               # pool mysql2 (connectionLimit 50, TLS opzionale)
@@ -456,6 +457,8 @@ Un valore senza traduzione resta in italiano. L'ordinamento SQL della tabella (`
 **Tabella `traduzioni_lookup`** (migrazione `002`): `tabella` (nome della tabella del dump: `mestieri`, `bestiame`, `rapporto_mestiere`, `immigrazione`, `casa`, `particolarita_fuoco`, `particolarita_parenti`, `rapporti_parentela`, `sesso_parenti`, `statocivile_parenti`), `valore_it`, `lingua` (`en`), `valore`. La chiave è l'**etichetta italiana**, non l'id: la tabella sta fuori dal dump, sopravvive ai reimport e si popola senza conoscere gli id. Il confronto ignora maiuscole, accenti e spazi superflui (collation `utf8mb4_unicode_ci` nel DB, stessa normalizzazione nel backend).
 
 **Seed** (migrazione `003`): circa 590 traduzioni di valori plausibili — sesso, stato civile, parentela, casa, rapporto di lavoro, bestiame, immigrazione, particolarità e circa 250 grafie di mestieri del vocabolario del Catasto del 1427 (Herlihy e Klapisch-Zuber). Le righe che non corrispondono a valori del dump sono innocue; `INSERT IGNORE` non sovrascrive traduzioni già corrette.
+
+**Etichette reali** (migrazione `004`): il dump usa descrizioni lunghe ("arte della lana, lanaiolo, ritagliatore, …"), che il seed di `003` non intercettava. `004` traduce le 226 etichette esportate dal database di produzione con `db:export-traduzioni` (tutte le tabelle di lookup) e, a differenza di `003`, aggiorna le righe già presenti. Funziona uguale su MySQL e TiDB.
 
 **Cache.** Le traduzioni restano in memoria 10 minuti per lingua (la copia italiana dei filtri in cache non viene mai modificata: la traduzione ne fa una copia). Se la tabella non esiste (migrazione non applicata) o il DB dà errore, le risposte restano in italiano invece di andare in 500.
 
