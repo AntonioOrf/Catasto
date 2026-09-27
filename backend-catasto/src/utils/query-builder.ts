@@ -82,13 +82,19 @@ const like = (value: string) => likePattern(value);
 /**
  * Parole da cercare nel nome del fuoco. Nel DB nome e patronimico sono un
  * unico campo senza "di" ("NUTO NARDO"), mentre chi cerca scrive "Nuto di
- * Nardo": il "di" si scarta e ogni parola restante deve comparire nel nome,
- * in qualunque ordine.
+ * Nardo": il "di" si scarta e le parole restanti si cercano nel nome.
  */
 export const nameTerms = (search: string): string[] => {
   const words = search.split(/\s+/).filter((w) => w && w.toLowerCase() !== "di");
   return words.length > 0 ? words : [search];
 };
+
+/**
+ * Pattern LIKE per il nome preceduto da uno spazio: ogni parola deve iniziare
+ * una parola del nome, nell'ordine in cui è scritta ("% nuto% nardo%").
+ */
+export const namePattern = (search: string): string =>
+  `% ${nameTerms(search).map((w) => escapeLike(w.replace(/'/g, " ").trim())).join("% ")}%`;
 
 const LIKE = LIKE_SQL;
 
@@ -127,15 +133,12 @@ export const buildQuery = (filters: QueryFilters | Record<string, unknown>) => {
 
   const persona = text(raw.q_persona, "q_persona");
   if (persona) {
-    // Se esiste un fuoco con esattamente quel nome si mostrano solo quelli:
-    // "nuto nardo" non deve trovare anche "BERNARDO NUTO". Altrimenti ogni
-    // parola deve comparire nel nome, in qualunque ordine. La sottoquery non
-    // dipende dalla riga, quindi MySQL la valuta una volta sola.
-    const terms = nameTerms(persona);
-    const esatto = terms.join(" ");
-    const parole = terms.map(() => `f.Nome_Fuoco ${LIKE}`).join(" AND ");
-    conditions += ` AND (f.Nome_Fuoco = ? OR (NOT EXISTS (SELECT 1 FROM fuochi fx WHERE fx.Nome_Fuoco = ?) AND ${parole}))`;
-    params.push(esatto, esatto, ...terms.map(like));
+    // Le parole vanno cercate nell'ordine scritto e dall'inizio di una parola
+    // del nome: "nuto nardo" trova NUTO NARDO ma non BERNARDO NUTO né NUTO
+    // BERNARDO. Lo spazio iniziale fa valere anche la prima parola del nome;
+    // l'apostrofo diventa uno spazio, così "antonio" trova D'ANTONIO.
+    conditions += ` AND (CONCAT(' ', REPLACE(f.Nome_Fuoco, '''', ' ')) ${LIKE})`;
+    params.push(namePattern(persona));
   }
 
   const localita = text(raw.q_localita, "q_localita");
