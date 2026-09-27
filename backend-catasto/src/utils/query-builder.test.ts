@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOrderBy, buildQuery } from "./query-builder.js";
+import { buildOrderBy, buildQuery, nameTerms } from "./query-builder.js";
 import { ValidationError } from "./validation.js";
 
 describe("buildQuery", () => {
@@ -14,6 +14,19 @@ describe("buildQuery", () => {
     expect(conditions).toContain("f.Nome_Fuoco LIKE ? ESCAPE '!'");
     expect(conditions).not.toContain("Rossi");
     expect(params).toEqual(["%Rossi%"]);
+  });
+
+  it("cerca nome e patronimico anche con le particelle", () => {
+    const { conditions, params } = buildQuery({ q_persona: "Nuto di Nardo" });
+    expect(conditions.match(/f\.Nome_Fuoco LIKE/g)).toHaveLength(2);
+    expect(params).toEqual(["%Nuto%", "%Nardo%"]);
+  });
+
+  it("scarta solo il di e tiene le parole intere", () => {
+    expect(nameTerms("Giovanni di Nuccio")).toEqual(["Giovanni", "Nuccio"]);
+    expect(nameTerms("Piero del Nuccio")).toEqual(["Piero", "del", "Nuccio"]);
+    expect(nameTerms("  Lapo   ")).toEqual(["Lapo"]);
+    expect(nameTerms("di")).toEqual(["di"]);
   });
 
   it("expands comma-separated ids into one placeholder per id", () => {

@@ -78,6 +78,18 @@ export const likePattern = (value: string, mode: "contains" | "starts_with" = "c
   mode === "contains" ? `%${escapeLike(value)}%` : `${escapeLike(value)}%`;
 
 const like = (value: string) => likePattern(value);
+
+/**
+ * Parole da cercare nel nome del fuoco. Nel DB nome e patronimico sono un
+ * unico campo senza "di" ("NUTO NARDO"), mentre chi cerca scrive "Nuto di
+ * Nardo": il "di" si scarta e ogni parola restante deve comparire nel nome,
+ * in qualunque ordine.
+ */
+export const nameTerms = (search: string): string[] => {
+  const words = search.split(/\s+/).filter((w) => w && w.toLowerCase() !== "di");
+  return words.length > 0 ? words : [search];
+};
+
 const LIKE = LIKE_SQL;
 
 const EQUALITY_FILTERS = [
@@ -115,8 +127,10 @@ export const buildQuery = (filters: QueryFilters | Record<string, unknown>) => {
 
   const persona = text(raw.q_persona, "q_persona");
   if (persona) {
-    conditions += ` AND (f.Nome_Fuoco ${LIKE})`;
-    params.push(like(persona));
+    for (const term of nameTerms(persona)) {
+      conditions += ` AND (f.Nome_Fuoco ${LIKE})`;
+      params.push(like(term));
+    }
   }
 
   const localita = text(raw.q_localita, "q_localita");
