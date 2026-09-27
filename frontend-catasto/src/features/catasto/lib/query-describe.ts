@@ -1,36 +1,50 @@
 import {
   NO_VALUE_OPERATORS,
-  OPERATOR_LABELS,
   getField,
   type FilterOption,
   type Operator,
   type QueryNode,
 } from "@catasto/shared";
+import { fieldLabel, operatorLabel } from "../../../i18n/fields";
+import { getLang, type Lang } from "../../../i18n/language";
+import { translate } from "../../../i18n/messages";
+import { queryDescribeMessages as messages } from "./query-describe.messages";
 
 export type OptionsByKey = Record<string, FilterOption[]>;
 
 /**
- * Traduce l'AST in italiano leggibile. Serve all'anteprima del builder: una
- * query annidata con AND/OR è facile da comporre per sbaglio, e vederla scritta
- * è l'unico modo in cui un utente non tecnico si accorge dell'errore.
+ * Traduce l'AST in linguaggio leggibile (nella lingua attiva). Serve
+ * all'anteprima del builder: una query annidata con AND/OR è facile da
+ * comporre per sbaglio, e vederla scritta è l'unico modo in cui un utente non
+ * tecnico si accorge dell'errore. Le etichette delle opzioni arrivano già
+ * tradotte dal backend.
  */
-export function describeNode(node: QueryNode, options: OptionsByKey, depth = 0): string {
-  if (node.kind === "group") {
-    if (node.children.length === 0) return "tutti i fuochi";
+export function describeNode(
+  node: QueryNode,
+  options: OptionsByKey,
+  depth = 0,
+  lang: Lang = getLang(),
+): string {
+  const t = (key: keyof typeof messages.it, vars?: Record<string, string>) =>
+    translate(messages, key, vars, lang);
 
-    const parts = node.children.map((child) => describeNode(child, options, depth + 1));
-    const joined = parts.join(node.op === "AND" ? " e " : " oppure ");
+  if (node.kind === "group") {
+    if (node.children.length === 0) return t("allHouseholds");
+
+    const parts = node.children.map((child) => describeNode(child, options, depth + 1, lang));
+    const joined = parts.join(node.op === "AND" ? t("and") : t("or"));
     const wrapped = node.children.length > 1 && depth > 0 ? `(${joined})` : joined;
 
-    return node.not ? `non (${wrapped})` : wrapped;
+    return node.not ? t("not", { expr: wrapped }) : wrapped;
   }
 
   const field = getField(node.field);
-  if (!field) return "condizione non valida";
+  if (!field) return t("invalidCondition");
 
-  const operatorLabel = OPERATOR_LABELS[node.operator as Operator] ?? node.operator;
+  const label = fieldLabel(field.key, lang);
+  const operator = operatorLabel(node.operator as Operator, lang);
   if (NO_VALUE_OPERATORS.includes(node.operator as Operator)) {
-    return `${field.label} ${operatorLabel}`;
+    return `${label} ${operator}`;
   }
 
   const values = Array.isArray(node.value) ? node.value : [node.value];
@@ -44,7 +58,7 @@ export function describeNode(node: QueryNode, options: OptionsByKey, depth = 0):
   });
 
   const valueLabel =
-    node.operator === "between" ? labels.join(" e ") : labels.join(", ");
+    node.operator === "between" ? labels.join(t("between")) : labels.join(", ");
 
-  return `${field.label} ${operatorLabel} ${valueLabel}`;
+  return `${label} ${operator} ${valueLabel}`;
 }

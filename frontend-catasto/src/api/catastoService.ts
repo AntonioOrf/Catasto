@@ -1,4 +1,6 @@
 import { apiRequest } from "./client";
+import { translate } from "../i18n/messages";
+import { clientMessages as messages } from "./client.messages";
 import type {
   ApiResponse,
   FilterOptions,
@@ -24,7 +26,7 @@ const fetchAdvanced = <V extends View>(
   limit: number,
   signal?: AbortSignal,
 ) =>
-  apiRequest<ViewResult<V>>("/api/catasto/query", "La ricerca avanzata non è riuscita", {
+  apiRequest<ViewResult<V>>("/api/catasto/query", translate(messages, "advancedSearchFailed"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -50,7 +52,7 @@ const fetchSimple = <V extends View>(
   params.append("limit", String(limit));
   const path = view === "sidebar" ? "/api/catasto/sidebar" : "/api/catasto";
   const fallback =
-    view === "sidebar" ? "Impossibile caricare l'indice" : "Il server non ha risposto correttamente";
+    translate(messages, view === "sidebar" ? "sidebarFailed" : "tableFailed");
   return apiRequest<ViewResult<V>>(`${path}?${params}`, fallback, { signal });
 };
 
@@ -70,7 +72,7 @@ export const fetchFuochi = <V extends View>(
     : fetchSimple(search, view, page, limit, signal);
 
 export const fetchParentiData = (idFuoco: number, signal?: AbortSignal) =>
-  apiRequest<Parenti[]>(`/api/parenti/${idFuoco}`, "Impossibile caricare la composizione familiare", {
+  apiRequest<Parenti[]>(`/api/parenti/${idFuoco}`, translate(messages, "parentiFailed"), {
     signal,
   });
 
@@ -83,7 +85,7 @@ export const fetchFilterOptions = (
     if (value) params.append(key, value);
   }
   const query = params.toString() ? `?${params}` : "";
-  return apiRequest<FilterOptions>(`/api/filters${query}`, "Impossibile caricare le opzioni dei filtri", {
+  return apiRequest<FilterOptions>(`/api/filters${query}`, translate(messages, "filtersFailed"), {
     signal,
   });
 };
@@ -91,6 +93,6 @@ export const fetchFilterOptions = (
 export const fetchManifestPages = (archiveId: string, signal?: AbortSignal) =>
   apiRequest<IiifPage[]>(
     `/api/catasto/manifest/${encodeURIComponent(archiveId)}`,
-    "Impossibile scaricare le informazioni del volume dall'Archivio di Stato",
+    translate(messages, "manifestFailed"),
     { signal },
   );
