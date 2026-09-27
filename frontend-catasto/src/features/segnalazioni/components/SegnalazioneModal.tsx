@@ -11,6 +11,7 @@ import {
 } from "@catasto/shared";
 import { useCreateSegnalazione } from "../api/create-segnalazione";
 import { useModal } from "../../../hooks/useModal";
+import { userMessage } from "../../../api/client";
 
 interface SegnalazioneModalProps {
   isOpen: boolean;
@@ -34,9 +35,17 @@ const composeSegnatura = (value: string, altroFondo: boolean): string => {
   return `${SEGNATURA_PREFISSO} ${trimmed}`;
 };
 
+/**
+ * Chiavi del registry che nel Fuoco hanno un nome diverso. Le altre chiavi
+ * segnalabili coincidono con la proprietà (nome, volume, credito_m, ...).
+ */
+const FUOCO_PROPERTY: Partial<Record<string, keyof Fuoco>> = {
+  rapporto: "rapporto_mestiere",
+};
+
 /** Il valore attualmente mostrato all'utente per il campo scelto. */
 const currentValue = (row: Fuoco | null, campo: string): string => {
-  const raw = (row as Record<string, unknown> | null)?.[campo];
+  const raw = (row as Record<string, unknown> | null)?.[FUOCO_PROPERTY[campo] ?? campo];
   return raw === null || raw === undefined || raw === "" ? "" : String(raw);
 };
 
@@ -291,7 +300,7 @@ export default function SegnalazioneModal({
             />
 
             {mutation.isError && (
-              <p role="alert" className="text-sm text-red-600 dark:text-red-400">{(mutation.error as Error).message}</p>
+              <p role="alert" className="text-sm text-red-600 dark:text-red-400">{userMessage(mutation.error, "Invio della segnalazione non riuscito.")}</p>
             )}
 
             <div className="flex items-center justify-end gap-3 pt-2 border-t border-border-base">

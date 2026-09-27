@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { List } from "lucide-react";
 import type { SidebarItem } from "@catasto/shared";
 import Spinner from "../common/Spinner";
+import { useIsDesktop } from "../../hooks/useMediaQuery";
 
 /** Altezza fissa delle voci: la lista è virtualizzata e calcola le posizioni. */
 const ITEM_HEIGHT = 68;
@@ -40,6 +41,20 @@ export default React.memo(function Sidebar({
     asideRef.current?.toggleAttribute("inert", !isSidebarOpen);
   }, [isSidebarOpen]);
   const [containerHeight, setContainerHeight] = useState(0);
+
+  // Su mobile la sidebar è un overlay: Esc la chiude come una modale. Il
+  // listener sta su window, dopo quelli di useModal su document: se una
+  // modale aperta ha già gestito Esc (defaultPrevented) la sidebar resta.
+  const isDesktop = useIsDesktop();
+  useEffect(() => {
+    if (!isSidebarOpen || isDesktop) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      setIsSidebarOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSidebarOpen, isDesktop, setIsSidebarOpen]);
 
   useEffect(() => {
     const handleResize = () => {

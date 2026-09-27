@@ -37,5 +37,13 @@ export async function apiRequest<T>(
     throw new Error(message);
   }
 
-  return (await response.json()) as T;
+  // Un 200 non JSON è quasi sempre l'index.html servito al posto dell'API
+  // (es. deploy senza VITE_API_URL): il SyntaxError del parse non va mostrato.
+  try {
+    return (await response.json()) as T;
+  } catch (error) {
+    // l'annullamento della richiesta resta tale: lo gestisce TanStack Query
+    if (error instanceof DOMException && error.name === "AbortError") throw error;
+    throw new Error(`${fallbackError} (risposta del server non valida)`);
+  }
 }

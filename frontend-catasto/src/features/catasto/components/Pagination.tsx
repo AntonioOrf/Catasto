@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 interface PaginationProps {
   page: number;
   totalPages: number;
+  /** Richiesta in corso: comandi disabilitati per non accodare cambi di pagina. */
   loading: boolean;
   handlePageChange: (newPage: number) => void;
 }
@@ -50,7 +51,7 @@ export default function Pagination({
         onClick={() => handlePageChange(page - 1)}
         disabled={isFirst || loading}
         aria-label="Pagina precedente"
-        className={navButtonClasses(isFirst)}
+        className={navButtonClasses(isFirst || loading)}
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         <span className="hidden sm:inline">Precedente</span>
@@ -86,7 +87,7 @@ export default function Pagination({
         onClick={() => handlePageChange(page + 1)}
         disabled={isLast || loading}
         aria-label="Pagina successiva"
-        className={navButtonClasses(isLast)}
+        className={navButtonClasses(isLast || loading)}
       >
         <span className="hidden sm:inline">Successivo</span>
         <ArrowRight className="h-4 w-4" aria-hidden="true" />

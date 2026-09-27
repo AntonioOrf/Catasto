@@ -1,4 +1,5 @@
 import type { QueryGroup, SavedQuery } from "@catasto/shared";
+import { isQueryGroup } from "./query-ast-validate";
 
 /**
  * Preset di ricerca salvati localmente. Nessun account, nessun backend: sono
@@ -12,11 +13,28 @@ export const SAVED_QUERIES_STORAGE_KEY = "catasto.savedQueries.v1";
 
 const MAX_SAVED = 50;
 
-const isSavedQuery = (value: any): value is SavedQuery =>
-  typeof value?.id === "string" &&
-  typeof value?.nome === "string" &&
-  value?.ast?.kind === "group" &&
-  Array.isArray(value.ast.children);
+// Il localStorage è modificabile a mano: un preset con AST malformato va
+// scartato qui, altrimenti romperebbe il render quando viene caricato.
+const isSavedQuery = (value: unknown): value is SavedQuery => {
+  if (typeof value !== "object" || value === null) return false;
+  const q = value as Record<string, unknown>;
+  return typeof q.id === "string" && typeof q.nome === "string" && isQueryGroup(q.ast);
+};
+
+/**
+ * crypto.randomUUID esiste solo nei contesti sicuri (https, localhost): su
+ * http://<ip> serve un fallback. L'id è solo una chiave locale, non un segreto.
+ */
+export function generateId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      // alcuni browser espongono la funzione ma la rifiutano fuori da https
+    }
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 export function loadSavedQueries(): SavedQuery[] {
   try {
@@ -45,7 +63,7 @@ export function saveQuery(nome: string, ast: QueryGroup): SavedQuery[] {
   const trimmed = nome.trim();
 
   const entry: SavedQuery = {
-    id: crypto.randomUUID(),
+    id: generateId(),
     nome: trimmed,
     ast,
     createdAt: new Date().toISOString(),

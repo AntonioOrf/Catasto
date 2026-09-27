@@ -30,6 +30,7 @@ import type { SimpleFilterKey } from "../lib/simple-filters";
 import AdvancedSearchPanel from "./AdvancedSearchPanel";
 
 interface FilterPanelProps {
+  /** Richiesta in corso, anche con risultati già a schermo: fa girare l'icona. */
   loading: boolean;
   /** Ripete la ricerca corrente (i filtri si applicano già da soli). */
   onRefresh: () => void;
