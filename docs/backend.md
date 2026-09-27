@@ -63,3 +63,18 @@ DB_NAME=catasto
 DB_PORT=3306
 PORT=3005
 ```
+
+### Notifica email delle proposte di segnatura (FormSubmit)
+
+Ogni segnalazione di tipo `segnatura` viene salvata nel DB e, se è impostata
+`FORMSUBMIT_EMAIL`, inoltrata alla redazione tramite [FormSubmit](https://formsubmit.co)
+(`src/services/notifica.service.ts`). L'invio parte dal backend, non blocca la
+risposta all'utente e un eventuale errore viene solo loggato.
+
+```env
+FORMSUBMIT_EMAIL=redazione@example.org   # o l'alias casuale fornito da FormSubmit
+FORMSUBMIT_ORIGIN=https://catasto.example.org
+```
+
+Al primo invio FormSubmit manda un'email di conferma all'indirizzo: va
+attivata una volta, poi si può sostituire l'indirizzo con l'alias casuale.
