@@ -1,12 +1,12 @@
-import type { SegnalazioneInput } from "@catasto/shared";
+import { getField, TIPO_SEGNALAZIONE_LABELS, type SegnalazioneInput } from "@catasto/shared";
 import { ModerazioneToken, type AzioneLink } from "../utils/moderazione-token.js";
 
 const FORMSUBMIT_URL = "https://formsubmit.co/ajax";
 const TIMEOUT_MS = 8000;
 
 /**
- * Inoltro via email delle proposte di segnatura della portata, tramite
- * FormSubmit. È solo un avviso alla redazione: la segnalazione è già salvata
+ * Inoltro via email di ogni segnalazione (dato errato, segnatura della
+ * portata, altro) tramite FormSubmit. È solo un avviso alla redazione: la segnalazione è già salvata
  * nel DB e resta l'unica fonte di verità per la moderazione, quindi un invio
  * fallito viene loggato ma non fa fallire la richiesta dell'utente.
  *
@@ -15,7 +15,7 @@ const TIMEOUT_MS = 8000;
  * anche per le email.
  */
 export class NotificaService {
-  static async inviaSegnatura(id: number, input: SegnalazioneInput): Promise<void> {
+  static async invia(id: number, input: SegnalazioneInput): Promise<void> {
     // FORMSUBMIT_EMAIL può essere l'indirizzo o l'alias casuale che FormSubmit
     // fornisce dopo l'attivazione (consigliato: non espone l'email).
     const destinatario = process.env.FORMSUBMIT_EMAIL;
@@ -25,15 +25,24 @@ export class NotificaService {
     // server li impostiamo esplicitamente con l'URL pubblico del portale.
     const origin = process.env.FORMSUBMIT_ORIGIN || process.env.CORS_ORIGIN?.split(",")[0]?.trim();
 
+    const tipo = TIPO_SEGNALAZIONE_LABELS[input.tipo];
     const body: Record<string, string> = {
-      _subject: `Proposta di segnatura della portata #${id}`,
+      _subject: `${tipo} · segnalazione #${id}`,
       _template: "table",
       Segnalazione: `#${id}`,
+      Tipo: tipo,
       Fuoco: input.id_fuoco !== null ? String(input.id_fuoco) : "non indicato",
-      "Segnatura proposta": input.valore_proposto ?? "",
-      Note: input.note ?? "",
-      "Email segnalatore": input.email ?? "non indicata",
     };
+    if (input.tipo === "segnatura") {
+      body["Segnatura proposta"] = input.valore_proposto ?? "";
+    } else {
+      if (input.campo) body.Campo = getField(input.campo)?.label ?? input.campo;
+      if (input.tipo === "dato_errato") body["Valore attuale"] = input.valore_attuale ?? "vuoto";
+      body["Valore proposto"] = input.valore_proposto ?? "non indicato";
+    }
+    body.Note = input.note ?? "";
+    body["Email segnalatore"] = input.email ?? "non indicata";
+
     // Link di moderazione: aprono una pagina di conferma sul backend, che è
     // l'unico a cambiare lo stato. FormSubmit si limita a recapitarli.
     const apiBase = (process.env.PUBLIC_API_URL || origin)?.replace(/\/$/, "");
