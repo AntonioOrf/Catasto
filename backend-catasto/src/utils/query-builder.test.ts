@@ -13,18 +13,18 @@ describe("buildQuery", () => {
     const { conditions, params } = buildQuery({ q_persona: "Rossi" });
     expect(conditions).toContain("f.Nome_Fuoco LIKE ? ESCAPE '!'");
     expect(conditions).not.toContain("Rossi");
-    expect(params).toEqual(["%Ross%"]);
+    expect(params).toEqual(["%Rossi%"]);
   });
 
   it("cerca nome e patronimico anche con le particelle", () => {
     const { conditions, params } = buildQuery({ q_persona: "Nuto di Nardo" });
     expect(conditions.match(/f\.Nome_Fuoco LIKE/g)).toHaveLength(2);
-    expect(params).toEqual(["%Nuto%", "%Nard%"]);
+    expect(params).toEqual(["%Nuto%", "%Nardo%"]);
   });
 
-  it("scarta le particelle elise e toglie la vocale finale alle parole lunghe", () => {
-    expect(nameTerms("Giovanni d'Antonio")).toEqual(["Giovann", "Antoni"]);
-    expect(nameTerms("Piero del Nuccio")).toEqual(["Pier", "Nucci"]);
+  it("scarta solo il di e tiene le parole intere", () => {
+    expect(nameTerms("Giovanni di Nuccio")).toEqual(["Giovanni", "Nuccio"]);
+    expect(nameTerms("Piero del Nuccio")).toEqual(["Piero", "del", "Nuccio"]);
     expect(nameTerms("  Lapo   ")).toEqual(["Lapo"]);
     expect(nameTerms("di")).toEqual(["di"]);
   });
