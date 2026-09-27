@@ -13,13 +13,20 @@ describe("buildQuery", () => {
     const { conditions, params } = buildQuery({ q_persona: "Rossi" });
     expect(conditions).toContain("f.Nome_Fuoco LIKE ? ESCAPE '!'");
     expect(conditions).not.toContain("Rossi");
-    expect(params).toEqual(["%Rossi%"]);
+    expect(params).toEqual(["Rossi", "Rossi", "%Rossi%"]);
   });
 
   it("cerca nome e patronimico anche con le particelle", () => {
     const { conditions, params } = buildQuery({ q_persona: "Nuto di Nardo" });
     expect(conditions.match(/f\.Nome_Fuoco LIKE/g)).toHaveLength(2);
-    expect(params).toEqual(["%Nuto%", "%Nardo%"]);
+    expect(params).toEqual(["Nuto Nardo", "Nuto Nardo", "%Nuto%", "%Nardo%"]);
+  });
+
+  it("col nome esatto esclude i nomi che contengono solo le parole", () => {
+    const { conditions } = buildQuery({ q_persona: "nuto nardo" });
+    expect(conditions).toContain(
+      "(f.Nome_Fuoco = ? OR (NOT EXISTS (SELECT 1 FROM fuochi fx WHERE fx.Nome_Fuoco = ?) AND f.Nome_Fuoco LIKE",
+    );
   });
 
   it("scarta solo il di e tiene le parole intere", () => {

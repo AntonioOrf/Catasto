@@ -127,10 +127,15 @@ export const buildQuery = (filters: QueryFilters | Record<string, unknown>) => {
 
   const persona = text(raw.q_persona, "q_persona");
   if (persona) {
-    for (const term of nameTerms(persona)) {
-      conditions += ` AND (f.Nome_Fuoco ${LIKE})`;
-      params.push(like(term));
-    }
+    // Se esiste un fuoco con esattamente quel nome si mostrano solo quelli:
+    // "nuto nardo" non deve trovare anche "BERNARDO NUTO". Altrimenti ogni
+    // parola deve comparire nel nome, in qualunque ordine. La sottoquery non
+    // dipende dalla riga, quindi MySQL la valuta una volta sola.
+    const terms = nameTerms(persona);
+    const esatto = terms.join(" ");
+    const parole = terms.map(() => `f.Nome_Fuoco ${LIKE}`).join(" AND ");
+    conditions += ` AND (f.Nome_Fuoco = ? OR (NOT EXISTS (SELECT 1 FROM fuochi fx WHERE fx.Nome_Fuoco = ?) AND ${parole}))`;
+    params.push(esatto, esatto, ...terms.map(like));
   }
 
   const localita = text(raw.q_localita, "q_localita");
