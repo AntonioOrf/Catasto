@@ -74,7 +74,24 @@ risposta all'utente e un eventuale errore viene solo loggato.
 ```env
 FORMSUBMIT_EMAIL=redazione@example.org   # o l'alias casuale fornito da FormSubmit
 FORMSUBMIT_ORIGIN=https://catasto.example.org
+MODERAZIONE_SECRET=stringa_casuale_lunga   # abilita i link Accetta / Respingi
+PUBLIC_API_URL=                           # base di /api, se diversa dal sito
 ```
 
 Al primo invio FormSubmit manda un'email di conferma all'indirizzo: va
 attivata una volta, poi si può sostituire l'indirizzo con l'alias casuale.
+
+#### Accetta / Respingi dall'email
+
+Con `MODERAZIONE_SECRET` impostato, l'email contiene due link firmati
+(`GET /api/segnalazioni/moderazione?t=...`), validi 14 giorni:
+
+1. il link apre una pagina di conferma con i dati della proposta, **senza
+   modificare nulla** (i filtri antispam aprono i link delle email da soli);
+2. il pulsante "Conferma" invia un `POST` allo stesso indirizzo, che applica la
+   decisione come `PATCH /api/segnalazioni/:id` (accettare pubblica la segnatura);
+3. il link funziona solo finché la segnalazione è `nuova` o `in_esame`: una
+   segnalazione già decisa si cambia solo con l'API di moderazione.
+
+Il token firma id, azione e scadenza: non si può riusare per un'altra
+segnalazione o per la decisione opposta.

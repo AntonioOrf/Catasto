@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NotificaService } from "./notifica.service.js";
+import { ModerazioneToken } from "../utils/moderazione-token.js";
 
 const input = {
   id_fuoco: 42,
@@ -51,5 +52,36 @@ describe("NotificaService.inviaSegnatura", () => {
     fetchMock.mockRejectedValue(new Error("timeout"));
     await expect(NotificaService.inviaSegnatura(7, input)).resolves.toBeUndefined();
     expect(console.warn).toHaveBeenCalled();
+  });
+
+  it("con MODERAZIONE_SECRET include i link firmati Accetta e Respingi", async () => {
+    vi.stubEnv("FORMSUBMIT_EMAIL", "abc123");
+    vi.stubEnv("FORMSUBMIT_ORIGIN", "https://catasto.example.org");
+    vi.stubEnv("PUBLIC_API_URL", "https://api.example.org/");
+    vi.stubEnv("MODERAZIONE_SECRET", "segreto-di-test");
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: "true" }) });
+
+    await NotificaService.inviaSegnatura(7, input);
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const token = (url: string) => {
+      expect(url.startsWith("https://api.example.org/api/segnalazioni/moderazione?t=")).toBe(true);
+      return new URL(url).searchParams.get("t");
+    };
+    expect(ModerazioneToken.verify(token(body.Accetta))).toEqual({ id: 7, azione: "accettata" });
+    expect(ModerazioneToken.verify(token(body.Respingi))).toEqual({ id: 7, azione: "respinta" });
+  });
+
+  it("senza MODERAZIONE_SECRET l'email non contiene link", async () => {
+    vi.stubEnv("FORMSUBMIT_EMAIL", "abc123");
+    vi.stubEnv("FORMSUBMIT_ORIGIN", "https://catasto.example.org");
+    vi.stubEnv("MODERAZIONE_SECRET", "");
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: "true" }) });
+
+    await NotificaService.inviaSegnatura(7, input);
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.Accetta).toBeUndefined();
+    expect(body.Respingi).toBeUndefined();
   });
 });

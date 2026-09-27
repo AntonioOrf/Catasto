@@ -7,7 +7,9 @@ import {
   TIPI_SEGNALAZIONE,
 } from "@catasto/shared";
 import { SegnalazioneService } from "../services/segnalazione.service.js";
-import { paginationSchema, parseNumericId, ValidationError } from "../utils/validation.js";
+import { HttpError, paginationSchema, parseNumericId, ValidationError } from "../utils/validation.js";
+import { ModerazioneToken } from "../utils/moderazione-token.js";
+import { ModerazionePage } from "../views/moderazione.page.js";
 
 const trimmedText = (max: number) =>
   z
@@ -60,6 +62,24 @@ const createSchema = z
 
 const updateSchema = z.object({ stato: z.enum(STATI_SEGNALAZIONE) });
 
+/**
+ * Le rotte dei link si aprono in un browser dall'email: gli errori diventano
+ * una pagina HTML leggibile invece del JSON dell'error handler.
+ */
+const renderHtml = async (res: Response, work: () => Promise<string>) => {
+  // Il token è nell'URL: niente cache né indicizzazione.
+  res.set("Cache-Control", "no-store");
+  res.set("X-Robots-Tag", "noindex");
+  try {
+    res.type("html").send(await work());
+  } catch (err) {
+    const status = err instanceof HttpError ? err.status : 500;
+    if (status >= 500) console.error("❌ Error:", (err as Error)?.stack ?? err);
+    const message = status >= 500 ? "Errore interno, riprova più tardi." : (err as Error).message;
+    res.status(status).type("html").send(ModerazionePage.errore(status, message));
+  }
+};
+
 export const SegnalazioneController = {
   async create(req: Request, res: Response) {
     const parsed = createSchema.safeParse(req.body);
@@ -91,5 +111,29 @@ export const SegnalazioneController = {
 
     const data = await SegnalazioneService.updateStato(id, parsed.data.stato);
     res.json({ data });
+  },
+
+  /** GET dal link dell'email: mostra la proposta e chiede conferma, senza modificare nulla. */
+  async linkConferma(req: Request, res: Response) {
+    await renderHtml(res, async () => {
+      const token = String(req.query.t ?? "");
+      const { id, azione } = ModerazioneToken.verify(token);
+      const segnalazione = await SegnalazioneService.findById(id);
+      return ModerazionePage.conferma(
+        segnalazione,
+        azione,
+        token,
+        SegnalazioneService.isDaModerare(segnalazione.stato),
+      );
+    });
+  },
+
+  /** POST dal pulsante di conferma: applica la decisione firmata nel token. */
+  async linkApplica(req: Request, res: Response) {
+    await renderHtml(res, async () => {
+      const { id, azione } = ModerazioneToken.verify(req.body?.t);
+      await SegnalazioneService.updateStato(id, azione, { soloSeDaModerare: true });
+      return ModerazionePage.esito(await SegnalazioneService.findById(id));
+    });
   },
 };

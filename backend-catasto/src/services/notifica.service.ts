@@ -1,4 +1,5 @@
 import type { SegnalazioneInput } from "@catasto/shared";
+import { ModerazioneToken, type AzioneLink } from "../utils/moderazione-token.js";
 
 const FORMSUBMIT_URL = "https://formsubmit.co/ajax";
 const TIMEOUT_MS = 8000;
@@ -33,6 +34,16 @@ export class NotificaService {
       Note: input.note ?? "",
       "Email segnalatore": input.email ?? "non indicata",
     };
+    // Link di moderazione: aprono una pagina di conferma sul backend, che è
+    // l'unico a cambiare lo stato. FormSubmit si limita a recapitarli.
+    const apiBase = (process.env.PUBLIC_API_URL || origin)?.replace(/\/$/, "");
+    if (apiBase && ModerazioneToken.isConfigured()) {
+      const link = (azione: AzioneLink) =>
+        `${apiBase}/api/segnalazioni/moderazione?t=${ModerazioneToken.sign(id, azione)}`;
+      body.Accetta = link("accettata");
+      body.Respingi = link("respinta");
+    }
+
     // Rispondendo all'email si scrive direttamente a chi ha segnalato.
     if (input.email) body._replyto = input.email;
 
