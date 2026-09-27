@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { SidebarItem } from "@catasto/shared";
 import { fetchFuochi } from "../api/catastoService";
 import type { SearchParams } from "../features/catasto/lib/simple-filters";
+import { useLanguage } from "../i18n/useT";
 
 /** Righe per richiesta. Le pagine restano allineate: la pagina n parte da (n-1)*size. */
 const SIDEBAR_PAGE_SIZE = 1000;
@@ -21,6 +22,9 @@ export function useCatastoSidebar(search: SearchParams) {
   // Stato letto dai callback senza doverli ricreare a ogni pagina caricata.
   const loadedPages = useRef(0);
   const controllerRef = useRef<AbortController | null>(null);
+  const lastSearch = useRef<SearchParams | null>(null);
+  // Il mestiere mostrato nell'indice arriva tradotto dal backend.
+  const { lang } = useLanguage();
 
   /** Carica le pagine [from, to] e le accoda; `replace` riparte da zero. */
   const loadPages = useCallback(
@@ -48,17 +52,26 @@ export function useCatastoSidebar(search: SearchParams) {
         if (controllerRef.current === controller) setSidebarLoading(false);
       }
     },
-    [search],
+    // `lang` non è letto qui, ma una lingua nuova deve rilanciare l'effetto sotto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [search, lang],
   );
 
-  // Ricerca nuova: l'indice riparte dalla prima pagina.
   useEffect(() => {
-    loadedPages.current = 0;
-    setSidebarData([]);
-    setHasMore(true);
-    loadPages(1, 1, true);
+    if (lastSearch.current !== search) {
+      // Ricerca nuova: l'indice riparte dalla prima pagina.
+      lastSearch.current = search;
+      loadedPages.current = 0;
+      setSidebarData([]);
+      setHasMore(true);
+      loadPages(1, 1, true);
+    } else {
+      // Solo la lingua è cambiata: le stesse righe restano a schermo finché
+      // arrivano quelle tradotte, senza perdere le pagine già caricate.
+      loadPages(1, Math.min(Math.max(loadedPages.current, 1), MAX_SYNC_PAGES), true);
+    }
     return () => controllerRef.current?.abort();
-  }, [loadPages]);
+  }, [loadPages, search]);
 
   const loadMoreSidebar = useCallback(() => {
     if (sidebarLoading || !hasMore) return;

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { FilterOptions } from "@catasto/shared";
 import { fetchFilterOptions } from "../api/catastoService";
 import Header from "../components/layout/Header";
@@ -12,6 +13,7 @@ import { TABLE_PAGE_SIZE, useCatastoData } from "../hooks/useCatastoData";
 import { useCatastoSidebar } from "../hooks/useCatastoSidebar";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { DESKTOP_QUERY, useIsDesktop } from "../hooks/useMediaQuery";
+import { useLanguage } from "../i18n";
 
 /** Attesa dopo l'ultimo tasto: scrivere "Rossi" non deve lanciare cinque ricerche. */
 const SEARCH_DEBOUNCE_MS = 350;
@@ -39,24 +41,23 @@ export default function HomePage() {
   const tableRowsRef = useRef<Record<number, HTMLElement | null>>({});
   const mainContentRef = useRef<HTMLElement>(null);
   const [targetScrolledId, setTargetScrolledId] = useState<number | null>(null);
-  const [filterOptions, setFilterOptions] = useState<FilterOptions>(EMPTY_FILTER_OPTIONS);
 
   const { filters, searchParams } = useFilters();
   const search = useDebouncedValue(searchParams, SEARCH_DEBOUNCE_MS);
 
-  // Le opzioni geografiche dipendono dal livello superiore selezionato.
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchFilterOptions(
-      { serie: filters.filterSerie, quartiere: filters.filterQuartiere, piviere: filters.filterPiviere },
-      controller.signal,
-    )
-      .then(setFilterOptions)
-      .catch((err) => {
-        if (err.name !== "AbortError") console.error("Failed to load filter options", err);
-      });
-    return () => controller.abort();
-  }, [filters.filterSerie, filters.filterQuartiere, filters.filterPiviere]);
+  const { lang } = useLanguage();
+
+  // Le opzioni geografiche dipendono dal livello superiore selezionato, le
+  // etichette di lookup dalla lingua: entrambe nella chiave, così tornare a
+  // una lingua già vista è immediato e nel frattempo restano le opzioni di prima.
+  const geo = { serie: filters.filterSerie, quartiere: filters.filterQuartiere, piviere: filters.filterPiviere };
+  const { data: filterOptions = EMPTY_FILTER_OPTIONS } = useQuery({
+    queryKey: ["filterOptions", lang, geo],
+    queryFn: ({ signal }) => fetchFilterOptions(geo, signal),
+    placeholderData: keepPreviousData,
+    // Cambiano solo con un reimport del dump o un import di traduzioni.
+    staleTime: 30 * 60 * 1000,
+  });
 
   const {
     data,
