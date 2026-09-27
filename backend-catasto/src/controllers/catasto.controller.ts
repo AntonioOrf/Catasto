@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CatastoService, type FuochiView } from "../services/catasto.service.js";
 import { paginationSchema, parseNumericId, splitPaginationQuery, ValidationError } from "../utils/validation.js";
 import { astSchema } from "../utils/query-ast-builder.js";
+import { parseLang } from "../models/traduzioni.model.js";
 
 const advancedQuerySchema = z.object({
   ast: astSchema,
@@ -13,11 +14,13 @@ const advancedQuerySchema = z.object({
 const SIDEBAR_DEFAULT_LIMIT = "1000";
 
 const search = (view: FuochiView) => async (req: Request, res: Response) => {
+  // `lang` sceglie la lingua delle etichette, non e' un filtro.
+  const { lang, ...query } = req.query;
   const { pagination, filters } = splitPaginationQuery(
-    req.query,
+    query,
     view === "sidebar" ? { limit: SIDEBAR_DEFAULT_LIMIT } : {},
   );
-  res.json(await CatastoService.searchFuochi(filters, pagination, view));
+  res.json(await CatastoService.searchFuochi(filters, pagination, view, parseLang(lang)));
 };
 
 export const CatastoController = {
@@ -38,16 +41,18 @@ export const CatastoController = {
     }
 
     const pagination = paginationSchema.parse(req.body ?? {});
-    res.json(await CatastoService.queryFuochi(parsed.data.ast, pagination, parsed.data.view));
+    res.json(
+      await CatastoService.queryFuochi(parsed.data.ast, pagination, parsed.data.view, parseLang(req.query.lang)),
+    );
   },
 
   async getParenti(req: Request, res: Response) {
     const id = parseNumericId(req.params.id, "fuoco id");
-    res.json(await CatastoService.getParenti(id));
+    res.json(await CatastoService.getParenti(id, parseLang(req.query.lang)));
   },
 
-  async getMestieri(_req: Request, res: Response) {
-    res.json(await CatastoService.getMestieri());
+  async getMestieri(req: Request, res: Response) {
+    res.json(await CatastoService.getMestieri(parseLang(req.query.lang)));
   },
 
   async getManifest(req: Request, res: Response) {

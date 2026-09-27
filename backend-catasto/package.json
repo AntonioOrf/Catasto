@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsup src/server.ts src/scripts/migrate.ts --format esm --clean --minify",
+    "build": "tsup src/server.ts src/scripts/migrate.ts src/scripts/export-traduzioni.ts src/scripts/import-traduzioni.ts --format esm --clean --minify",
     "start": "node dist/server.js",
     "db:migrate": "tsx src/scripts/migrate.ts",
     "db:migrate:prod": "node dist/scripts/migrate.js",
+    "db:export-traduzioni": "tsx src/scripts/export-traduzioni.ts",
+    "db:import-traduzioni": "tsx src/scripts/import-traduzioni.ts",
     "test": "vitest run"
   },
   "dependencies": {
