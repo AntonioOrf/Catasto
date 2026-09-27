@@ -136,7 +136,7 @@ Valida per `/api/catasto`, `/api/catasto/sidebar` e `POST /api/catasto/query`. I
 |---|---|---|
 | `page` | intero 1–100000 | `1` |
 | `limit` | intero 1–2000 | `50` (`1000` su `GET /sidebar`) |
-| `sort_by` | `fortune`, `credito`, `creditoM`, `imponibile`, `deduzioni`, `localita`; qualunque altro valore ordina per nome | nome |
+| `sort_by` | `fortune`, `credito`, `creditoM`, `imponibile`, `deduzioni`, `localita`; qualunque altro valore ordina per nome. A parità di valore decide l'id del fuoco, quindi le pagine non si sovrappongono | nome |
 | `order` | `ASC` / `DESC` | `ASC` |
 
 ### `GET /api/catasto` — ricerca semplice
@@ -302,6 +302,8 @@ Regole di traduzione:
 - `neq`, `not_contains`, `not_in` includono anche i valori `NULL` (“diverso da X” comprende “non indicato”).
 - Sui campi dei parenti le forme negative diventano `NOT EXISTS`: `eta_parente neq 0` = "nessun parente di età 0".
 - `not: true` su un gruppo produce `NOT ( … )`; un gruppo vuoto vale `1=1`.
+- Per `serie`, `quartiere`, `piviere` e `popolo` il valore può essere la lista di id restituita da `/api/filters` (`"3,7"`): `eq` diventa `IN (3, 7)`, `neq` `NOT IN`, e le liste dentro `in` / `not_in` vengono espanse.
+- Un AST oltre i 5 livelli viene rifiutato con `400` prima della validazione completa, anche se annidato migliaia di volte.
 
 ### Esempio
 
@@ -341,7 +343,7 @@ WHERE ( f.Nome_Fuoco LIKE ? ESCAPE '!'
 
 | Campo | Regole |
 |---|---|
-| `id_fuoco` | intero > 0 o `null`; se presente deve esistere |
+| `id_fuoco` | intero > 0 o `null` (obbligatorio per `segnatura`); se presente deve esistere |
 | `tipo` | `dato_errato` · `segnatura` · `altro` |
 | `campo` | chiave di un campo segnalabile (obbligatorio per `dato_errato`) |
 | `valore_attuale`, `valore_proposto` | max 500 caratteri (`valore_proposto` obbligatorio per `segnatura`) |
@@ -369,7 +371,7 @@ stateDiagram-v2
 
 - I **link email** agiscono solo su segnalazioni `nuova` o `in_esame`; altrimenti rispondono `409`.
 - La **PATCH admin** accetta qualunque transizione.
-- Effetti per `tipo = segnatura` con `id_fuoco`: diventando `accettata` la segnatura è pubblicata in `fuoco_segnature`; lasciando `accettata` viene ritirata (solo se è ancora quella pubblicata da questa segnalazione). Tutto in transazione con `SELECT … FOR UPDATE`.
+- Effetti per `tipo = segnatura`: diventando `accettata` la segnatura è pubblicata in `fuoco_segnature`. Lasciando `accettata`, se era quella pubblicata, torna visibile l'ultima altra segnatura ancora accettata per lo stesso fuoco; se non ce ne sono, il fuoco resta senza. Tutto in transazione con `SELECT … FOR UPDATE`.
 - Per `dato_errato` e `altro` cambia solo lo stato: la correzione del dato resta manuale.
 
 ### Flusso email (FormSubmit)
@@ -429,13 +431,16 @@ curl -X PATCH -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: applicat
 
 Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici. Le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `schema_migrations`) sono create dal runner in `src/scripts/migrate.ts`, che applica in ordine i file `migrations/*.sql` non ancora registrati.
 
-**Le migrazioni vanno eseguite prima di usare il sito**: la ricerca in tabella legge `fuoco_segnature` e senza di essa risponde 500.
+La ricerca in tabella legge `fuoco_segnature`: senza migrazioni risponde 500.
+
+- **Docker**: il container del backend applica le migrazioni mancanti a ogni avvio, prima di far partire il server. Se una migrazione fallisce il container si ferma (e il compose lo riavvia): l'errore è in `docker compose logs backend`.
+- **Sviluppo**: vanno eseguite a mano.
 
 ```bash
 # sviluppo (legge backend-catasto/.env)
 npm run db:migrate -w catasto-backend
 
-# container di produzione
+# container, a mano (di norma non serve)
 docker compose exec backend node backend-catasto/dist/scripts/migrate.js
 ```
 
@@ -451,7 +456,7 @@ docker compose exec backend node backend-catasto/dist/scripts/migrate.js
 | `DB_PORT` | `3306` | |
 | `DB_SSL` | `false` | `true` attiva TLS ≥ 1.2 con verifica del certificato |
 | `CORS_ORIGIN` | vuota = tutte le origini | Origini ammesse, separate da virgola |
-| `TRUST_PROXY` | non impostata | Numero di proxy davanti al backend (`1` con nginx). Usare un numero: `true` blocca l'avvio |
+| `TRUST_PROXY` | non impostata | Numero di proxy davanti al backend (`1` con nginx). Accetta anche `true`/`false` o nomi come `loopback`, ma `true` fa fidare di qualunque `X-Forwarded-For`: usare un numero |
 | `SEGNALAZIONI_SALT` | obbligatoria in produzione | Salt dell'hash degli IP |
 | `ADMIN_TOKEN` | vuota = area admin chiusa | Token Bearer della moderazione via API |
 | `FORMSUBMIT_EMAIL` | vuota = nessuna email | Destinatario delle segnalazioni |
@@ -474,20 +479,15 @@ Esempio completo per la produzione: [`.env.prod.example`](../.env.prod.example).
 | `npm run db:migrate:prod` | migrazioni dalla build |
 | `npm test` | `vitest run` |
 
-I test (vitest, database sempre simulato) coprono query builder semplice e AST, token di moderazione, servizio di notifica, cambi di stato delle segnalazioni, rotte di moderazione, `toPages` del manifest e l'associazione portata→volume. Non ci sono ancora test per i controller di ricerca, i middleware o test di integrazione su MySQL.
+I test (vitest, database sempre simulato) coprono query builder semplice e AST (compresi liste geografiche, ordinamento stabile e AST troppo annidati), token di moderazione, servizio di notifica, cambi di stato delle segnalazioni (con il ripristino della segnatura precedente), validazione della creazione, rotte di moderazione, `TRUST_PROXY`, `toPages` del manifest e l'associazione portata→volume. Non ci sono ancora test per i controller di ricerca, i middleware o test di integrazione su MySQL.
 
 ---
 
 ## Limiti noti
 
-Emersi dalla revisione del codice di settembre 2026 (dettagli in [revisione-codice.md](revisione-codice.md)):
+I problemi emersi dalla revisione del codice di settembre 2026 sono stati corretti; lo storico è in [revisione-codice.md](revisione-codice.md). Restano due comportamenti da conoscere:
 
-| # | Area | Descrizione |
-|---|---|---|
-| 1 | Ricerca avanzata | Per `serie`/`quartiere`/`piviere`/`popolo` le opzioni unite (`"3,7"`) vengono inviate come stringa singola e MySQL confronta solo il primo id: "Quartiere = San Giovanni" perde i fuochi di "San Giovanni (II)". La ricerca semplice non ha il problema. |
-| 2 | Paginazione | L'ordinamento usa una sola colonna non univoca: a parità di valore (es. fortune = 0) le righe possono spostarsi fra una pagina e l'altra. |
-| 3 | Segnature | Revocare l'ultima segnatura accettata di un fuoco non ripristina quella accettata in precedenza. |
-| 4 | Segnature | Una segnalazione `segnatura` senza `id_fuoco` si può accettare ma non pubblica nulla, anche se la pagina dice "pubblicata". |
-| 5 | Validazione | Un AST annidato oltre ~1000 livelli supera lo stack durante il parse e risponde 500 invece di 400. |
-| 6 | Configurazione | `TRUST_PROXY=true` viene letto come indirizzo IP e il server non parte. |
-| 7 | Cache | Le opzioni dei filtri non scadono: dopo un reimport del dump serve riavviare il backend. |
+| Area | Descrizione |
+|---|---|
+| Cache | Le opzioni dei filtri non scadono: dopo un reimport del dump serve riavviare il backend. |
+| Rate limit | I contatori sono in memoria e per processo: con più istanze del backend i limiti valgono per istanza. |
