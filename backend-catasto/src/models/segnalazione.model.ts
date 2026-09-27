@@ -158,6 +158,39 @@ export class SegnalazioneTx {
     );
   }
 
+  /**
+   * Ultima segnatura ancora accettata sullo stesso fuoco, esclusa quella che
+   * si sta revocando: è il dato da ripristinare al posto di quella ritirata.
+   */
+  async findUltimaSegnaturaAccettata(
+    idFuoco: number,
+    esclusa: number,
+  ): Promise<{ id: number; valore_proposto: string } | null> {
+    const [rows]: any = await this.db.query(
+      `SELECT id, valore_proposto FROM segnalazioni
+       WHERE id_fuoco = ? AND tipo = 'segnatura' AND stato = 'accettata' AND id <> ?
+         AND valore_proposto IS NOT NULL AND valore_proposto <> ''
+       ORDER BY updated_at DESC, created_at DESC, id DESC
+       LIMIT 1 FOR UPDATE`,
+      [idFuoco, esclusa],
+    );
+    return rows[0] ?? null;
+  }
+
+  /** Sostituisce la segnatura solo se è ancora quella pubblicata da `daSegnalazione`. */
+  async replaceSegnatura(
+    idFuoco: number,
+    daSegnalazione: number,
+    segnatura: string,
+    idSegnalazione: number,
+  ): Promise<void> {
+    await this.db.query(
+      `UPDATE fuoco_segnature SET segnatura = ?, id_segnalazione = ?
+       WHERE id_fuoco = ? AND id_segnalazione = ?`,
+      [segnatura, idSegnalazione, idFuoco, daSegnalazione],
+    );
+  }
+
   /** Ritira la segnatura solo se è ancora quella pubblicata da `idSegnalazione`. */
   async deleteSegnatura(idFuoco: number, idSegnalazione: number): Promise<void> {
     await this.db.query("DELETE FROM fuoco_segnature WHERE id_fuoco = ? AND id_segnalazione = ?", [

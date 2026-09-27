@@ -64,12 +64,12 @@ describe("buildQuery - input ostili", () => {
 describe("buildOrderBy", () => {
   it("defaults to ascending order on an unrecognized column", () => {
     const { clause } = buildOrderBy(undefined, undefined);
-    expect(clause).toBe("ORDER BY f.Nome_Fuoco ASC");
+    expect(clause).toBe("ORDER BY f.Nome_Fuoco ASC, f.ID_Fuochi ASC");
   });
 
   it("falls back to ASC when order is not exactly DESC", () => {
     const { clause } = buildOrderBy("fortune", "not-a-real-direction");
-    expect(clause).toBe("ORDER BY f.Fortune_Fuoco ASC");
+    expect(clause).toBe("ORDER BY f.Fortune_Fuoco ASC, f.ID_Fuochi ASC");
   });
 
   it("marks the joined tables needed for locality sorting", () => {
@@ -77,5 +77,14 @@ describe("buildOrderBy", () => {
     expect(clause).toContain("tq.nome_quartiere DESC");
     expect(usedTables.has("tq")).toBe(true);
     expect(usedTables.has("tp")).toBe(true);
+  });
+
+  it("chiude sempre l'ordinamento sulla chiave univoca, per una paginazione stabile", () => {
+    for (const sortBy of [undefined, "fortune", "credito", "creditoM", "imponibile", "deduzioni"]) {
+      expect(buildOrderBy(sortBy, "DESC").clause).toMatch(/ DESC, f\.ID_Fuochi ASC$/);
+    }
+    expect(buildOrderBy("localita", "DESC").clause).toBe(
+      "ORDER BY tq.nome_quartiere DESC, tp.nome_popolo DESC, f.ID_Fuochi ASC",
+    );
   });
 });

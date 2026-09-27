@@ -19,6 +19,8 @@ export function useCatastoData(search: SearchParams) {
   const {
     data: queryResult,
     isLoading: loading,
+    isFetching: fetching,
+    isPlaceholderData: stale,
     error: queryError,
     isError,
     refetch,
@@ -44,9 +46,14 @@ export function useCatastoData(search: SearchParams) {
     refetch();
   }, [refetch]);
 
+  // Con keepPreviousData `loading` vale solo per il primo caricamento (nessun
+  // dato da mostrare); `fetching` copre ogni richiesta in corso e `stale` dice
+  // che le righe a schermo sono ancora quelle della pagina o ricerca precedente.
   return {
     data: queryResult?.data ?? [],
     loading,
+    fetching,
+    stale,
     error: isError ? userMessage(queryError, "Impossibile caricare i fuochi") : null,
     page,
     setPage,

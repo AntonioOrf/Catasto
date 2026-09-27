@@ -14,7 +14,12 @@ interface CatastoTableProps {
   isDesktop: boolean;
   data: Fuoco[];
   totalRecords: number;
+  /** Primo caricamento, nessun dato da mostrare: scheletro. */
   loading: boolean;
+  /** Qualsiasi richiesta in corso, anche con righe già a schermo. */
+  fetching: boolean;
+  /** Righe a schermo della pagina o ricerca precedente, in attesa delle nuove. */
+  stale: boolean;
   error: string | null;
   tableRowsRef: React.MutableRefObject<Record<number, HTMLElement | null>>;
   handleRowClick: (id: number) => void;
@@ -48,6 +53,8 @@ export default function CatastoTable({
   data,
   totalRecords,
   loading,
+  fetching,
+  stale,
   error,
   tableRowsRef,
   handleRowClick,
@@ -119,6 +126,10 @@ export default function CatastoTable({
       <ArrowDown className="h-4 w-4 text-primary ml-1" />
     );
   };
+
+  // Righe vecchie attenuate ma leggibili: segnalano l'attesa senza far
+  // sparire la tabella a ogni cambio di pagina.
+  const staleClasses = `transition-opacity motion-reduce:transition-none ${stale ? "opacity-50" : ""}`;
 
   const thClasses =
     "bg-bg-sidebar px-6 py-2 text-left text-xs font-bold text-text-accent uppercase tracking-wider";
@@ -195,7 +206,7 @@ export default function CatastoTable({
       <div className="bg-bg-main shadow-lg border border-border-base rounded-sm overflow-hidden">
         {isDesktop ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border-base" aria-busy={loading}>
+            <table className="min-w-full divide-y divide-border-base" aria-busy={fetching}>
               <thead className="bg-bg-sidebar">
                 <tr>
                   {sortableHeader("nome", "Capofamiglia")}
@@ -210,7 +221,7 @@ export default function CatastoTable({
                 </tr>
               </thead>
 
-              <tbody className="bg-bg-main divide-y divide-border-base">
+              <tbody className={`bg-bg-main divide-y divide-border-base ${staleClasses}`}>
                 {error ? (
                   <tr>
                     <td colSpan={5} className="p-4">
@@ -238,7 +249,7 @@ export default function CatastoTable({
             </table>
           </div>
         ) : (
-          <div className="divide-y divide-border-base" aria-busy={loading}>
+          <div className="divide-y divide-border-base" aria-busy={fetching}>
             {error ? (
               <div className="p-2">{errorState(true)}</div>
             ) : loading ? (
@@ -250,7 +261,7 @@ export default function CatastoTable({
                 </div>
               ))
             ) : data.length > 0 ? (
-              <div className="p-2 space-y-3 bg-bg-main">
+              <div className={`p-2 space-y-3 bg-bg-main ${staleClasses}`}>
                 {data.map((row) => (
                   <CatastoMobileCard key={row.id} ref={registerRow(row.id)} {...rowProps(row)} />
                 ))}
@@ -264,7 +275,7 @@ export default function CatastoTable({
         <Pagination
           page={page}
           totalPages={totalPages}
-          loading={loading}
+          loading={fetching}
           handlePageChange={handlePageChange}
         />
       </div>

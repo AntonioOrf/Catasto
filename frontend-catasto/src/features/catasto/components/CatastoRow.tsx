@@ -20,6 +20,7 @@ import {
 import type { Fuoco, Parenti, TipoSegnalazione } from "@catasto/shared";
 import type { RiferimentoArchivio } from "../lib/archivio";
 import { parseSegnaturaPortata } from "../lib/segnatura";
+import { eta, fiorini, piviereEPopolo } from "../lib/formato";
 
 export interface CatastoRowProps {
   row: Fuoco;
@@ -31,11 +32,6 @@ export interface CatastoRowProps {
   onViewArchivio?: (row: Fuoco, riferimento: RiferimentoArchivio) => void;
   onSegnala?: (row: Fuoco, tipo?: TipoSegnalazione) => void;
 }
-
-const numberFormat = new Intl.NumberFormat("it-IT");
-
-/** Stesso formato ovunque: prima la sintesi usava il locale del browser e il dettaglio nessuno. */
-const fiorini = (value: number | null | undefined) => `${numberFormat.format(value || 0)} fiorini`;
 
 const smallLabel = "text-[11px] md:text-xs text-text-accent uppercase block";
 const sectionTitle =
@@ -236,17 +232,22 @@ const PortataReference = ({
   );
 };
 
-const Location = ({ row }: { row: Fuoco }) => (
-  <>
-    <div className="font-bold text-primary flex items-center gap-1">
-      <Layers className="h-3 w-3 flex-shrink-0" aria-hidden="true" /> {row.serie || "Serie N/D"}
-    </div>
-    <div className="text-text-main ml-2 border-l-2 border-border-base pl-2">{row.quartiere || "Quartiere N/D"}</div>
-    <div className="text-text-accent ml-2 border-l-2 border-border-base pl-2 italic text-[11px] md:text-xs leading-snug">
-      {row.piviere} &raquo; {row.popolo}
-    </div>
-  </>
-);
+const Location = ({ row }: { row: Fuoco }) => {
+  const dettaglio = piviereEPopolo(row.piviere, row.popolo);
+  return (
+    <>
+      <div className="font-bold text-primary flex items-center gap-1">
+        <Layers className="h-3 w-3 flex-shrink-0" aria-hidden="true" /> {row.serie || "Serie N/D"}
+      </div>
+      <div className="text-text-main ml-2 border-l-2 border-border-base pl-2">{row.quartiere || "Quartiere N/D"}</div>
+      {dettaglio && (
+        <div className="text-text-accent ml-2 border-l-2 border-border-base pl-2 italic text-[11px] md:text-xs leading-snug">
+          {dettaglio}
+        </div>
+      )}
+    </>
+  );
+};
 
 const DetailItem = ({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) => (
   <div>
@@ -349,7 +350,7 @@ const FamilyComposition = ({ loading, parenti }: { loading: boolean; parenti: Pa
                   {parente.parentela_desc || "Membro"}
                   {parente.sesso && <span className="text-[11px] text-text-accent ml-1">({parente.sesso})</span>}
                 </td>
-                <td className="px-2 py-2">{parente.eta || "-"}</td>
+                <td className="px-2 py-2">{eta(parente.eta)}</td>
                 <td className="px-2 py-2">
                   <div className="flex flex-col">
                     <span>{parente.stato_civile}</span>

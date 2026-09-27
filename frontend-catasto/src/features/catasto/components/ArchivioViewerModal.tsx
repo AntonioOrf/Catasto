@@ -76,7 +76,9 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
   const [isDragging, setIsDragging] = useState(false);
   const useHighRes = scale > HIGH_RES_THRESHOLD;
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Il contenitore si ricrea a ogni apertura: come stato, e non come ref,
+  // l'effetto dei listener riparte ogni volta sul nodo corrente.
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const dragStart = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
   const touchStart = useRef({ x: 0, y: 0 });
   const pinchStart = useRef<{ distance: number; scale: number } | null>(null);
@@ -107,7 +109,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
     resetView();
   }, [isOpen, archiveId, foglio, resetView]);
 
-  // Stato letto dai listener touch nativi, registrati una sola volta.
+  // Stato letto dai listener touch nativi, registrati una volta per contenitore.
   const stateRef = useRef({ position, scale, goToPage, currentIndex });
   useEffect(() => {
     stateRef.current = { position, scale, goToPage, currentIndex };
@@ -116,7 +118,6 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
   // Listener nativi e non React: servono { passive: false } per poter
   // bloccare lo scroll della pagina durante pan e pinch.
   useEffect(() => {
-    const container = containerRef.current;
     if (!container) return;
 
     const onTouchStart = (e: TouchEvent) => {
@@ -169,7 +170,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
       container.removeEventListener('touchmove', onTouchMove);
       container.removeEventListener('touchend', onTouchEnd);
     };
-  }, [imageUrl]);
+  }, [container]);
 
   const dialogRef = useRef<HTMLDivElement>(null);
   useModal(isOpen, onClose, dialogRef);
@@ -281,7 +282,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
 
           {showImage && (
             <div
-              ref={containerRef}
+              ref={setContainer}
               className="w-full h-full cursor-grab active:cursor-grabbing relative flex items-center justify-center overflow-hidden select-none touch-none"
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}

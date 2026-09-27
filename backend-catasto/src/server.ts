@@ -12,6 +12,7 @@ import parentiRoutes from "./routes/parenti.routes.js";
 import mestieriRoutes from "./routes/mestieri.routes.js";
 import segnalazioneRoutes from "./routes/segnalazione.routes.js";
 import { NotificaService } from "./services/notifica.service.js";
+import { parseTrustProxy } from "./utils/trust-proxy.js";
 
 dotenv.config({ quiet: true });
 
@@ -23,9 +24,9 @@ const PORT = process.env.PORT || 3005;
 // tutti lo stesso IP del reverse proxy. Non attivarlo "a fiducia": con
 // trust proxy attivo senza un proxy reale il client può falsificare
 // X-Forwarded-For e aggirare i limiti.
-const trustProxy = process.env.TRUST_PROXY;
-if (trustProxy) {
-  app.set("trust proxy", Number.isNaN(Number(trustProxy)) ? trustProxy : Number(trustProxy));
+const trustProxy = parseTrustProxy(process.env.TRUST_PROXY);
+if (trustProxy !== undefined) {
+  app.set("trust proxy", trustProxy);
 }
 
 // CORS_ORIGIN: comma-separated list of allowed origins for production.
