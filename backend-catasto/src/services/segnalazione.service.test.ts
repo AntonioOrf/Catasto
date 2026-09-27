@@ -45,4 +45,19 @@ describe("SegnalazioneService.updateStato", () => {
     await expect(SegnalazioneService.updateStato(1, "accettata")).rejects.toMatchObject({ status: 404 });
     expect(tx.updateStato).not.toHaveBeenCalled();
   });
+
+  it("con soloSeDaModerare rifiuta una segnalazione già decisa, senza scrivere", async () => {
+    tx.findByIdForUpdate.mockResolvedValue(segnatura("respinta"));
+    await expect(
+      SegnalazioneService.updateStato(7, "accettata", { soloSeDaModerare: true }),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(tx.updateStato).not.toHaveBeenCalled();
+    expect(tx.upsertSegnatura).not.toHaveBeenCalled();
+  });
+
+  it("con soloSeDaModerare accetta una segnalazione nuova", async () => {
+    tx.findByIdForUpdate.mockResolvedValue(segnatura("nuova"));
+    await SegnalazioneService.updateStato(7, "accettata", { soloSeDaModerare: true });
+    expect(tx.upsertSegnatura).toHaveBeenCalledWith(42, "ASFi, Catasto 81, c. 245r", 7);
+  });
 });
