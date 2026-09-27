@@ -10,7 +10,7 @@ const input = {
   email: "studioso@example.org",
 };
 
-describe("NotificaService.inviaSegnatura", () => {
+describe("NotificaService.invia", () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
@@ -27,7 +27,7 @@ describe("NotificaService.inviaSegnatura", () => {
 
   it("senza FORMSUBMIT_EMAIL non invia nulla", async () => {
     vi.stubEnv("FORMSUBMIT_EMAIL", "");
-    await NotificaService.inviaSegnatura(7, input);
+    await NotificaService.invia(7, input);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -36,7 +36,7 @@ describe("NotificaService.inviaSegnatura", () => {
     vi.stubEnv("FORMSUBMIT_ORIGIN", "https://catasto.example.org");
     fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: "true" }) });
 
-    await NotificaService.inviaSegnatura(7, input);
+    await NotificaService.invia(7, input);
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("https://formsubmit.co/ajax/abc123");
@@ -50,7 +50,7 @@ describe("NotificaService.inviaSegnatura", () => {
   it("un errore di rete viene loggato, non propagato", async () => {
     vi.stubEnv("FORMSUBMIT_EMAIL", "abc123");
     fetchMock.mockRejectedValue(new Error("timeout"));
-    await expect(NotificaService.inviaSegnatura(7, input)).resolves.toBeUndefined();
+    await expect(NotificaService.invia(7, input)).resolves.toBeUndefined();
     expect(console.warn).toHaveBeenCalled();
   });
 
@@ -61,7 +61,7 @@ describe("NotificaService.inviaSegnatura", () => {
     vi.stubEnv("MODERAZIONE_SECRET", "segreto-di-test");
     fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: "true" }) });
 
-    await NotificaService.inviaSegnatura(7, input);
+    await NotificaService.invia(7, input);
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     const token = (url: string) => {
@@ -78,10 +78,33 @@ describe("NotificaService.inviaSegnatura", () => {
     vi.stubEnv("MODERAZIONE_SECRET", "");
     fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: "true" }) });
 
-    await NotificaService.inviaSegnatura(7, input);
+    await NotificaService.invia(7, input);
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.Accetta).toBeUndefined();
     expect(body.Respingi).toBeUndefined();
+  });
+
+  it("inoltra anche i dati errati, con campo e valori", async () => {
+    vi.stubEnv("FORMSUBMIT_EMAIL", "abc123");
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: "true" }) });
+
+    await NotificaService.invia(8, {
+      id_fuoco: 42,
+      tipo: "dato_errato",
+      campo: "nome",
+      valore_attuale: "ABRAM",
+      valore_proposto: "ABRAMO",
+      note: null,
+      email: null,
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.Tipo).toBe("Dato errato");
+    expect(body.Campo).toBe("Nome fuoco");
+    expect(body["Valore attuale"]).toBe("ABRAM");
+    expect(body["Valore proposto"]).toBe("ABRAMO");
+    expect(body["Segnatura proposta"]).toBeUndefined();
+    expect(body._replyto).toBeUndefined();
   });
 });
