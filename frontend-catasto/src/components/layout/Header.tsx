@@ -1,6 +1,8 @@
-import { Menu, X, Scroll, Moon, Sun, ArrowLeft } from "lucide-react";
+import { Menu, X, Scroll, Moon, Sun, ArrowLeft, Languages } from "lucide-react";
 import { Link } from "react-router-dom";
 import useDarkMode from "../../hooks/useDarkMode";
+import { useLanguage, useT } from "../../i18n";
+import { headerMessages } from "./Header.messages";
 
 interface HeaderProps {
   /** Con il toggle dell'indice (Home); senza, eventualmente il ritorno alla Home. */
@@ -11,6 +13,8 @@ interface HeaderProps {
 
 export default function Header({ isSidebarOpen = false, setIsSidebarOpen, showHomeLink = false }: HeaderProps) {
   const [theme, setTheme] = useDarkMode();
+  const { lang, setLang } = useLanguage();
+  const t = useT(headerMessages);
 
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
 
@@ -22,8 +26,8 @@ export default function Header({ isSidebarOpen = false, setIsSidebarOpen, showHo
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="p-2.5 mr-1 hover:bg-white/10 rounded-md transition-colors"
-              title={isSidebarOpen ? "Chiudi Indice" : "Apri Indice"}
-              aria-label={isSidebarOpen ? "Chiudi indice" : "Apri indice"}
+              title={isSidebarOpen ? t("closeIndex") : t("openIndex")}
+              aria-label={isSidebarOpen ? t("closeIndex") : t("openIndex")}
               aria-expanded={isSidebarOpen}
             >
               {isSidebarOpen ? (
@@ -33,7 +37,7 @@ export default function Header({ isSidebarOpen = false, setIsSidebarOpen, showHo
               )}
             </button>
           ) : showHomeLink ? (
-            <Link to="/" className="p-2.5 mr-1 hover:bg-white/10 rounded-md transition-colors" title="Torna alla Home" aria-label="Torna alla Home">
+            <Link to="/" className="p-2.5 mr-1 hover:bg-white/10 rounded-md transition-colors" title={t("backHome")} aria-label={t("backHome")}>
               <ArrowLeft className="h-6 w-6" aria-hidden="true" />
             </Link>
           ) : null}
@@ -44,22 +48,33 @@ export default function Header({ isSidebarOpen = false, setIsSidebarOpen, showHo
             <Scroll className="h-6 w-6 lg:h-8 lg:w-8" aria-hidden="true" />
             <div>
               <h1 className="text-lg lg:text-2xl font-bold tracking-wide font-serif leading-tight">
-                Catasto Fiorentino
-                <span className="hidden lg:inline"> del 1427/30</span>
+                {t("title")}
+                <span className="hidden lg:inline">{t("titleSuffix")}</span>
               </h1>
               <p className="text-[11px] lg:text-xs uppercase tracking-wider font-medium hidden sm:block opacity-80">
-                Sistema di Consultazione
+                {t("subtitle")}
               </p>
             </div>
           </Link>
         </div>
         
-        <div className="flex items-center h-full gap-3 lg:gap-4">
+        <div className="flex items-center h-full gap-1 sm:gap-3 lg:gap-4">
+          {/* Mostra la lingua di destinazione: chi non legge l'italiano deve riconoscere "EN". */}
+          <button
+            onClick={() => setLang(lang === "it" ? "en" : "it")}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-white/30 hover:bg-white/10 transition-colors text-sm font-semibold tracking-wider"
+            title={t("switchLang")}
+            aria-label={t("switchLang")}
+            lang={lang === "it" ? "en" : "it"}
+          >
+            <Languages className="h-4 w-4" aria-hidden="true" />
+            <span>{lang === "it" ? "EN" : "IT"}</span>
+          </button>
           <button
             onClick={toggleTheme}
             className="p-3 rounded-full hover:bg-white/10 transition-colors"
-            title={theme === "dark" ? "Passa alla modalità chiara" : "Passa alla modalità scura"}
-            aria-label={theme === "dark" ? "Passa alla modalità chiara" : "Passa alla modalità scura"}
+            title={theme === "dark" ? t("toLight") : t("toDark")}
+            aria-label={theme === "dark" ? t("toLight") : t("toDark")}
           >
             {theme === "dark" ? (
               <Sun className="h-5 w-5" aria-hidden="true" />
