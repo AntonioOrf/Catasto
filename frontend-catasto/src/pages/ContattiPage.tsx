@@ -1,21 +1,25 @@
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
+import { useT } from '../i18n';
+import { contattiPageMessages } from './ContattiPage.messages';
 
 export default function ContattiPage() {
+  const t = useT(contattiPageMessages);
+
   return (
     <div className="min-h-screen flex flex-col bg-bg-main text-text-main font-serif">
       <Header showHomeLink={true} />
 
       <main className="flex-1 max-w-4xl mx-auto w-full p-6 md:p-10">
-        <h2 className="text-3xl font-bold mb-6 text-primary">Contatti</h2>
+        <h2 className="text-3xl font-bold mb-6 text-primary">{t("title")}</h2>
         <div className="bg-bg-sidebar border border-border-base rounded-lg p-8 shadow-lg">
           <p className="mb-6 leading-relaxed text-lg">
-            Per informazioni sul progetto, segnalazioni o collaborazioni, potete contattare il team tramite i seguenti canali:
+            {t("intro")}
           </p>
           
           <div className="space-y-6">
             <div className="flex flex-col">
-              <span className="text-xs uppercase tracking-widest text-text-accent font-bold mb-1">Email</span>
+              <span className="text-xs uppercase tracking-widest text-text-accent font-bold mb-1">{t("email")}</span>
               <a href="mailto:antonio.orfitelli@edu.unifi.it" className="text-primary text-xl hover:underline">
                 antonio.orfitelli@edu.unifi.it
               </a>

@@ -1,4 +1,6 @@
 import { ChevronUp, ChevronDown } from "lucide-react";
+import { useT } from "../../i18n";
+import { customNumberInputMessages } from "./CustomNumberInput.messages";
 
 interface CustomNumberInputProps {
   value: string;
@@ -25,6 +27,7 @@ export default function CustomNumberInput({
   id,
   ariaLabel,
 }: CustomNumberInputProps) {
+  const t = useT(customNumberInputMessages);
   const step = (delta: number) => {
     const current = Number(value);
     const base = value === "" || !Number.isFinite(current) ? (min ?? 0) - delta : current;
@@ -53,7 +56,7 @@ export default function CustomNumberInput({
         <button
           type="button"
           onClick={() => step(1)}
-          aria-label="Aumenta"
+          aria-label={t("increase")}
           tabIndex={-1}
           className={`${stepButtonClasses} border-b border-border-base`}
         >
@@ -62,7 +65,7 @@ export default function CustomNumberInput({
         <button
           type="button"
           onClick={() => step(-1)}
-          aria-label="Diminuisci"
+          aria-label={t("decrease")}
           tabIndex={-1}
           className={stepButtonClasses}
         >

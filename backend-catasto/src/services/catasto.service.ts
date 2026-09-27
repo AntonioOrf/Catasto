@@ -3,6 +3,7 @@ import { CommonModel } from "../models/common.model.js";
 import { buildQuery, buildOrderBy } from "../utils/query-builder.js";
 import { buildQueryFromAst } from "../utils/query-ast-builder.js";
 import { HttpError, type Pagination } from "../utils/validation.js";
+import { TraduzioniModel, type Lingua, type TabellaLookup } from "../models/traduzioni.model.js";
 import type {
   Fuoco,
   ApiResponse,
@@ -13,6 +14,23 @@ import type {
 } from "@catasto/shared";
 
 export type FuochiView = "table" | "sidebar";
+
+/** Campi di lookup della vista tabella e tabella del dump da cui vengono. */
+const FUOCO_LOOKUP_FIELDS: Partial<Record<keyof Fuoco, TabellaLookup>> = {
+  mestiere: "mestieri",
+  bestiame: "bestiame",
+  immigrazione: "immigrazione",
+  rapporto_mestiere: "rapporto_mestiere",
+  casa: "casa",
+  particolarita_fuoco: "particolarita_fuoco",
+};
+
+const PARENTI_LOOKUP_FIELDS: Partial<Record<keyof Parenti, TabellaLookup>> = {
+  parentela_desc: "rapporti_parentela",
+  sesso: "sesso_parenti",
+  stato_civile: "statocivile_parenti",
+  particolarita: "particolarita_parenti",
+};
 
 interface CompiledFilters {
   conditions: string;
@@ -97,6 +115,7 @@ export class CatastoService {
     filters: CompiledFilters,
     { page, limit, sort_by, order }: Pagination,
     view: FuochiView,
+    lang: Lingua,
   ): Promise<ApiResponse<Fuoco[]> | SidebarItem[]> {
     const { clause, usedTables: orderTables } = buildOrderBy(sort_by, order);
     const query: FuocoQuery = {
@@ -108,12 +127,18 @@ export class CatastoService {
       offset: (page - 1) * limit,
     };
 
-    if (view === "sidebar") return FuocoModel.getSidebar(query);
+    // Le traduzioni si caricano in parallelo alla query (e di norma sono in cache).
+    if (view === "sidebar") {
+      const [items, traduttore] = await Promise.all([FuocoModel.getSidebar(query), TraduzioniModel.forLang(lang)]);
+      return traduttore.translateRows(items, { mestiere: "mestieri" });
+    }
 
-    const [total, data] = await Promise.all([
+    const [total, rows, traduttore] = await Promise.all([
       FuocoModel.count(filters.conditions, filters.params, filters.usedTables),
       FuocoModel.findAll(query),
+      TraduzioniModel.forLang(lang),
     ]);
+    const data = traduttore.translateRows(rows, FUOCO_LOOKUP_FIELDS);
 
     return {
       data,
@@ -121,20 +146,32 @@ export class CatastoService {
     };
   }
 
-  static searchFuochi(filters: Record<string, unknown>, pagination: Pagination, view: FuochiView) {
-    return this.runQuery(buildQuery(filters), pagination, view);
+  static searchFuochi(
+    filters: Record<string, unknown>,
+    pagination: Pagination,
+    view: FuochiView,
+    lang: Lingua = "it",
+  ) {
+    return this.runQuery(buildQuery(filters), pagination, view, lang);
   }
 
-  static queryFuochi(ast: QueryGroup, pagination: Pagination, view: FuochiView) {
-    return this.runQuery(buildQueryFromAst(ast), pagination, view);
+  static queryFuochi(ast: QueryGroup, pagination: Pagination, view: FuochiView, lang: Lingua = "it") {
+    return this.runQuery(buildQueryFromAst(ast), pagination, view, lang);
   }
 
-  static getParenti(fuocoId: number): Promise<Parenti[]> {
-    return CommonModel.getParenti(fuocoId);
+  static async getParenti(fuocoId: number, lang: Lingua = "it"): Promise<Parenti[]> {
+    const [rows, traduttore] = await Promise.all([CommonModel.getParenti(fuocoId), TraduzioniModel.forLang(lang)]);
+    return traduttore.translateRows(rows, PARENTI_LOOKUP_FIELDS);
   }
 
-  static getMestieri(): Promise<Record<string, unknown>[]> {
-    return CommonModel.getMestieriList();
+  /** Righe grezze di `mestieri`: con la traduzione cambia `Mestiere` e l'ordine. */
+  static async getMestieri(lang: Lingua = "it"): Promise<Record<string, unknown>[]> {
+    const [rows, traduttore] = await Promise.all([CommonModel.getMestieriList(), TraduzioniModel.forLang(lang)]);
+    if (traduttore.vuoto) return rows;
+    const collator = new Intl.Collator(lang, { sensitivity: "base" });
+    return traduttore
+      .translateRows(rows, { Mestiere: "mestieri" })
+      .sort((a, b) => collator.compare(String(a.Mestiere ?? ""), String(b.Mestiere ?? "")));
   }
 
   static async getManifest(id: number): Promise<IiifPage[]> {

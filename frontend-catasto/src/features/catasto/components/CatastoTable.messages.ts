@@ -1,0 +1,36 @@
+import { defineMessages } from "../../../i18n";
+
+export const catastoTableMessages = defineMessages({
+  it: {
+    loadError: "Impossibile caricare i fuochi",
+    retry: "Riprova",
+    emptyTitle: "Nessun fuoco corrisponde ai filtri",
+    emptyHint: "Allarga la ricerca togliendo qualche condizione, oppure ricomincia da capo.",
+    resetFilters: "Azzera i filtri",
+    heading: "Registri Fuochi",
+    result: "risultato",
+    results: "risultati",
+    colHead: "Capofamiglia",
+    colPlace: "Località",
+    colSummary: "Dati Sintetici",
+    colRefs: "Riferimenti",
+    expand: "Espandi",
+    loading: "Caricamento dati in corso...",
+  },
+  en: {
+    loadError: "Unable to load households",
+    retry: "Retry",
+    emptyTitle: "No household matches the filters",
+    emptyHint: "Broaden the search by removing some conditions, or start over.",
+    resetFilters: "Clear filters",
+    heading: "Household Registers",
+    result: "result",
+    results: "results",
+    colHead: "Head of household",
+    colPlace: "Place",
+    colSummary: "Summary data",
+    colRefs: "References",
+    expand: "Expand",
+    loading: "Loading data...",
+  },
+});

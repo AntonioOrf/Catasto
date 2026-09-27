@@ -253,3 +253,12 @@ I problemi emersi dalla revisione di settembre 2026 sono stati corretti (storico
 
 - le righe della tabella sono focalizzabili e contengono pulsanti (elementi interattivi annidati);
 - alcune icone accanto a un'etichetta visibile non hanno `aria-hidden`.
+
+## Lingua (italiano / inglese)
+
+Il pulsante **EN/IT** nell'header cambia la lingua del sito; la scelta resta in `localStorage` (`lang`) e, alla prima visita, segue la lingua del browser (italiano se il browser è italiano, altrimenti inglese).
+
+- Nucleo in `src/i18n/`: `LanguageProvider` (in `Providers`), `useLanguage()`, `useT(messages)`; fuori da React `translate()` e `getLang()`.
+- Ogni componente tiene i testi in un `X.messages.ts` accanto al codice, con `defineMessages({ it, en })`: TypeScript segnala le chiavi inglesi mancanti.
+- Le etichette dei campi e degli operatori del registry (`@catasto/shared`, che resta in italiano) si mostrano con `fieldLabel()` / `operatorLabel()`.
+- I valori delle tabelle di lookup (mestieri, casa, bestiame, ...) li traduce il backend: `apiRequest` aggiunge `?lang=en` e al cambio lingua la cache di TanStack Query viene invalidata. Luoghi e nomi di persona non si traducono. Vedi `docs/backend.md`, sezione Traduzioni.
