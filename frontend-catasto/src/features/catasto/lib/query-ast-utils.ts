@@ -30,12 +30,23 @@ const isComplete = (node: QueryNode): boolean => {
   return value !== "" && value !== undefined && value !== null;
 };
 
+/**
+ * Tollerante verso nodi malformati (figli null, gruppi senza children, kind
+ * sconosciuti): vengono scartati invece di far fallire il render. L'input è di
+ * norma già validato, questa è l'ultima difesa.
+ */
 export function pruneAst(group: QueryGroup): QueryGroup {
-  const children = group.children
+  const source: unknown[] = Array.isArray(group?.children) ? group.children : [];
+  const children = source
+    .filter((child): child is QueryNode =>
+      typeof child === "object" &&
+      child !== null &&
+      ((child as QueryNode).kind === "group" || (child as QueryNode).kind === "condition"),
+    )
     .map((child) => (child.kind === "group" ? pruneAst(child) : child))
     .filter((child) =>
       child.kind === "group" ? child.children.length > 0 : isComplete(child),
     );
 
-  return { ...group, children };
+  return { ...group, kind: "group", op: group?.op === "OR" ? "OR" : "AND", children };
 }

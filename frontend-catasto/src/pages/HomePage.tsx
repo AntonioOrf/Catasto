@@ -61,6 +61,8 @@ export default function HomePage() {
   const {
     data,
     loading,
+    fetching,
+    stale,
     error,
     page,
     setPage,
@@ -81,15 +83,21 @@ export default function HomePage() {
   }, []);
 
   // Dopo un cambio di pagina chiesto dall'indice: la riga esiste solo quando
-  // i dati della nuova pagina sono arrivati.
+  // i dati della nuova pagina sono arrivati. Finché a schermo restano quelli
+  // della pagina precedente (stale) si aspetta; con un errore si rinuncia.
   useEffect(() => {
-    if (targetScrolledId === null || loading || data.length === 0) return;
+    if (targetScrolledId === null) return;
+    if (error) {
+      setTargetScrolledId(null);
+      return;
+    }
+    if (loading || stale) return;
     if (tableRowsRef.current[targetScrolledId]) {
       scrollToRow(targetScrolledId);
       handleRowClick(targetScrolledId);
     }
     setTargetScrolledId(null);
-  }, [data, loading, targetScrolledId, scrollToRow, handleRowClick]);
+  }, [data, loading, stale, error, targetScrolledId, scrollToRow, handleRowClick]);
 
   const handlePageChange = useCallback(
     (newPage: number) => {
@@ -139,13 +147,15 @@ export default function HomePage() {
 
         <main ref={mainContentRef} className="flex-1 overflow-y-auto relative w-full flex flex-col">
           <div className="p-3 sm:p-4 md:p-8 flex-1">
-            <FilterPanel loading={loading} onRefresh={retry} filterOptions={filterOptions} />
+            <FilterPanel loading={fetching} onRefresh={retry} filterOptions={filterOptions} />
 
             <CatastoTable
               isDesktop={isDesktop}
               data={data}
               totalRecords={totalRecords}
               loading={loading}
+              fetching={fetching}
+              stale={stale}
               error={error}
               tableRowsRef={tableRowsRef}
               handleRowClick={handleRowClick}

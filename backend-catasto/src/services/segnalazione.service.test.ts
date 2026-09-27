@@ -7,6 +7,8 @@ const tx = {
   updateStato: vi.fn(),
   upsertSegnatura: vi.fn(),
   deleteSegnatura: vi.fn(),
+  findUltimaSegnaturaAccettata: vi.fn(),
+  replaceSegnatura: vi.fn(),
 };
 
 vi.mock("../models/segnalazione.model.js", () => ({
@@ -36,8 +38,19 @@ describe("SegnalazioneService.updateStato", () => {
 
   it("revocando ritira solo la segnatura pubblicata da quella segnalazione", async () => {
     tx.findByIdForUpdate.mockResolvedValue(segnatura("accettata"));
+    tx.findUltimaSegnaturaAccettata.mockResolvedValue(null);
     await SegnalazioneService.updateStato(7, "respinta");
+    expect(tx.findUltimaSegnaturaAccettata).toHaveBeenCalledWith(42, 7);
     expect(tx.deleteSegnatura).toHaveBeenCalledWith(42, 7);
+    expect(tx.replaceSegnatura).not.toHaveBeenCalled();
+  });
+
+  it("revocando ripristina l'ultima altra segnatura ancora accettata sul fuoco", async () => {
+    tx.findByIdForUpdate.mockResolvedValue(segnatura("accettata"));
+    tx.findUltimaSegnaturaAccettata.mockResolvedValue({ id: 3, valore_proposto: "ASFi, Catasto 80, c. 12v" });
+    await SegnalazioneService.updateStato(7, "respinta");
+    expect(tx.replaceSegnatura).toHaveBeenCalledWith(42, 7, "ASFi, Catasto 80, c. 12v", 3);
+    expect(tx.deleteSegnatura).not.toHaveBeenCalled();
   });
 
   it("restituisce 404 per una segnalazione inesistente, senza scrivere", async () => {

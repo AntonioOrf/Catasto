@@ -94,11 +94,12 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
         </button>
       </div>
 
-      {shareState === "too-long" && (
-        <p className="text-xs text-orange-500">
-          La ricerca è troppo lunga per essere condivisa via link. Riducila o salvala come filtro.
-        </p>
-      )}
+      {/* Live region sempre montata: gli screen reader annunciano solo i
+          cambi di contenuto di una regione già presente nel DOM. */}
+      <p role="status" aria-live="polite" className="text-xs text-amber-800 dark:text-amber-300 empty:hidden">
+        {shareState === "too-long" &&
+          "La ricerca è troppo lunga per essere condivisa via link. Riducila o salvala come filtro."}
+      </p>
 
       {saved.length > 0 && (
         <div className="border-t border-dashed border-border-base pt-3">

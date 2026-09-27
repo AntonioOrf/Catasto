@@ -128,9 +128,16 @@ export class SegnalazioneService {
         if (stato === "accettata" && segnalazione.valore_proposto) {
           await tx.upsertSegnatura(idFuoco, segnalazione.valore_proposto, id);
         } else if (segnalazione.stato === "accettata") {
-          // Era pubblicata e non lo è più: ritiriamo il dato solo se è ancora
+          // Era pubblicata e non lo è più: il dato cambia solo se è ancora
           // quello di questa segnalazione, non una correzione accettata dopo.
-          await tx.deleteSegnatura(idFuoco, id);
+          // Se un'altra segnatura resta accettata torna visibile quella,
+          // altrimenti il fuoco resta senza.
+          const precedente = await tx.findUltimaSegnaturaAccettata(idFuoco, id);
+          if (precedente) {
+            await tx.replaceSegnatura(idFuoco, id, precedente.valore_proposto, precedente.id);
+          } else {
+            await tx.deleteSegnatura(idFuoco, id);
+          }
         }
       }
 

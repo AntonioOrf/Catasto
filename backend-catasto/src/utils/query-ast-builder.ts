@@ -14,7 +14,7 @@ import {
   type QueryNode,
 } from "@catasto/shared";
 import { ValidationError } from "./validation.js";
-import { LIKE_SQL, likePattern } from "./query-builder.js";
+import { LIKE_SQL, likePattern, parseIdList } from "./query-builder.js";
 
 /**
  * Compila l'AST della ricerca avanzata nello stesso contratto di `buildQuery`
@@ -49,12 +49,43 @@ const nodeSchema: z.ZodType<QueryNode> = z.lazy(() =>
   ]),
 );
 
-export const astSchema: z.ZodType<QueryGroup> = z.object({
+/**
+ * Profondita' dell'input grezzo, calcolata senza ricorsione e interrotta appena
+ * supera il limite: lo schema zod ricorsivo, su qualche migliaio di livelli,
+ * esaurirebbe lo stack (500) prima che `assertAstLimits` possa rifiutarlo.
+ */
+export function exceedsAstDepth(input: unknown, maxDepth = AST_MAX_DEPTH): boolean {
+  const stack: [unknown, number][] = [[input, 1]];
+  while (stack.length > 0) {
+    const [node, depth] = stack.pop()!;
+    if (depth > maxDepth) return true;
+    const children = (node as { children?: unknown } | null)?.children;
+    if (typeof node === "object" && Array.isArray(children)) {
+      for (const child of children) stack.push([child, depth + 1]);
+    }
+  }
+  return false;
+}
+
+const rootSchema = z.object({
   kind: z.literal("group"),
   op: z.enum(["AND", "OR"]),
   not: z.boolean().optional(),
   children: z.array(nodeSchema).max(AST_MAX_CONDITIONS),
-}) as unknown as z.ZodType<QueryGroup>;
+});
+
+// La pipe non esegue lo schema ricorsivo se il controllo di profondita' fallisce.
+export const astSchema: z.ZodType<QueryGroup> = z
+  .unknown()
+  .superRefine((input, ctx) => {
+    if (exceedsAstDepth(input)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Query troppo annidata (max ${AST_MAX_DEPTH} livelli)`,
+      });
+    }
+  })
+  .pipe(rootSchema) as unknown as z.ZodType<QueryGroup>;
 
 
 const asString = (value: unknown, field: FieldDef, operator: Operator): string => {
@@ -90,6 +121,33 @@ const coerceScalar = (value: unknown, field: FieldDef, operator: Operator) => {
 };
 
 /**
+ * Serie, quartiere, piviere e popolo hanno opzioni da GROUP_CONCAT: le
+ * partizioni omonime arrivano come un unico valore "3,7". Confrontato come
+ * stringa MySQL lo leggerebbe come 3, quindi va espanso negli id numerici.
+ */
+const GROUPED_GEO_OPTIONS = new Set(["serie", "quartieri", "pivieri", "popoli"]);
+
+const isGroupedGeo = (field: FieldDef): boolean =>
+  field.optionsKey !== undefined && GROUPED_GEO_OPTIONS.has(field.optionsKey);
+
+const groupedIds = (values: unknown[], field: FieldDef, operator: Operator): number[] => {
+  const ids = values.flatMap((v) => (typeof v === "number" ? [v] : (parseIdList(v, field.key) ?? [])));
+  if (ids.length === 0) {
+    throw new ValidationError(`Valore mancante per ${field.key} ${operator}`);
+  }
+  if (ids.length > AST_MAX_IN_VALUES) {
+    throw new ValidationError(`Troppi valori per ${field.key} (max ${AST_MAX_IN_VALUES})`);
+  }
+  return ids;
+};
+
+const inSql = (col: string, count: number, negated: boolean): string => {
+  const placeholders = Array(count).fill("?").join(",");
+  // NOT IN esclude anche i NULL: stessa semantica di neq / not_in.
+  return negated ? `(${col} NOT IN (${placeholders}) OR ${col} IS NULL)` : `${col} IN (${placeholders})`;
+};
+
+/**
  * Sui numerici il confronto con '' e' sbagliato: MySQL converte '' in 0, quindi
  * `Eta = ''` e' vero per i neonati e un valore 0 risulterebbe "vuoto".
  */
@@ -121,16 +179,25 @@ function compileCondition(condition: QueryCondition, usedTables: Set<string>): C
   const params: unknown[] = [];
   let sql: string;
 
+  // Una lista di id su eq / neq diventa IN / NOT IN; un id singolo resta com'e'.
+  const geoIds =
+    isGroupedGeo(field) && (operator === "eq" || operator === "neq")
+      ? groupedIds([condition.value], field, operator)
+      : undefined;
+  if (geoIds && geoIds.length > 1) {
+    return { sql: inSql(col, geoIds.length, operator === "neq"), params: geoIds };
+  }
+
   switch (operator) {
     case "eq":
       sql = `${col} = ?`;
-      params.push(coerceScalar(condition.value, field, operator));
+      params.push(geoIds ? geoIds[0] : coerceScalar(condition.value, field, operator));
       break;
     case "neq":
       // NULL <> 'x' e' NULL, non TRUE: senza il coalesce le righe vuote
       // sparirebbero da una negazione, che per l'utente e' un bug.
       sql = `(${col} <> ? OR ${col} IS NULL)`;
-      params.push(coerceScalar(condition.value, field, operator));
+      params.push(geoIds ? geoIds[0] : coerceScalar(condition.value, field, operator));
       break;
     case "contains":
       sql = `${col} ${LIKE_SQL}`;
@@ -161,14 +228,11 @@ function compileCondition(condition: QueryCondition, usedTables: Set<string>): C
     }
     case "in":
     case "not_in": {
-      const values = asArray(condition.value, field, operator).map((v) =>
-        coerceScalar(v, field, operator),
-      );
-      const placeholders = values.map(() => "?").join(",");
-      sql =
-        operator === "in"
-          ? `${col} IN (${placeholders})`
-          : `(${col} NOT IN (${placeholders}) OR ${col} IS NULL)`;
+      const raw = asArray(condition.value, field, operator);
+      const values = isGroupedGeo(field)
+        ? groupedIds(raw, field, operator)
+        : raw.map((v) => coerceScalar(v, field, operator));
+      sql = inSql(col, values.length, operator === "not_in");
       params.push(...values);
       break;
     }
