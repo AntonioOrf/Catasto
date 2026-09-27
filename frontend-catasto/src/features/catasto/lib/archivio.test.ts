@@ -20,6 +20,12 @@ describe("findFoglioIndex", () => {
     expect(findFoglioIndex(pages, "130")).toBe(1);
   });
 
+  it("per le carte con recto/verso ripiega sul solo numero", () => {
+    const pages = [page("Registro_0244"), page("Registro_0245")];
+    expect(findFoglioIndex(pages, "245r")).toBe(1);
+    expect(findFoglioIndex([page("Registro_0245v")], "245v")).toBe(0);
+  });
+
   it("restituisce -1 se la carta non c'è", () => {
     expect(findFoglioIndex([page("Registro_0001")], "999")).toBe(-1);
     expect(findFoglioIndex([page("Registro_0001")], "")).toBe(-1);

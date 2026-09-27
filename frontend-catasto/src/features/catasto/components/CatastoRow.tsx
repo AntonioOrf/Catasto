@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { Fuoco, Parenti, TipoSegnalazione } from "@catasto/shared";
+import type { RiferimentoArchivio } from "../lib/archivio";
 import { parseSegnaturaPortata } from "../lib/segnatura";
 
 export interface CatastoRowProps {
@@ -26,7 +27,8 @@ export interface CatastoRowProps {
   onRowClick: (id: number) => void;
   loadingParenti: boolean;
   parentiData: Parenti[];
-  onViewArchivio?: (row: Fuoco) => void;
+  /** Apre il visore sul volume del campione o, se digitalizzato, della portata. */
+  onViewArchivio?: (row: Fuoco, riferimento: RiferimentoArchivio) => void;
   onSegnala?: (row: Fuoco, tipo?: TipoSegnalazione) => void;
 }
 
@@ -136,7 +138,7 @@ const ArchiveReference = ({
   return (
     <button
       type="button"
-      onClick={stop(() => onViewArchivio?.(row))}
+      onClick={stop(() => onViewArchivio?.(row, "campione"))}
       title="Visualizza il manoscritto originale"
       aria-label={`Campione: visualizza il manoscritto, volume ${volume}, carta ${foglio}`}
       className={`${refBase[variant]} ${
@@ -156,40 +158,81 @@ const ArchiveReference = ({
  * accanto al campione, nello stesso formato; il fondo compare solo se non è
  * ASFi, Catasto. Quando manca non si mostra nulla - né etichetta né
  * placeholder - perché un "N/D" suggerirebbe un dato assente per quel fuoco
- * invece che per l'intera fonte.
+ * invece che per l'intera fonte. Se il volume della portata è digitalizzato
+ * (il backend ne ha trovato il codice d'archivio) apre il visore come il
+ * campione.
  */
-const PortataReference = ({ row, variant }: { row: Fuoco; variant: "block" | "inline" }) => {
+const PortataReference = ({
+  row,
+  onViewArchivio,
+  variant,
+}: {
+  row: Fuoco;
+  onViewArchivio?: CatastoRowProps["onViewArchivio"];
+  variant: "block" | "inline";
+}) => {
   if (!row.segnatura_portata) return null;
   const { fondo, volume, carta, testo } = parseSegnaturaPortata(row.segnatura_portata);
+  const canView = Boolean(row.codice_archivio_portata && volume && carta && onViewArchivio);
 
+  let content: React.ReactNode;
   if (variant === "inline") {
     const rif = volume && carta ? `Vol. ${volume} c. ${carta}` : testo;
-    return (
-      <span className={`${refBase.inline} ${refStatic.inline}`} title={`Portata: ${row.segnatura_portata}`}>
+    content = (
+      <>
         <RefLabel>Portata</RefLabel>
         <span>{fondo ? `${fondo}, ${rif}` : rif}</span>
+        {canView && <ExternalLink className="h-3 w-3" aria-hidden="true" />}
+      </>
+    );
+  } else {
+    content = (
+      <>
+        <RefLabel>Portata</RefLabel>
+        {fondo && (
+          <span className="flex items-start gap-2">
+            <ScrollText className="h-3 w-3 text-primary flex-shrink-0 mt-1" aria-hidden="true" />
+            <span>{fondo}</span>
+          </span>
+        )}
+        {volume && carta ? (
+          <VolumeCarta volume={volume} carta={carta} link={canView} />
+        ) : (
+          <span className="flex items-start gap-2">
+            <Bookmark className="h-3 w-3 text-primary flex-shrink-0 mt-1" aria-hidden="true" />
+            <span>{testo}</span>
+          </span>
+        )}
+      </>
+    );
+  }
+
+  const blockWidth = variant === "block" ? " max-w-48" : "";
+  if (!canView) {
+    return (
+      <span
+        className={`${refBase[variant]} ${refStatic[variant]}${blockWidth}`}
+        title={variant === "inline" ? `Portata: ${row.segnatura_portata}` : row.segnatura_portata}
+      >
+        {content}
       </span>
     );
   }
 
   return (
-    <span className={`${refBase.block} ${refStatic.block} max-w-48`} title={row.segnatura_portata}>
-      <RefLabel>Portata</RefLabel>
-      {fondo && (
-        <span className="flex items-start gap-2">
-          <ScrollText className="h-3 w-3 text-primary flex-shrink-0 mt-1" aria-hidden="true" />
-          <span>{fondo}</span>
-        </span>
-      )}
-      {volume && carta ? (
-        <VolumeCarta volume={volume} carta={carta} />
-      ) : (
-        <span className="flex items-start gap-2">
-          <Bookmark className="h-3 w-3 text-primary flex-shrink-0 mt-1" aria-hidden="true" />
-          <span>{testo}</span>
-        </span>
-      )}
-    </span>
+    <button
+      type="button"
+      onClick={stop(() => onViewArchivio?.(row, "portata"))}
+      title={`Visualizza la portata originale: ${row.segnatura_portata}`}
+      aria-label={`Portata: visualizza il manoscritto, volume ${volume}, carta ${carta}`}
+      className={`${refBase[variant]}${blockWidth} ${
+        variant === "block"
+          ? "border-primary/50 bg-primary/5 hover:bg-primary/10 shadow-sm"
+          : "text-primary bg-primary/10 hover:bg-primary/20 border-primary/20 min-h-8"
+      } transition-colors`}
+    >
+      {content}
+    </button>
   );
 };
 
@@ -374,7 +417,7 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
         <td className="px-6 py-4">
           <div className="flex items-start gap-2">
             <ArchiveReference row={row} onViewArchivio={onViewArchivio} variant="block" />
-            <PortataReference row={row} variant="block" />
+            <PortataReference row={row} onViewArchivio={onViewArchivio} variant="block" />
           </div>
         </td>
 
@@ -434,7 +477,7 @@ export const CatastoMobileCard = React.memo(
             </div>
             <div className="mt-1.5 pl-1 flex flex-wrap gap-1">
               <ArchiveReference row={row} onViewArchivio={onViewArchivio} variant="inline" />
-              <PortataReference row={row} variant="inline" />
+              <PortataReference row={row} onViewArchivio={onViewArchivio} variant="inline" />
             </div>
           </div>
         </div>
