@@ -3,6 +3,8 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { fetchFuochi, fetchParentiData } from "../api/catastoService";
 import { userMessage } from "../api/client";
 import type { SearchParams } from "../features/catasto/lib/simple-filters";
+import { useLanguage, useT } from "../i18n/useT";
+import { useCatastoDataMessages as messages } from "./useCatastoData.messages";
 
 export const TABLE_PAGE_SIZE = 50;
 
@@ -15,6 +17,8 @@ export function useCatastoData(search: SearchParams) {
   const setPage = useCallback((next: number) => setPageState({ search, page: next }), [search]);
 
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const { lang } = useLanguage();
+  const t = useT(messages);
 
   const {
     data: queryResult,
@@ -54,7 +58,7 @@ export function useCatastoData(search: SearchParams) {
     loading,
     fetching,
     stale,
-    error: isError ? userMessage(queryError, "Impossibile caricare i fuochi") : null,
+    error: isError ? userMessage(queryError, t("loadFailed"), lang) : null,
     page,
     setPage,
     totalPages: queryResult?.pagination?.totalPages || 1,

@@ -5,13 +5,14 @@ import {
   SEGNALAZIONE_LIMITS,
   SEGNATURA_PREFISSO,
   TIPI_SEGNALAZIONE,
-  TIPO_SEGNALAZIONE_LABELS,
   type Fuoco,
   type TipoSegnalazione,
 } from "@catasto/shared";
 import { useCreateSegnalazione } from "../api/create-segnalazione";
 import { useModal } from "../../../hooks/useModal";
 import { userMessage } from "../../../api/client";
+import { fieldLabel, useLanguage, useT } from "../../../i18n";
+import { segnalazioneModalMessages as messages } from "./SegnalazioneModal.messages";
 
 interface SegnalazioneModalProps {
   isOpen: boolean;
@@ -24,6 +25,13 @@ interface SegnalazioneModalProps {
 }
 
 const REPORTABLE = FIELD_REGISTRY.filter((f) => f.reportable && !f.editorial);
+
+/** Etichette dei tipi: quelle di `@catasto/shared` restano italiane per il backend. */
+const TIPO_MESSAGE_KEY = {
+  dato_errato: "typeDatoErrato",
+  segnatura: "typeSegnatura",
+  altro: "typeAltro",
+} as const satisfies Record<TipoSegnalazione, keyof typeof messages.it>;
 
 /**
  * Segnatura completa da inviare: il prefisso del fondo è implicito, a meno che
@@ -65,6 +73,8 @@ export default function SegnalazioneModal({
   const [altroFondo, setAltroFondo] = useState(false);
 
   const mutation = useCreateSegnalazione();
+  const { lang } = useLanguage();
+  const t = useT(messages);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -123,12 +133,12 @@ export default function SegnalazioneModal({
         <div className="flex items-start justify-between p-4 border-b border-border-base">
           <div>
             <h2 id="segnalazione-title" className="text-base md:text-lg font-serif font-bold text-accent-strong flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" /> Segnala un problema
+              <AlertCircle className="h-5 w-5" /> {t("title")}
             </h2>
             {row?.nome && (
               <p className="text-xs text-text-accent mt-1">
-                Fuoco: <span className="font-semibold text-text-main">{row.nome}</span>
-                {row.volume && ` · Vol. ${row.volume} c. ${row.foglio}`}
+                {t("household")} <span className="font-semibold text-text-main">{row.nome}</span>
+                {row.volume && t("volumeFolio", { volume: row.volume, foglio: row.foglio })}
               </p>
             )}
           </div>
@@ -136,8 +146,8 @@ export default function SegnalazioneModal({
             type="button"
             onClick={onClose}
             className="text-text-main hover:text-red-500 p-2.5 -m-2 rounded transition-colors"
-            title="Chiudi"
-            aria-label="Chiudi"
+            title={t("close")}
+            aria-label={t("close")}
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -146,54 +156,49 @@ export default function SegnalazioneModal({
         {mutation.isSuccess ? (
           <div className="p-6 flex flex-col items-center text-center gap-3">
             <Check className="h-12 w-12 text-green-600" />
-            <h3 className="font-bold text-text-main">Segnalazione inviata</h3>
-            <p className="text-sm text-text-accent">
-              Sarà verificata dalla redazione prima di essere pubblicata. Grazie del contributo.
-            </p>
+            <h3 className="font-bold text-text-main">{t("sentTitle")}</h3>
+            <p className="text-sm text-text-accent">{t("sentBody")}</p>
             <button
               type="button"
               onClick={onClose}
               className="mt-2 bg-primary text-on-primary px-4 py-2 rounded text-sm font-bold hover:bg-primary/90 transition-colors"
             >
-              Chiudi
+              {t("close")}
             </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto">
             <fieldset>
-              <legend className={labelClasses}>Tipo di segnalazione</legend>
+              <legend className={labelClasses}>{t("typeLegend")}</legend>
               {/* Pulsanti rapidi invece di un menu (issue #13): i tipi sono tre e
                   vederli tutti costa un clic in meno. Radio native nascoste: la
                   navigazione con le frecce viene gratis. */}
               <div className="grid grid-cols-3 gap-2">
-                {TIPI_SEGNALAZIONE.map((t) => (
-                  <label key={t} className="cursor-pointer">
+                {TIPI_SEGNALAZIONE.map((tipoOption) => (
+                  <label key={tipoOption} className="cursor-pointer">
                     <input
                       type="radio"
                       name="segn-tipo"
-                      value={t}
-                      checked={tipo === t}
-                      onChange={() => setTipo(t)}
+                      value={tipoOption}
+                      checked={tipo === tipoOption}
+                      onChange={() => setTipo(tipoOption)}
                       className="sr-only peer"
                     />
                     <span className="flex h-full items-center justify-center text-center rounded border border-border-base bg-bg-main px-2 py-2 text-xs font-semibold text-text-main transition-colors hover:bg-item-hover peer-checked:bg-primary peer-checked:border-primary peer-checked:text-on-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/60">
-                      {TIPO_SEGNALAZIONE_LABELS[t]}
+                      {t(TIPO_MESSAGE_KEY[tipoOption])}
                     </span>
                   </label>
                 ))}
               </div>
               {tipo === "segnatura" && (
-                <p className="text-[11px] text-text-accent mt-1 italic">
-                  La segnatura della portata non è presente nella base dati dell'Archivio: viene
-                  ricostruita dalle segnalazioni e pubblicata dopo la verifica.
-                </p>
+                <p className="text-[11px] text-text-accent mt-1 italic">{t("segnaturaHint")}</p>
               )}
             </fieldset>
 
             {tipo === "dato_errato" && (
               <>
                 <div>
-                  <label htmlFor="segn-campo" className={labelClasses}>Campo errato</label>
+                  <label htmlFor="segn-campo" className={labelClasses}>{t("wrongField")}</label>
                   <select
                     id="segn-campo"
                     value={campo}
@@ -202,15 +207,15 @@ export default function SegnalazioneModal({
                   >
                     {REPORTABLE.map((f) => (
                       <option key={f.key} value={f.key}>
-                        {f.label}
+                        {fieldLabel(f.key, lang)}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <span className={labelClasses}>Valore attualmente pubblicato</span>
+                  <span className={labelClasses}>{t("currentValue")}</span>
                   <p className="text-sm text-text-main bg-bg-main border border-dashed border-border-base rounded px-3 py-2">
-                    {valoreAttuale || <span className="italic text-text-accent">vuoto</span>}
+                    {valoreAttuale || <span className="italic text-text-accent">{t("empty")}</span>}
                   </p>
                 </div>
               </>
@@ -218,7 +223,7 @@ export default function SegnalazioneModal({
 
             <div>
               <label htmlFor="segn-valore" className={labelClasses}>
-                {tipo === "segnatura" ? "Segnatura corretta" : "Valore corretto (facoltativo)"}
+                {tipo === "segnatura" ? t("correctSegnatura") : t("correctValueOptional")}
               </label>
               <div className="flex items-stretch">
                 {tipo === "segnatura" && !altroFondo && (
@@ -240,10 +245,10 @@ export default function SegnalazioneModal({
                   required={tipo === "segnatura"}
                   placeholder={
                     tipo !== "segnatura"
-                      ? "Valore corretto..."
+                      ? t("correctValuePlaceholder")
                       : altroFondo
-                        ? "Segnatura completa, es. ASFi, Estimo 12, c. 3r"
-                        : "Volume e carta, es. 81, c. 245r"
+                        ? t("fullSegnaturaPlaceholder")
+                        : t("volumeFolioPlaceholder")
                   }
                   className={`${inputClasses} ${tipo === "segnatura" && !altroFondo ? "rounded-l-none" : ""}`}
                 />
@@ -256,26 +261,26 @@ export default function SegnalazioneModal({
                     onChange={(e) => setAltroFondo(e.target.checked)}
                     className="accent-primary"
                   />
-                  La portata è in un fondo diverso da {SEGNATURA_PREFISSO}
+                  {t("otherFonds", { prefix: SEGNATURA_PREFISSO })}
                 </label>
               )}
             </div>
 
             <div>
-              <label htmlFor="segn-note" className={labelClasses}>Note</label>
+              <label htmlFor="segn-note" className={labelClasses}>{t("notes")}</label>
               <textarea
                 id="segn-note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 maxLength={SEGNALAZIONE_LIMITS.note}
                 rows={3}
-                placeholder="Fonte, riferimento archivistico, dettagli..."
+                placeholder={t("notesPlaceholder")}
                 className={inputClasses}
               />
             </div>
 
             <div>
-              <label htmlFor="segn-email" className={labelClasses}>Email (facoltativa, per chiarimenti)</label>
+              <label htmlFor="segn-email" className={labelClasses}>{t("email")}</label>
               <input
                 id="segn-email"
                 type="email"
@@ -300,7 +305,7 @@ export default function SegnalazioneModal({
             />
 
             {mutation.isError && (
-              <p role="alert" className="text-sm text-red-600 dark:text-red-400">{userMessage(mutation.error, "Invio della segnalazione non riuscito.")}</p>
+              <p role="alert" className="text-sm text-red-600 dark:text-red-400">{userMessage(mutation.error, t("sendError"), lang)}</p>
             )}
 
             <div className="flex items-center justify-end gap-3 pt-2 border-t border-border-base">
@@ -309,7 +314,7 @@ export default function SegnalazioneModal({
                 onClick={onClose}
                 className="min-h-11 px-2 text-sm text-text-accent hover:underline"
               >
-                Annulla
+                {t("cancel")}
               </button>
               <button
                 type="submit"
@@ -317,7 +322,7 @@ export default function SegnalazioneModal({
                 className="flex items-center gap-2 min-h-11 bg-primary text-on-primary px-4 rounded text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 <Send className="h-4 w-4" aria-hidden="true" />
-                {mutation.isPending ? "Invio..." : "Invia segnalazione"}
+                {mutation.isPending ? t("sending") : t("send")}
               </button>
             </div>
           </form>
