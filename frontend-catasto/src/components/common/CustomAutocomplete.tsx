@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useMemo, useId } from "react";
 import { ChevronDown, ChevronUp, Check, Search, X } from "lucide-react";
 
 import type { FilterOption as Option } from "@catasto/shared";
+import { useT } from "../../i18n";
+import { customAutocompleteMessages } from "./CustomAutocomplete.messages";
 
 interface CustomAutocompleteProps {
   value: string;
@@ -17,7 +19,6 @@ interface CustomAutocompleteProps {
 
 /** Oltre questa soglia la lista chiede di filtrare: migliaia di nodi rendono lento ogni tasto. */
 const MAX_VISIBLE = 100;
-const ALL_OPTION: Option = { id: "", label: "Tutti" };
 
 /**
  * Select con filtro, secondo il pattern ARIA "combobox + listbox": il focus
@@ -29,11 +30,12 @@ export default function CustomAutocomplete({
   value,
   onChange,
   options = [],
-  placeholder = "Cerca...",
+  placeholder,
   icon = null,
   className = "",
   id,
 }: CustomAutocompleteProps) {
+  const t = useT(customAutocompleteMessages);
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -53,12 +55,15 @@ export default function CustomAutocomplete({
   // "Tutti" resta la prima voce solo senza filtro: con un filtro attivo
   // l'utente cerca un valore preciso e Invio deve selezionare il primo match.
   const visibleOptions = useMemo(
-    () => [...(searchTerm ? [] : [ALL_OPTION]), ...filteredOptions.slice(0, MAX_VISIBLE)],
-    [filteredOptions, searchTerm],
+    () => [
+      ...(searchTerm ? [] : [{ id: "", label: t("all") } satisfies Option]),
+      ...filteredOptions.slice(0, MAX_VISIBLE),
+    ],
+    [filteredOptions, searchTerm, t],
   );
 
   const selectedOption = options.find((opt) => opt.id.toString() === value);
-  const displayLabel = selectedOption ? selectedOption.label : placeholder;
+  const displayLabel = selectedOption ? selectedOption.label : (placeholder ?? t("placeholder"));
   const hasValue = value !== "";
 
   const close = (restoreFocus: boolean) => {
@@ -172,8 +177,8 @@ export default function CustomAutocomplete({
         <button
           type="button"
           onClick={() => onChange("")}
-          aria-label={`Azzera ${selectedOption?.label ?? "selezione"}`}
-          title="Azzera"
+          aria-label={t("clearNamed", { label: selectedOption?.label ?? t("clearSelection") })}
+          title={t("clear")}
           className="absolute right-7 top-1/2 -translate-y-1/2 p-2 text-text-accent hover:text-primary rounded"
         >
           <X size={14} aria-hidden="true" />
@@ -193,9 +198,9 @@ export default function CustomAutocomplete({
                 aria-controls={listId}
                 aria-autocomplete="list"
                 aria-activedescendant={visibleOptions[activeIndex] ? optionId(activeIndex) : undefined}
-                aria-label="Filtra le opzioni"
+                aria-label={t("filterAria")}
                 className="w-full pl-8 pr-3 py-1.5 bg-bg-main border border-border-base text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="Filtra lista..."
+                placeholder={t("filterPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleInputKeyDown}
@@ -230,12 +235,12 @@ export default function CustomAutocomplete({
           </ul>
           {filteredOptions.length === 0 && (
             <p className="py-4 text-center text-sm text-text-accent" role="status">
-              Nessuna voce contiene "{searchTerm}"
+              {t("noMatch", { term: searchTerm })}
             </p>
           )}
           {filteredOptions.length > MAX_VISIBLE && (
             <p className="py-2 px-3 text-[11px] text-text-accent bg-bg-sidebar/30 border-t border-border-base/10 italic">
-              Mostrate {MAX_VISIBLE} voci su {filteredOptions.length}: scrivi per restringere.
+              {t("truncated", { max: MAX_VISIBLE, total: filteredOptions.length })}
             </p>
           )}
         </div>

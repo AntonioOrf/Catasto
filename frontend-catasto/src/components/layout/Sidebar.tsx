@@ -3,6 +3,8 @@ import { List } from "lucide-react";
 import type { SidebarItem } from "@catasto/shared";
 import Spinner from "../common/Spinner";
 import { useIsDesktop } from "../../hooks/useMediaQuery";
+import { useT } from "../../i18n";
+import { sidebarMessages } from "./Sidebar.messages";
 
 /** Altezza fissa delle voci: la lista è virtualizzata e calcola le posizioni. */
 const ITEM_HEIGHT = 68;
@@ -30,6 +32,7 @@ export default React.memo(function Sidebar({
   loadMoreSidebar,
   hasMore,
 }: SidebarProps) {
+  const t = useT(sidebarMessages);
   const containerRef = useRef<HTMLDivElement>(null);
   const asideRef = useRef<HTMLElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -125,7 +128,7 @@ export default React.memo(function Sidebar({
         >
           <div className="font-bold truncate font-serif">{row.nome}</div>
           <div className={`text-xs truncate ${isSelected ? "text-on-primary/80" : "text-text-accent"}`}>
-            {row.mestiere || "Nessun mestiere"}
+            {row.mestiere || t("noOccupation")}
           </div>
         </button>
       </div>,
@@ -143,7 +146,7 @@ export default React.memo(function Sidebar({
 
       <aside
         ref={asideRef}
-        aria-label="Indice dei fuochi"
+        aria-label={t("ariaLabel")}
         className={`
           bg-bg-sidebar border-r border-border-base flex flex-col 
           transition-all duration-300 ease-in-out motion-reduce:transition-none
@@ -156,7 +159,7 @@ export default React.memo(function Sidebar({
           style={{ height: "60px" }}
         >
           <h2 className="font-bold text-text-main uppercase text-xs tracking-wider flex items-center gap-2">
-            <List className="h-4 w-4" aria-hidden="true" /> Indice
+            <List className="h-4 w-4" aria-hidden="true" /> {t("title")}
           </h2>
         </div>
 
@@ -166,14 +169,14 @@ export default React.memo(function Sidebar({
               {visibleItems}
               {sidebarLoading && hasMore && (
                 <div className="absolute w-full flex justify-center py-4" style={{ top: totalHeight - ITEM_HEIGHT }}>
-                  <Spinner className="h-6 w-6" label="Caricamento di altre voci" />
+                  <Spinner className="h-6 w-6" label={t("loadingMore")} />
                 </div>
               )}
             </div>
           ) : sidebarLoading ? (
-            <div className="p-4 text-center text-sm text-text-accent italic">Caricamento indice...</div>
+            <div className="p-4 text-center text-sm text-text-accent italic">{t("loading")}</div>
           ) : (
-            <div className="p-4 text-center text-sm text-text-accent">Nessun risultato.</div>
+            <div className="p-4 text-center text-sm text-text-accent">{t("noResults")}</div>
           )}
         </div>
       </aside>
