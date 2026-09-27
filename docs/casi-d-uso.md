@@ -203,7 +203,7 @@ Gli id delle voci (mestiere, casa…) sono quelli restituiti da `GET /api/filter
 - *2a. Condizione incompleta* (valore non ancora scelto): viene esclusa automaticamente dalla query finché non è completa.
 - *3a. Oltre 5 livelli di annidamento*: il pulsante **+ Gruppo** si disattiva. Una query con più di 50 condizioni viene rifiutata dal backend con `400`.
 - *7a. Link oltre 2000 caratteri*: il portale avvisa che la query è troppo lunga da condividere; resta possibile salvarla.
-- *Limite noto*: condizioni su Serie/Quartiere/Piviere/Popolo con partizioni omonime restituiscono solo la prima (vedi [revisione](revisione-codice.md)). Per ora conviene filtrare la geografia con la ricerca semplice.
+- *3b. Condizione geografica*: `Quartiere` **è uguale a** *San Giovanni* comprende tutte le partizioni omonime (`San Giovanni (I)` e `(II)`), come nella ricerca semplice.
 
 ```mermaid
 sequenceDiagram
@@ -369,7 +369,7 @@ done
 **Note**
 
 - Rispettare `RateLimit-Remaining` negli header; oltre la soglia si riceve `429`.
-- L'ordinamento su una sola colonna non univoca può spostare le righe a pari valore fra le pagine: per estrazioni complete meglio un criterio che renda l'ordine stabile o una deduplicazione per `id`.
+- L'ordinamento è stabile (a parità di valore decide l'id del fuoco): le pagine non si sovrappongono e nessun fuoco viene saltato.
 - Per i parenti di ogni fuoco: `GET /api/parenti/:id`.
 
 ---
@@ -383,7 +383,7 @@ done
 1. Copia `docker-compose.yml` sul server e crea `.env` a partire da `.env.prod.example` (password MySQL, `SEGNALAZIONI_SALT`, `ADMIN_TOKEN`, `MODERAZIONE_SECRET`, `FORMSUBMIT_*`, `CORS_ORIGIN`).
 2. Mette il dump in `init/Catasto.sql`.
 3. `docker compose up -d`: MySQL importa il dump al primo avvio (può richiedere diversi minuti); il backend parte quando il DB è sano.
-4. Applica le migrazioni: `docker compose exec backend node backend-catasto/dist/scripts/migrate.js`.
+4. Il backend applica da solo le migrazioni all'avvio: in `docker compose logs backend` compaiono le righe `✅ 001_segnalazioni.sql`.
 5. Verifica: `curl http://127.0.0.1:3005/health` → `{"status":"ok","db":"up"}`; il sito risponde su `:1427`.
 6. Configura il terminatore TLS (reverse proxy o CDN) davanti alla porta 1427.
 7. Invia una segnalazione di prova e conferma l'email di attivazione di FormSubmit.
@@ -397,14 +397,14 @@ flowchart LR
     C --> D{Aggiornamento}
     D -->|manuale| E["docker compose pull backend frontend<br/>docker compose up -d backend frontend"]
     D -->|automatico| F[Polling del registro<br/>es. Watchtower]
-    E --> G{Nuove migrazioni?}
+    E --> G[Avvio del backend:<br/>migrazioni mancanti applicate]
     F --> G
-    G -->|sì| H[docker compose exec backend<br/>node backend-catasto/dist/scripts/migrate.js]
-    G -->|no| I[Fine]
-    H --> I
+    G --> H{/health ok?}
+    H -->|sì| I[Fine]
+    H -->|no| L[docker compose logs backend]
 ```
 
 **Varianti**
 
 - *Ritorno a una versione precedente*: nel compose sostituire `:latest` con il tag SHA corto e rifare `up -d`.
-- *Reimport completo del dump*: fermare i container, cancellare `./mysql_data`, riavviare, rieseguire le migrazioni e riavviare il backend (le opzioni dei filtri sono in cache).
+- *Reimport completo del dump*: fermare i container, cancellare `./mysql_data`, riavviare; il backend riapplica le migrazioni e ricarica le opzioni dei filtri.

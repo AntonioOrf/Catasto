@@ -153,8 +153,8 @@ flowchart TD
 - Gruppi **Tutte** (AND) / **Almeno una** (OR), con **Escludi** (NOT) e annidamento fino a 5 livelli.
 - Ogni condizione: campo → operatore compatibile col tipo → valore (testo, numero, intervallo, scelta singola o multipla).
 - **Anteprima** in linguaggio naturale, ad esempio: *Mostra i fuochi dove Mestiere è uguale a "Lanaiolo" e (Fortune maggiore di 1000 oppure Casa è uguale a "Propria")*.
-- **Filtri salvati**: in `localStorage` (`catasto.savedQueries.v1`, max 50, nome max 60 caratteri); stesso nome = sovrascrittura. Restano sul dispositivo.
-- **Condividi link**: copia `https://…/#q=<base64url del JSON dell'AST>` (max 2000 caratteri). Il frammento `#` non arriva ai log dei server. Chi apre il link entra direttamente in ricerca avanzata.
+- **Filtri salvati**: in `localStorage` (`catasto.savedQueries.v1`, max 50, nome max 60 caratteri); stesso nome = sovrascrittura. Restano sul dispositivo; le voci con una struttura non valida vengono scartate.
+- **Condividi link**: copia `https://…/#q=<base64url del JSON dell'AST>` (max 2000 caratteri). Il frammento `#` non arriva ai log dei server. Chi apre il link entra direttamente in ricerca avanzata; un link con una query malformata viene ignorato.
 
 ### Indice laterale (`Sidebar`)
 
@@ -239,6 +239,9 @@ Test unitari sulla logica pura in `features/catasto/lib/`:
 - `archivio.test.ts`: scelta della parte del volume, ricerca della carta, URL IIIF;
 - `segnatura.test.ts`: parsing delle segnature della portata;
 - `simple-filters.test.ts`: conversione dei filtri in parametri.
+- `formato.test.ts`: fiorini, età e località con dati assenti;
+- `query-ast-validate.test.ts`: validazione strutturale dei link condivisi, limiti di profondità, `pruneAst` tollerante;
+- `saved-queries.test.ts`: generazione degli id anche fuori da HTTPS.
 
 Non ci sono ancora test di componenti o hook (niente jsdom).
 
@@ -246,11 +249,7 @@ Non ci sono ancora test di componenti o hook (niente jsdom).
 
 ## Limiti noti
 
-Dalla revisione di settembre 2026 (dettagli e priorità in [revisione-codice.md](revisione-codice.md)):
+I problemi emersi dalla revisione di settembre 2026 sono stati corretti (storico in [revisione-codice.md](revisione-codice.md)). Restano aperti due miglioramenti di accessibilità:
 
-- Dopo il primo caricamento, filtri e cambi pagina non mostrano indicatori di attesa (skeleton, `aria-busy`, pulsanti disabilitati).
-- Cliccando nell'indice un fuoco che sta in un'altra pagina, la tabella cambia pagina ma non apre né evidenzia la riga.
-- Ricerca avanzata su Serie/Quartiere/Piviere/Popolo: le opzioni che uniscono partizioni omonime restituiscono solo la prima.
-- Nel visore su mobile i gesti touch smettono di funzionare riaprendo lo stesso volume.
-- Un link `#q=` malformato o una query salvata corrotta bloccano l'app (manca un error boundary).
-- "Salva filtro" non funziona se il sito è servito in HTTP semplice (`crypto.randomUUID` richiede un contesto sicuro).
+- le righe della tabella sono focalizzabili e contengono pulsanti (elementi interattivi annidati);
+- alcune icone accanto a un'etichetta visibile non hanno `aria-hidden`.

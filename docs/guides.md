@@ -120,16 +120,18 @@ Variabili da impostare in `.env` (il file di esempio le commenta tutte):
 | `ADMIN_TOKEN` | consigliata | abilita l'API di moderazione |
 | `MODERAZIONE_SECRET` | consigliata | abilita i link Accetta/Respingi nelle email |
 | `FORMSUBMIT_EMAIL`, `FORMSUBMIT_ORIGIN` | consigliate | inoltro email delle segnalazioni |
-| `TRUST_PROXY` | già `1` | numero di proxy davanti al backend: usare un numero, non `true` |
+| `TRUST_PROXY` | già `1` | numero di proxy davanti al backend: usare un numero (`true` renderebbe falsificabile l'IP) |
 | `CORS_ORIGIN`, `PUBLIC_API_URL` | no | solo se frontend o API stanno su un altro dominio |
 
 ### 2. Migrazioni
 
+Il container del backend le applica **da solo a ogni avvio**, prima di far partire il server: il runner esegue solo i file di `backend-catasto/migrations/` non ancora registrati. Nei log (`docker compose logs backend`) compaiono le righe `✅ …` o `↩️ … (già applicata)`.
+
+Se una migrazione fallisce il backend non parte e il compose lo riavvia; per rilanciarle a mano:
+
 ```bash
 docker compose exec backend node backend-catasto/dist/scripts/migrate.js
 ```
-
-Vanno eseguite dopo la prima installazione e dopo ogni aggiornamento che aggiunge file in `backend-catasto/migrations/`. Il runner applica solo quelle nuove.
 
 ### 3. Verifica
 
@@ -145,12 +147,10 @@ Infine inviare una segnalazione di prova dal sito e confermare l'email di attiva
 
 ```bash
 docker compose pull backend frontend
-docker compose up -d backend frontend
-# se ci sono nuove migrazioni:
-docker compose exec backend node backend-catasto/dist/scripts/migrate.js
+docker compose up -d backend frontend   # le nuove migrazioni si applicano all'avvio
 ```
 
-In alternativa il server può controllare periodicamente Docker Hub (ad esempio con Watchtower) e aggiornare i container da solo; le migrazioni restano un passo manuale.
+In alternativa il server può controllare periodicamente Docker Hub (ad esempio con Watchtower) e aggiornare i container da solo; anche in questo caso le migrazioni si applicano all'avvio del backend.
 
 Per tornare a una versione precedente, sostituire `:latest` con il tag dello SHA corto (es. `ipavon/catasto1427-backend:1a2b3c4`) e rieseguire `docker compose up -d`.
 
@@ -183,10 +183,10 @@ Il workflow si può lanciare anche a mano da Actions → Docker images → Run w
 
 | Sintomo | Causa probabile | Soluzione |
 |---|---|---|
-| La ricerca risponde "Internal Server Error" su un'installazione nuova | migrazioni non eseguite (`fuoco_segnature` mancante) | eseguire le migrazioni |
+| La ricerca risponde "Internal Server Error" (sviluppo) | migrazioni non eseguite (`fuoco_segnature` mancante) | `npm run db:migrate -w catasto-backend` |
+| Il container del backend si riavvia di continuo | una migrazione fallisce all'avvio | `docker compose logs backend`, riga `❌ … fallita` |
 | `/health` risponde `503` | il backend non raggiunge MySQL | controllare le variabili `DB_*` / `MYSQL_*` e `docker compose logs db` |
 | Porta già occupata | un altro servizio usa 1427, 3005 o 3306 | liberare la porta o cambiarla in `docker-compose.yml` |
-| Il backend non parte con `invalid IP address: true` | `TRUST_PROXY=true` | usare un numero (`1`) |
 | Le segnalazioni rispondono 500 | manca `SEGNALAZIONI_SALT` | impostarla in `.env` e riavviare il backend |
 | Le email non arrivano | vedi i log del backend | [diagnosi FormSubmit](backend.md#flusso-email-formsubmit) |
 | I filtri mostrano valori vecchi dopo un reimport | opzioni in cache nel backend | `docker compose restart backend` |
@@ -201,6 +201,5 @@ I dati di MySQL sono in `./mysql_data` (bind mount): `docker compose down -v` **
 ```bash
 docker compose down
 rm -rf ./mysql_data          # ATTENZIONE: cancella anche le segnalazioni
-docker compose up -d         # reimporta init/Catasto.sql
-docker compose exec backend node backend-catasto/dist/scripts/migrate.js
+docker compose up -d         # reimporta init/Catasto.sql, poi il backend riapplica le migrazioni
 ```
