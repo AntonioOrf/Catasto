@@ -4,7 +4,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import compression from "compression";
 import dotenv from "dotenv";
-import { errorHandler } from "./middlewares/error.middleware.js";
+import { errorHandler, notFoundHandler } from "./middlewares/error.middleware.js";
 import pool from "./config/db.js";
 import catastoRoutes from "./routes/catasto.routes.js";
 import filterRoutes from "./routes/filter.routes.js";
@@ -58,16 +58,6 @@ const apiLimiter = rateLimit({
 });
 app.use("/api", apiLimiter);
 
-// The manifest endpoint proxies an external government service - keep it
-// stricter than general API traffic to avoid hammering the upstream.
-const manifestLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use("/api/catasto/manifest", manifestLimiter);
-
 // Routes
 app.get("/", (_req, res) => {
   res.send("Catasto API is running! 🚀");
@@ -88,9 +78,23 @@ app.use("/api/parenti", parentiRoutes);
 app.use("/api/mestieri", mestieriRoutes);
 app.use("/api/segnalazioni", segnalazioneRoutes);
 
-// Error Handling
+// Error Handling: 404 in JSON anche per le rotte inesistenti, non la pagina
+// HTML di default di Express.
+app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Server started on port ${PORT}`);
 });
+
+// docker stop invia SIGTERM: chiudiamo le connessioni in corso e il pool
+// invece di troncare le richieste a metà.
+const shutdown = (signal: string) => {
+  console.log(`${signal} ricevuto, arresto in corso...`);
+  server.close(() => {
+    pool.end().finally(() => process.exit(0));
+  });
+  setTimeout(() => process.exit(1), 10_000).unref();
+};
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

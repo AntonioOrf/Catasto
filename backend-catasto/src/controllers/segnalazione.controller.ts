@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import { z } from "zod";
 import {
   REPORTABLE_FIELD_KEYS,
@@ -60,50 +60,36 @@ const createSchema = z
 
 const updateSchema = z.object({ stato: z.enum(STATI_SEGNALAZIONE) });
 
-export class SegnalazioneController {
-  static async create(req: Request, res: Response, next: NextFunction) {
-    try {
-      const parsed = createSchema.safeParse(req.body);
-      if (!parsed.success) {
-        throw new ValidationError(
-          parsed.error.issues[0]?.message ?? "Segnalazione non valida",
-        );
-      }
-
-      const id = await SegnalazioneService.create(parsed.data, req.ip);
-
-      // id === -1 è l'honeypot: risposta identica a quella di successo, così un
-      // bot non può distinguere i campi trappola da quelli reali.
-      res.status(201).json({ id: id > 0 ? id : null, stato: "nuova" });
-    } catch (error) {
-      next(error);
+export const SegnalazioneController = {
+  async create(req: Request, res: Response) {
+    const parsed = createSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.issues[0]?.message ?? "Segnalazione non valida");
     }
-  }
 
-  static async list(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { page, limit } = paginationSchema.parse(req.query);
-      const stato = z.enum(STATI_SEGNALAZIONE).optional().catch(undefined).parse(req.query.stato);
+    const id = await SegnalazioneService.create(parsed.data, req.ip);
 
-      const data = await SegnalazioneService.list(stato, page, limit);
-      res.json({ data });
-    } catch (error) {
-      next(error);
+    // id === null è l'honeypot: risposta identica a quella di successo, così un
+    // bot non può distinguere i campi trappola da quelli reali.
+    res.status(201).json({ id, stato: "nuova" });
+  },
+
+  async list(req: Request, res: Response) {
+    const { page, limit } = paginationSchema.parse(req.query);
+    const stato = z.enum(STATI_SEGNALAZIONE).optional().catch(undefined).parse(req.query.stato);
+
+    const data = await SegnalazioneService.list(stato, page, limit);
+    res.json({ data });
+  },
+
+  async updateStato(req: Request, res: Response) {
+    const id = parseNumericId(req.params.id, "segnalazione id");
+    const parsed = updateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError("Stato non valido");
     }
-  }
 
-  static async updateStato(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseNumericId(req.params.id, "segnalazione id");
-      const parsed = updateSchema.safeParse(req.body);
-      if (!parsed.success) {
-        throw new ValidationError("Stato non valido");
-      }
-
-      const data = await SegnalazioneService.updateStato(Number(id), parsed.data.stato);
-      res.json({ data });
-    } catch (error) {
-      next(error);
-    }
-  }
-}
+    const data = await SegnalazioneService.updateStato(id, parsed.data.stato);
+    res.json({ data });
+  },
+};

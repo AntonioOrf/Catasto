@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildParams } from "./client";
+import { buildParams } from "./simple-filters";
 
 describe("buildParams", () => {
   it("maps filter fields to their query param names", () => {

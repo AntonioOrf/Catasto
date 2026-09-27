@@ -2,11 +2,12 @@ import {
   NO_VALUE_OPERATORS,
   OPERATOR_LABELS,
   getField,
+  type FilterOption,
   type Operator,
   type QueryNode,
 } from "@catasto/shared";
 
-export type OptionsByKey = Record<string, { id: string | number; label: string }[]>;
+export type OptionsByKey = Record<string, FilterOption[]>;
 
 /**
  * Traduce l'AST in italiano leggibile. Serve all'anteprima del builder: una

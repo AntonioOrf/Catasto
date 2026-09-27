@@ -1,10 +1,5 @@
-import {
-  useState,
-  useRef,
-  useEffect,
-  useMemo,
-  useCallback,
-} from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import type { FilterOptions } from "@catasto/shared";
 import { fetchFilterOptions } from "../api/catastoService";
 import Header from "../components/layout/Header";
 import Sidebar from "../components/layout/Sidebar";
@@ -13,123 +8,55 @@ import CatastoTable from "../features/catasto/components/CatastoTable";
 import Footer from "../components/layout/Footer";
 
 import { useFilters } from "../context/FilterContext";
-import { useCatastoData } from "../hooks/useCatastoData";
+import { TABLE_PAGE_SIZE, useCatastoData } from "../hooks/useCatastoData";
 import { useCatastoSidebar } from "../hooks/useCatastoSidebar";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import { DESKTOP_QUERY, useIsDesktop } from "../hooks/useMediaQuery";
+
+/** Attesa dopo l'ultimo tasto: scrivere "Rossi" non deve lanciare cinque ricerche. */
+const SEARCH_DEBOUNCE_MS = 350;
+
+const EMPTY_FILTER_OPTIONS: FilterOptions = {
+  bestiame: [],
+  rapporto: [],
+  immigrazione: [],
+  mestieri: [],
+  serie: [],
+  quartieri: [],
+  pivieri: [],
+  popoli: [],
+  particolaritaParente: [],
+  casa: [],
+};
 
 export default function HomePage() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isDesktop = useIsDesktop();
+  // Aperta di default solo dove c'è spazio per affiancarla alla tabella.
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(DESKTOP_QUERY).matches,
+  );
 
-  useEffect(() => {
-    setIsSidebarOpen(window.innerWidth >= 1024);
-  }, []);
-
-  const tableRowsRef = useRef<Record<string, any>>({});
+  const tableRowsRef = useRef<Record<number, HTMLElement | null>>({});
   const mainContentRef = useRef<HTMLElement>(null);
-  const [targetScrolledId, setTargetScrolledId] = useState<string | null>(null);
+  const [targetScrolledId, setTargetScrolledId] = useState<number | null>(null);
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>(EMPTY_FILTER_OPTIONS);
 
-  // Filter Options State
-  const [filterOptions, setFilterOptions] = useState({
-    bestiame: [],
-    rapporto: [],
-    immigrazione: [],
-    mestieri: [],
-    serie: [],
-    quartieri: [],
-    pivieri: [],
-    popoli: [],
-    particolaritaParente: [],
-    casa: [],
-  });
+  const { filters, searchParams } = useFilters();
+  const search = useDebouncedValue(searchParams, SEARCH_DEBOUNCE_MS);
 
-  // Custom Hooks
-  const filters: any = useFilters();
-
-  // Fetch filter options dynamically
+  // Le opzioni geografiche dipendono dal livello superiore selezionato.
   useEffect(() => {
     const controller = new AbortController();
-    const loadFilters = async () => {
-      try {
-        const geoFilters = {
-          serie: filters.filterSerie,
-          quartiere: filters.filterQuartiere,
-          piviere: filters.filterPiviere,
-        };
-        const options = await fetchFilterOptions(geoFilters, controller.signal);
-        setFilterOptions(options);
-      } catch (err: any) {
-        if (err.name !== "AbortError") {
-          console.error("Failed to load filter options", err);
-        }
-      }
-    };
-    loadFilters();
+    fetchFilterOptions(
+      { serie: filters.filterSerie, quartiere: filters.filterQuartiere, piviere: filters.filterPiviere },
+      controller.signal,
+    )
+      .then(setFilterOptions)
+      .catch((err) => {
+        if (err.name !== "AbortError") console.error("Failed to load filter options", err);
+      });
     return () => controller.abort();
   }, [filters.filterSerie, filters.filterQuartiere, filters.filterPiviere]);
-
-
-  
-  const filterValues = useMemo(
-    () => ({
-      searchPersona: filters.searchPersona,
-      searchLocalita: filters.searchLocalita,
-      filterMestiere: filters.filterMestiere,
-      filterBestiame: filters.filterBestiame,
-      filterImmigrazione: filters.filterImmigrazione,
-      filterRapporto: filters.filterRapporto,
-      filterVolume: filters.filterVolume,
-      filterFortuneMin: filters.filterFortuneMin,
-      filterFortuneMax: filters.filterFortuneMax,
-      filterCreditoMin: filters.filterCreditoMin,
-      filterCreditoMax: filters.filterCreditoMax,
-      filterCreditoMMin: filters.filterCreditoMMin,
-      filterCreditoMMax: filters.filterCreditoMMax,
-      filterImponibileMin: filters.filterImponibileMin,
-      filterImponibileMax: filters.filterImponibileMax,
-      filterDeduzioniMin: filters.filterDeduzioniMin,
-      filterDeduzioniMax: filters.filterDeduzioniMax,
-      filterSerie: filters.filterSerie,
-      filterQuartiere: filters.filterQuartiere,
-      filterPiviere: filters.filterPiviere,
-      filterPopolo: filters.filterPopolo,
-      filterParticolaritaParente: filters.filterParticolaritaParente,
-      filterCasa: filters.filterCasa,
-      sortBy: filters.sortBy,
-      sortOrder: filters.sortOrder,
-      // `queryAst` (già ripulito dalle condizioni incomplete) e non `ast`:
-      // qui serve l'albero eseguibile, non quello in editing.
-      advancedMode: filters.advancedMode,
-      ast: filters.queryAst,
-    }),
-    [
-      filters.searchPersona,
-      filters.searchLocalita,
-      filters.filterMestiere,
-      filters.filterBestiame,
-      filters.filterImmigrazione,
-      filters.filterRapporto,
-      filters.filterVolume,
-      filters.filterFortuneMin,
-      filters.filterFortuneMax,
-      filters.filterCreditoMin,
-      filters.filterCreditoMax,
-      filters.filterCreditoMMin,
-      filters.filterCreditoMMax,
-      filters.filterImponibileMin,
-      filters.filterImponibileMax,
-      filters.filterDeduzioniMin,
-      filters.filterDeduzioniMax,
-      filters.filterSerie,
-      filters.filterQuartiere,
-      filters.filterPiviere,
-      filters.filterPopolo,
-      filters.filterParticolaritaParente,
-      filters.filterCasa,
-      filters.sortBy,
-      filters.sortOrder,
-      filters.advancedMode,
-      filters.queryAst,
-    ],
-  );
 
   const {
     data,
@@ -143,65 +70,59 @@ export default function HomePage() {
     parentiData,
     loadingParenti,
     handleRowClick,
-    fetchData,
-  } = useCatastoData(filterValues);
+    retry,
+  } = useCatastoData(search);
 
-  // Sidebar Hook
-  const { sidebarData, sidebarLoading, loadMoreSidebar, hasMore, syncSidebarToPage } = useCatastoSidebar(filterValues);
+  const { sidebarData, sidebarLoading, loadMoreSidebar, hasMore, syncSidebarToPage } =
+    useCatastoSidebar(search);
 
-  // Scroll to row logic
+  const scrollToRow = useCallback((id: number) => {
+    tableRowsRef.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
+  // Dopo un cambio di pagina chiesto dall'indice: la riga esiste solo quando
+  // i dati della nuova pagina sono arrivati.
   useEffect(() => {
-    if (targetScrolledId && !loading && data.length > 0) {
-      const rowElement = tableRowsRef.current[targetScrolledId];
-      if (rowElement) {
-        rowElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        handleRowClick(Number(targetScrolledId));
-      }
-      setTargetScrolledId(null);
+    if (targetScrolledId === null || loading || data.length === 0) return;
+    if (tableRowsRef.current[targetScrolledId]) {
+      scrollToRow(targetScrolledId);
+      handleRowClick(targetScrolledId);
     }
-  }, [data, loading, targetScrolledId]); // eslint-disable-line
+    setTargetScrolledId(null);
+  }, [data, loading, targetScrolledId, scrollToRow, handleRowClick]);
 
   const handlePageChange = useCallback(
     (newPage: number) => {
-      if (newPage >= 1 && newPage <= totalPages) {
-        setPage(newPage);
-        syncSidebarToPage(newPage);
-        if (mainContentRef.current) mainContentRef.current.scrollTop = 0;
-      }
+      if (newPage < 1 || newPage > totalPages) return;
+      setPage(newPage);
+      syncSidebarToPage(newPage, TABLE_PAGE_SIZE);
+      if (mainContentRef.current) mainContentRef.current.scrollTop = 0;
     },
     [totalPages, setPage, syncSidebarToPage],
   );
 
   const handleSidebarClick = useCallback(
-    (idFuoco: string) => {
-      if (window.innerWidth < 1024) {
-        setIsSidebarOpen(false);
-      }
+    (idFuoco: number) => {
+      if (!isDesktop) setIsSidebarOpen(false);
 
-      const index = sidebarData.findIndex((item: any) => item.id === idFuoco);
-      if (index !== -1) {
-        const ROWS_PER_PAGE = 50;
-        const targetPage = Math.floor(index / ROWS_PER_PAGE) + 1;
-        if (targetPage === page) {
-          const rowElement = tableRowsRef.current[idFuoco];
-          if (rowElement)
-            rowElement.scrollIntoView({ behavior: "smooth", block: "center" });
-          handleRowClick(Number(idFuoco));
-        } else {
-          setTargetScrolledId(idFuoco);
-          handlePageChange(targetPage);
-        }
+      const index = sidebarData.findIndex((item) => item.id === idFuoco);
+      if (index === -1) return;
+
+      const targetPage = Math.floor(index / TABLE_PAGE_SIZE) + 1;
+      if (targetPage === page) {
+        scrollToRow(idFuoco);
+        handleRowClick(idFuoco);
+      } else {
+        setTargetScrolledId(idFuoco);
+        handlePageChange(targetPage);
       }
     },
-    [sidebarData, page, handlePageChange, handleRowClick],
+    [isDesktop, sidebarData, page, scrollToRow, handlePageChange, handleRowClick],
   );
 
   return (
     <div className="h-screen flex flex-col bg-bg-main text-text-main font-serif overflow-hidden">
-      <Header
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-      />
+      <Header isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
 
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar
@@ -216,18 +137,12 @@ export default function HomePage() {
           hasMore={hasMore}
         />
 
-        <main
-          ref={mainContentRef}
-          className="flex-1 overflow-y-auto relative w-full flex flex-col"
-        >
+        <main ref={mainContentRef} className="flex-1 overflow-y-auto relative w-full flex flex-col">
           <div className="p-3 sm:p-4 md:p-8 flex-1">
-            <FilterPanel
-              loading={loading}
-              fetchData={fetchData}
-              filterOptions={filterOptions}
-            />
+            <FilterPanel loading={loading} onRefresh={retry} filterOptions={filterOptions} />
 
             <CatastoTable
+              isDesktop={isDesktop}
               data={data}
               totalRecords={totalRecords}
               loading={loading}
@@ -240,7 +155,7 @@ export default function HomePage() {
               page={page}
               totalPages={totalPages}
               handlePageChange={handlePageChange}
-              onRetry={fetchData}
+              onRetry={retry}
             />
           </div>
           <Footer />

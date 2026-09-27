@@ -1,3 +1,4 @@
+import type { PoolConnection } from "mysql2/promise";
 import pool from "../config/db.js";
 import type { Segnalazione, StatoSegnalazione } from "@catasto/shared";
 
@@ -68,29 +69,47 @@ export class SegnalazioneModel {
     return rows as Segnalazione[];
   }
 
-  static async findById(id: number): Promise<Segnalazione | null> {
-    const [rows]: any = await pool.query(
+  /** Esegue `work` in una transazione; rollback automatico se lancia. */
+  static async transaction<T>(work: (tx: SegnalazioneTx) => Promise<T>): Promise<T> {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const result = await work(new SegnalazioneTx(connection));
+      await connection.commit();
+      return result;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+}
+
+/** Operazioni di moderazione, legate a una connessione in transazione. */
+export class SegnalazioneTx {
+  constructor(private readonly db: PoolConnection) {}
+
+  /** FOR UPDATE: due moderatori sulla stessa segnalazione non si sovrascrivono a metà. */
+  async findByIdForUpdate(id: number): Promise<Segnalazione | null> {
+    const [rows]: any = await this.db.query(
       `SELECT id, id_fuoco, tipo, campo, valore_attuale, valore_proposto, note, email, stato, created_at
-       FROM segnalazioni WHERE id = ?`,
+       FROM segnalazioni WHERE id = ? FOR UPDATE`,
       [id],
     );
     return (rows[0] as Segnalazione) ?? null;
   }
 
-  static async updateStato(id: number, stato: StatoSegnalazione): Promise<void> {
-    await pool.query("UPDATE segnalazioni SET stato = ? WHERE id = ?", [stato, id]);
+  async updateStato(id: number, stato: StatoSegnalazione): Promise<void> {
+    await this.db.query("UPDATE segnalazioni SET stato = ? WHERE id = ?", [stato, id]);
   }
 
   /**
    * Pubblica la segnatura proposta sulla scheda del fuoco. Upsert: una nuova
    * segnalazione accettata sullo stesso fuoco corregge la precedente.
    */
-  static async upsertSegnatura(
-    idFuoco: number,
-    segnatura: string,
-    idSegnalazione: number,
-  ): Promise<void> {
-    await pool.query(
+  async upsertSegnatura(idFuoco: number, segnatura: string, idSegnalazione: number): Promise<void> {
+    await this.db.query(
       `INSERT INTO fuoco_segnature (id_fuoco, segnatura, id_segnalazione)
        VALUES (?, ?, ?)
        ON DUPLICATE KEY UPDATE segnatura = VALUES(segnatura), id_segnalazione = VALUES(id_segnalazione)`,
@@ -98,7 +117,11 @@ export class SegnalazioneModel {
     );
   }
 
-  static async deleteSegnatura(idFuoco: number): Promise<void> {
-    await pool.query("DELETE FROM fuoco_segnature WHERE id_fuoco = ?", [idFuoco]);
+  /** Ritira la segnatura solo se è ancora quella pubblicata da `idSegnalazione`. */
+  async deleteSegnatura(idFuoco: number, idSegnalazione: number): Promise<void> {
+    await this.db.query("DELETE FROM fuoco_segnature WHERE id_fuoco = ? AND id_segnalazione = ?", [
+      idFuoco,
+      idSegnalazione,
+    ]);
   }
 }

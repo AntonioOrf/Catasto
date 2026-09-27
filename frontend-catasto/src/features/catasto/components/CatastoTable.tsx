@@ -1,22 +1,24 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { BookOpen, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import CatastoRow, { CatastoMobileCard } from "./CatastoRow";
 import Pagination from "./Pagination";
 import ArchivioViewerModal from "./ArchivioViewerModal";
 import SegnalazioneModal from "../../segnalazioni/components/SegnalazioneModal";
 import { useFilters } from "../../../context/FilterContext";
-import type { TipoSegnalazione } from "@catasto/shared";
+import type { Fuoco, Parenti, TipoSegnalazione } from "@catasto/shared";
 
 interface CatastoTableProps {
-  data: any[];
+  /** Tabella sopra il breakpoint lg, card sotto: se ne monta una sola. */
+  isDesktop: boolean;
+  data: Fuoco[];
   totalRecords: number;
   loading: boolean;
-  error: any;
-  tableRowsRef: React.MutableRefObject<Record<string, any>>;
+  error: string | null;
+  tableRowsRef: React.MutableRefObject<Record<number, HTMLElement | null>>;
   handleRowClick: (id: number) => void;
   expandedId: number | null;
   loadingParenti: boolean;
-  parentiData: any[];
+  parentiData: Parenti[];
   page: number;
   totalPages: number;
   handlePageChange: (page: number) => void;
@@ -25,6 +27,7 @@ interface CatastoTableProps {
 }
 
 export default function CatastoTable({
+  isDesktop,
   data,
   totalRecords,
   loading,
@@ -39,52 +42,46 @@ export default function CatastoTable({
   handlePageChange,
   onRetry,
 }: CatastoTableProps) {
-  const { sortBy, sortOrder, handleSort, resetFilters }: any = useFilters();
-  const [viewerData, setViewerData] = useState<any>({
-    isOpen: false,
-    codiceArchivio: null,
-    foglio: null,
-    volume: null,
-    nome: null,
-    row: null
-  });
+  const { sortBy, sortOrder, handleSort, resetFilters } = useFilters();
 
-  const handleViewArchivio = React.useCallback((row: any) => {
-    setViewerData({
-      isOpen: true,
-      codiceArchivio: row.codice_archivio,
-      foglio: row.foglio,
-      volume: row.volume,
-      nome: row.nome,
-      // La riga intera serve alla segnalazione aperta dal visore: da lì
-      // l'utente ha davanti la carta originale, è il momento migliore per
-      // trascrivere la segnatura.
-      row
-    });
-  }, []);
-
-  const closeViewer = React.useCallback(() => {
-    setViewerData((prev: any) => ({ ...prev, isOpen: false }));
-  }, []);
+  // Riga aperta nel visore: serve intera anche alla segnalazione lanciata da
+  // lì, perché davanti alla carta originale l'utente può trascrivere la
+  // segnatura.
+  const [viewerRow, setViewerRow] = useState<Fuoco | null>(null);
+  const closeViewer = useCallback(() => setViewerRow(null), []);
 
   // La modale di segnalazione vive qui e non nella riga: una sola istanza per
   // tabella invece di una per ognuna delle 50 righe della pagina.
   const [segnalazione, setSegnalazione] = useState<{
     isOpen: boolean;
-    row: any;
+    row: Fuoco | null;
     tipo: TipoSegnalazione;
   }>({ isOpen: false, row: null, tipo: "dato_errato" });
 
-  const handleSegnala = React.useCallback(
-    (row: any, tipo: TipoSegnalazione = "dato_errato") =>
+  const handleSegnala = useCallback(
+    (row: Fuoco, tipo: TipoSegnalazione = "dato_errato") =>
       setSegnalazione({ isOpen: true, row, tipo }),
     [],
   );
 
-  const closeSegnalazione = React.useCallback(
+  const closeSegnalazione = useCallback(
     () => setSegnalazione((prev) => ({ ...prev, isOpen: false })),
     [],
   );
+
+  const registerRow = (id: number) => (el: HTMLElement | null) => {
+    tableRowsRef.current[id] = el;
+  };
+
+  const rowProps = (row: Fuoco) => ({
+    row,
+    expanded: expandedId === row.id,
+    onRowClick: handleRowClick,
+    loadingParenti,
+    parentiData,
+    onViewArchivio: setViewerRow,
+    onSegnala: handleSegnala,
+  });
 
   // Gestione icone ordinamento con colori dinamici
   const renderSortIcon = (columnKey: string) => {
@@ -101,7 +98,7 @@ export default function CatastoTable({
   };
 
   const thClasses =
-    "bg-bg-sidebar px-3 py-1 md:px-6 md:py-2 text-left text-xs font-bold text-text-accent uppercase tracking-wider font-sans";
+    "bg-bg-sidebar px-6 py-2 text-left text-xs font-bold text-text-accent uppercase tracking-wider";
 
   // Il pulsante dentro l'intestazione rende l'ordinamento raggiungibile da
   // tastiera; aria-sort annuncia colonna e verso correnti.
@@ -109,6 +106,7 @@ export default function CatastoTable({
     <th
       key={column}
       className={thClasses}
+      scope="col"
       aria-sort={sortBy === column ? (sortOrder === "ASC" ? "ascending" : "descending") : "none"}
     >
       <button
@@ -172,101 +170,73 @@ export default function CatastoTable({
       </div>
 
       <div className="bg-bg-main shadow-lg border border-border-base rounded-sm overflow-hidden">
-        {/* Desktop View */}
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="min-w-full divide-y divide-border-base">
-            <thead className="bg-bg-sidebar">
-              <tr>
-                {sortableHeader("nome", "Capofamiglia")}
-                {sortableHeader("localita", "Località")}
-                {sortableHeader("fortune", "Dati Sintetici")}
-                <th className="hidden lg:table-cell px-6 py-4 text-left text-xs font-bold text-text-accent uppercase tracking-wider font-sans">
-                  Riferimenti
-                </th>
-                <th className="px-3 py-3 md:px-6 md:py-4 w-8 md:w-10">
-                  <span className="sr-only">Espandi</span>
-                </th>
-              </tr>
-            </thead>
-
-            <tbody className="bg-bg-main divide-y divide-border-base">
-              {error ? (
+        {isDesktop ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-border-base" aria-busy={loading}>
+              <thead className="bg-bg-sidebar">
                 <tr>
-                  <td colSpan={5} className="p-4">
-                    {errorState()}
-                  </td>
+                  {sortableHeader("nome", "Capofamiglia")}
+                  {sortableHeader("localita", "Località")}
+                  {sortableHeader("fortune", "Dati Sintetici")}
+                  <th scope="col" className={thClasses}>
+                    Riferimenti
+                  </th>
+                  <th scope="col" className="px-6 py-4 w-10">
+                    <span className="sr-only">Espandi</span>
+                  </th>
                 </tr>
-              ) : loading ? (
-                [...Array(5)].map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    <td className="px-6 py-4" colSpan={5}>
-                      <div className="h-8 bg-border-base rounded opacity-50 flex items-center px-4">
-                        {i === 0 && <span className="text-text-accent font-serif text-sm">Caricamento dati in corso...</span>}
-                      </div>
+              </thead>
+
+              <tbody className="bg-bg-main divide-y divide-border-base">
+                {error ? (
+                  <tr>
+                    <td colSpan={5} className="p-4">
+                      {errorState()}
                     </td>
                   </tr>
-                ))
-              ) : data.length > 0 ? (
-                data.map((row) => (
-                  <CatastoRow
-                    key={row.id}
-                    ref={(el: any) => (tableRowsRef.current[row.id] = el)}
-                    row={row}
-                    expanded={expandedId === row.id}
-                    onRowClick={handleRowClick}
-                    loadingParenti={loadingParenti}
-                    parentiData={parentiData}
-                    onViewArchivio={handleViewArchivio}
-                    onSegnala={handleSegnala}
-                  />
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5}>
-                    {emptyState()}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile View */}
-        <div className="block lg:hidden divide-y divide-border-base">
-          {error ? (
-            <div className="p-2">
-              {errorState(true)}
-            </div>
-          ) : loading ? (
-            [...Array(5)].map((_, i) => (
-              <div key={i} className="animate-pulse p-4 space-y-3 bg-bg-main border-b border-border-base">
-                <div className="h-5 bg-border-base rounded w-1/3 opacity-50"></div>
-                <div className="h-4 bg-border-base rounded w-1/2 opacity-50"></div>
-                <div className="h-4 bg-border-base rounded w-1/4 opacity-50"></div>
+                ) : loading ? (
+                  Array.from({ length: 5 }, (_, i) => (
+                    <tr key={i} className="animate-pulse motion-reduce:animate-none">
+                      <td className="px-6 py-4" colSpan={5}>
+                        <div className="h-8 bg-border-base/50 rounded flex items-center px-4">
+                          {i === 0 && <span className="text-text-accent font-serif text-sm">Caricamento dati in corso...</span>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : data.length > 0 ? (
+                  data.map((row) => <CatastoRow key={row.id} ref={registerRow(row.id)} {...rowProps(row)} />)
+                ) : (
+                  <tr>
+                    <td colSpan={5}>{emptyState()}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="divide-y divide-border-base" aria-busy={loading}>
+            {error ? (
+              <div className="p-2">{errorState(true)}</div>
+            ) : loading ? (
+              Array.from({ length: 5 }, (_, i) => (
+                <div key={i} className="animate-pulse motion-reduce:animate-none p-4 space-y-3 bg-bg-main">
+                  <div className="h-5 bg-border-base/50 rounded w-1/3"></div>
+                  <div className="h-4 bg-border-base/50 rounded w-1/2"></div>
+                  <div className="h-4 bg-border-base/50 rounded w-1/4"></div>
+                </div>
+              ))
+            ) : data.length > 0 ? (
+              <div className="p-2 space-y-3 bg-bg-main">
+                {data.map((row) => (
+                  <CatastoMobileCard key={row.id} ref={registerRow(row.id)} {...rowProps(row)} />
+                ))}
               </div>
-            ))
-          ) : data.length > 0 ? (
-            <div className="p-2 space-y-3 bg-bg-main">
-              {data.map((row) => (
-                <CatastoMobileCard
-                  key={row.id}
-                  ref={(el: any) => (tableRowsRef.current[row.id] = el)}
-                  row={row}
-                  expanded={expandedId === row.id}
-                  onRowClick={handleRowClick}
-                  loadingParenti={loadingParenti}
-                  parentiData={parentiData}
-                  onViewArchivio={handleViewArchivio}
-                  onSegnala={handleSegnala}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="bg-bg-main">
-              {emptyState()}
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="bg-bg-main">{emptyState()}</div>
+            )}
+          </div>
+        )}
 
         <Pagination
           page={page}
@@ -276,16 +246,14 @@ export default function CatastoTable({
         />
       </div>
 
-      <ArchivioViewerModal 
-        isOpen={viewerData.isOpen} 
+      <ArchivioViewerModal
+        isOpen={viewerRow !== null}
         onClose={closeViewer}
-        codiceArchivio={viewerData.codiceArchivio || ""}
-        foglio={viewerData.foglio || ""}
-        volume={viewerData.volume || ""}
-        nome={viewerData.nome || ""}
-        onSegnalaSegnatura={
-          viewerData.row ? () => handleSegnala(viewerData.row, "segnatura") : undefined
-        }
+        codiceArchivio={viewerRow?.codice_archivio ?? ""}
+        foglio={viewerRow?.foglio ?? ""}
+        volume={viewerRow?.volume ?? ""}
+        nome={viewerRow?.nome ?? ""}
+        onSegnalaSegnatura={viewerRow ? () => handleSegnala(viewerRow, "segnatura") : undefined}
       />
 
       <SegnalazioneModal

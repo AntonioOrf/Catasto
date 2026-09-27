@@ -45,6 +45,35 @@ export interface Parenti {
   particolarita: string;
 }
 
+/**
+ * Carta di un volume digitalizzato, proiettata dal manifest IIIF
+ * dell'Archivio (GET /api/catasto/manifest/:id). `image` è sempre https.
+ */
+export interface IiifPage {
+  label: string;
+  image: string;
+}
+
+/** Opzione di un filtro enum (GET /api/filters): gli id raggruppati sono separati da virgola. */
+export interface FilterOption {
+  id: string | number;
+  label: string;
+}
+
+// `type` e non `interface`: così resta assegnabile a Record<string, FilterOption[]>.
+export type FilterOptions = {
+  bestiame: FilterOption[];
+  rapporto: FilterOption[];
+  immigrazione: FilterOption[];
+  mestieri: FilterOption[];
+  serie: FilterOption[];
+  quartieri: FilterOption[];
+  pivieri: FilterOption[];
+  popoli: FilterOption[];
+  particolaritaParente: FilterOption[];
+  casa: FilterOption[];
+};
+
 export interface PaginationInfo {
   total: number;
   page: number;

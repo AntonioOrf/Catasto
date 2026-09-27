@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { Request, Response, NextFunction } from "express";
 
 /**
@@ -9,12 +9,10 @@ import { Request, Response, NextFunction } from "express";
  * Senza ADMIN_TOKEN configurato le rotte sono chiuse (403), non aperte: una
  * variabile d'ambiente dimenticata non deve esporre le segnalazioni.
  */
-const safeCompare = (a: string, b: string): boolean => {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
-};
+// Confronto sui digest: lunghezza fissa, quindi né il contenuto né la
+// lunghezza del token trapelano dai tempi di risposta.
+const digest = (value: string) => createHash("sha256").update(value).digest();
+const safeCompare = (a: string, b: string): boolean => timingSafeEqual(digest(a), digest(b));
 
 export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
   const expected = process.env.ADMIN_TOKEN;
