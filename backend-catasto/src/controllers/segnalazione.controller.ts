@@ -44,6 +44,14 @@ const createSchema = z
         message: "Indica quale campo è errato",
       });
     }
+    // Senza fuoco una segnatura accettata non avrebbe dove essere pubblicata.
+    if (data.tipo === "segnatura" && data.id_fuoco === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["id_fuoco"],
+        message: "Indica il fuoco a cui si riferisce la segnatura",
+      });
+    }
     if (data.tipo === "segnatura" && !data.valore_proposto) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

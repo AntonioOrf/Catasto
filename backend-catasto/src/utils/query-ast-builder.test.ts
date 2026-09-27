@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { QueryGroup } from "@catasto/shared";
-import { buildQueryFromAst } from "./query-ast-builder.js";
+import { astSchema, buildQueryFromAst } from "./query-ast-builder.js";
 import { ValidationError } from "./validation.js";
 
 const group = (children: any[], op: "AND" | "OR" = "AND", not?: boolean): QueryGroup => ({
@@ -160,5 +160,54 @@ describe("buildQueryFromAst", () => {
     );
     expect(conditions).toBe("WHERE (fs.segnatura IS NULL OR fs.segnatura = '')");
     expect(params).toEqual([]);
+  });
+
+  it("espande le partizioni geografiche unite in una lista di id", () => {
+    const eq = buildQueryFromAst(group([cond("quartiere", "eq", "3,7")]));
+    expect(eq.conditions).toBe("WHERE tq.id_quartiere IN (?,?)");
+    expect(eq.params).toEqual([3, 7]);
+
+    const neq = buildQueryFromAst(group([cond("popolo", "neq", "3, 7")]));
+    expect(neq.conditions).toBe("WHERE (tp.id_popolo NOT IN (?,?) OR tp.id_popolo IS NULL)");
+    expect(neq.params).toEqual([3, 7]);
+
+    const notIn = buildQueryFromAst(group([cond("piviere", "not_in", ["3,7", "5", 9])]));
+    expect(notIn.conditions).toBe("WHERE (tpi.id_piviere NOT IN (?,?,?,?) OR tpi.id_piviere IS NULL)");
+    expect(notIn.params).toEqual([3, 7, 5, 9]);
+  });
+
+  it("lascia invariato un id geografico singolo", () => {
+    expect(buildQueryFromAst(group([cond("serie", "eq", "4")]))).toMatchObject({
+      conditions: "WHERE tser.id_serie = ?",
+      params: [4],
+    });
+    expect(buildQueryFromAst(group([cond("serie", "neq", 4)])).conditions).toBe(
+      "WHERE (tser.id_serie <> ? OR tser.id_serie IS NULL)",
+    );
+  });
+
+  it("rifiuta liste di id geografici malformate o troppo lunghe", () => {
+    expect(() => buildQueryFromAst(group([cond("quartiere", "eq", "3,x")]))).toThrow(
+      ValidationError,
+    );
+    const troppi = Array.from({ length: 101 }, (_, i) => i + 1).join(",");
+    expect(() => buildQueryFromAst(group([cond("quartiere", "in", [troppi])]))).toThrow(
+      ValidationError,
+    );
+  });
+});
+
+describe("astSchema", () => {
+  it("rifiuta un AST annidato in profondita' senza esaurire lo stack", () => {
+    let node: any = cond("nome", "contains", "a");
+    for (let i = 0; i < 2000; i++) node = group([node]);
+    const parsed = astSchema.safeParse(node);
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues[0]?.message).toMatch(/annidata/);
+  });
+
+  it("accetta un AST entro il limite di profondita'", () => {
+    const parsed = astSchema.safeParse(group([group([cond("casa", "eq", 1)])]));
+    expect(parsed.success).toBe(true);
   });
 });
