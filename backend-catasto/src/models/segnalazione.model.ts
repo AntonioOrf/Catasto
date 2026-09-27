@@ -69,6 +69,18 @@ export class SegnalazioneModel {
     return rows as Segnalazione[];
   }
 
+  static async findById(id: number): Promise<Segnalazione | null> {
+    const [rows]: any = await pool.query(
+      `SELECT s.id, s.id_fuoco, f.Nome_Fuoco as nome_fuoco, s.tipo, s.campo,
+              s.valore_attuale, s.valore_proposto, s.note, s.email, s.stato, s.created_at
+       FROM segnalazioni s
+       LEFT JOIN fuochi f ON f.ID_Fuochi = s.id_fuoco
+       WHERE s.id = ?`,
+      [id],
+    );
+    return (rows[0] as Segnalazione) ?? null;
+  }
+
   /** Esegue `work` in una transazione; rollback automatico se lancia. */
   static async transaction<T>(work: (tx: SegnalazioneTx) => Promise<T>): Promise<T> {
     const connection = await pool.getConnection();
