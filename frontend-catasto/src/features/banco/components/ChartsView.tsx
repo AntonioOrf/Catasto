@@ -1,11 +1,11 @@
 import { useState } from "react";
-import type { CatastoStats, FilterOptions } from "@catasto/shared";
+import type { CatastoStats } from "@catasto/shared";
 import { useLanguage, useT } from "../../../i18n";
 import AgePyramid from "../../catasto/components/stats/AgePyramid";
 import { statsMessages } from "../../catasto/components/stats/StatsPanel.messages";
 import { bancoMessages } from "../banco.messages";
 import { MAX_BOCCHE_BAR } from "../charts";
-import { boccheItems, distributionItems, imponibileItems, sharesByKey, type ChartItem } from "../charts-view";
+import { boccheItems, distributionItems, imponibileItems, sharesByKey, withCatastoItems, type ChartItem } from "../charts-view";
 import { chartsViewMessages } from "../charts-view.messages";
 import DistChart, { type ChartKind } from "./DistChart";
 
@@ -24,27 +24,28 @@ function loadKinds(): Record<ChartId, ChartKind> {
   }
 }
 
+/** Di quali fuochi sono i grafici: la destinazione, o tutto il catasto se è vuota. */
+export type ChartsSubject = { kind: "raccolta"; nome: string; n: number } | { kind: "selezione"; n: number } | { kind: "tutto" };
+
 interface ChartsViewProps {
+  subject: ChartsSubject;
   stats?: CatastoStats;
   loading: boolean;
   error: string | null;
   unavailable: boolean;
-  /** Statistiche di tutto il catasto, per il confronto (se acceso). */
+  /** Statistiche di tutto il catasto, per il confronto (se acceso e se i grafici non sono già di tutto il catasto). */
   catasto?: CatastoStats;
   compare: boolean;
   onCompare: (on: boolean) => void;
-  options: FilterOptions;
-  /** Restringe la query alla voce cliccata; assente quando si guarda una raccolta. */
-  onRestrict?: (item: ChartItem) => void;
 }
 
 /**
- * Vista «Grafici» del Banco: cifre di sintesi e grafici su tutti i risultati
- * della query, a barre o a torta, con il confronto facoltativo con tutto il
- * catasto. Tutto viene dalle statistiche (`/stats`); un clic su una voce
- * aggiunge la condizione alla query.
+ * Vista «Grafici» del Banco: cifre di sintesi e grafici sui fuochi della
+ * destinazione (selezione o raccolta), o su tutto il catasto se è vuota; a
+ * barre o a torta, con il confronto facoltativo con tutto il catasto. Tutto
+ * viene dalle statistiche (`/stats`).
  */
-export default function ChartsView({ stats, loading, error, unavailable, catasto, compare, onCompare, options, onRestrict }: ChartsViewProps) {
+export default function ChartsView({ subject, stats, loading, error, unavailable, catasto, compare, onCompare }: ChartsViewProps) {
   const t = useT(chartsViewMessages);
   const tb = useT(bancoMessages);
   const ts = useT(statsMessages);
@@ -75,12 +76,14 @@ export default function ChartsView({ stats, loading, error, unavailable, catasto
   const build = (s: CatastoStats): Record<ChartId, ChartItem[]> => ({
     imponibile: imponibileItems(s, (n) => fmt(n), (n) => tb("over", { n }), labels.notStated),
     bocche: boccheItems(s, boccheLabel),
-    mestieri: distributionItems(s.mestieri, labels, { key: "mestiere", options: options.mestieri ?? [] }),
-    quartieri: distributionItems(s.quartieri, labels, { key: "quartiere", options: options.quartieri ?? [] }),
+    mestieri: distributionItems(s.mestieri, labels),
+    quartieri: distributionItems(s.quartieri, labels),
     statoCivile: distributionItems(s.statoCivile, labels),
   });
   const data = build(stats);
-  const all = compare && catasto ? build(catasto) : null;
+  // Grafici già di tutto il catasto: niente da confrontare.
+  const comparing = compare && subject.kind !== "tutto";
+  const all = comparing && catasto ? build(catasto) : null;
   const shares = (id: ChartId) => (all ? sharesByKey(all[id]) : undefined);
 
   // --- cifre di sintesi ---
@@ -91,7 +94,7 @@ export default function ChartsView({ stats, loading, error, unavailable, catasto
   });
   const q = kpi(stats);
   const c = catasto ? kpi(catasto) : null;
-  const showC = compare && c && catasto;
+  const showC = comparing && c && catasto;
   const kpis = [
     { v: fmt(stats.fuochi), l: t("kpiFuochi"), c: showC ? t("kpiOf", { n: fmt(catasto.fuochi) }) : null },
     { v: fmt(stats.parenti), l: t("kpiParenti"), c: showC ? t("kpiOf", { n: fmt(catasto.parenti) }) : null },
@@ -100,16 +103,15 @@ export default function ChartsView({ stats, loading, error, unavailable, catasto
     { v: q.senza === null ? "—" : pct(q.senza), l: t("kpiSenza"), c: showC && c.senza !== null ? t("kpiCatasto", { v: pct(c.senza) }) : null },
   ];
 
-  const chart = (id: ChartId, title: string, subtitle: string, restrict = true) => (
+  const chart = (id: ChartId, title: string, subtitle: string) => (
     <DistChart
       key={id}
       title={title}
       subtitle={subtitle}
-      items={data[id]}
+      items={all ? withCatastoItems(data[id], all[id]) : data[id]}
       kind={kinds[id]}
       onKind={(k) => setKind({ ...kinds, [id]: k })}
       catasto={shares(id)}
-      onRestrict={restrict ? onRestrict : undefined}
     />
   );
   const fuochiTot = t("totalFuochi", { n: fmt(stats.fuochi) });
@@ -117,10 +119,25 @@ export default function ChartsView({ stats, loading, error, unavailable, catasto
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-text-accent">
-        <label className="inline-flex items-center gap-2 min-h-9 cursor-pointer">
-          <input type="checkbox" checked={compare} onChange={(e) => onCompare(e.target.checked)} />
-          {t("compareAll")}
-        </label>
+        <p className="text-base text-text-main">
+          {subject.kind === "tutto" ? (
+            t("subjectAll")
+          ) : (
+            <>
+              {t("subjectOf")}{" "}
+              <strong className="font-semibold">
+                {subject.kind === "raccolta" ? t("subjectCollection", { nome: subject.nome }) : t("subjectSelection")}
+              </strong>{" "}
+              <span className="text-text-accent tabular-nums">({subject.n === 1 ? t("oneFuoco") : t("totalFuochi", { n: fmt(subject.n) })})</span>
+            </>
+          )}
+        </p>
+        {subject.kind !== "tutto" && (
+          <label className="inline-flex items-center gap-2 min-h-9 cursor-pointer">
+            <input type="checkbox" checked={compare} onChange={(e) => onCompare(e.target.checked)} />
+            {t("compareAll")}
+          </label>
+        )}
         <label className="inline-flex items-center gap-2">
           {t("shape")}
           <select
@@ -138,7 +155,7 @@ export default function ChartsView({ stats, loading, error, unavailable, catasto
             </option>
           </select>
         </label>
-        {compare && !catasto && <span className="italic">{t("loadingAll")}</span>}
+        {comparing && !catasto && <span className="italic">{t("loadingAll")}</span>}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border border-border-base rounded-ui bg-bg-card overflow-hidden">
@@ -155,7 +172,7 @@ export default function ChartsView({ stats, loading, error, unavailable, catasto
         <li className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-3 bg-chart-1 rounded-ui" aria-hidden="true" /> {t("legendQuery")}
         </li>
-        {compare && catasto && (
+        {all && catasto && (
           <li className="inline-flex items-center gap-1.5">
             <span className="h-3.5 w-0.5 bg-text-main" aria-hidden="true" /> {t("legendAll", { n: fmt(catasto.fuochi) })}
           </li>
@@ -164,16 +181,15 @@ export default function ChartsView({ stats, loading, error, unavailable, catasto
           <span className="h-2.5 w-3 border border-chart-1/60 bg-[repeating-linear-gradient(45deg,var(--chart-1)_0_2px,transparent_2px_5px)]" aria-hidden="true" />{" "}
           {t("legendMissing")}
         </li>
-        <li>{onRestrict ? t("legendClick") : t("legendClickOff")}</li>
       </ul>
 
       <div className="grid gap-3 lg:grid-cols-2">
         {chart("imponibile", t("chartImponibile"), `${t("unitFiorini")} · ${fuochiTot}`)}
-        {chart("bocche", t("chartBocche"), `${t("unitParenti")} · ${fuochiTot}`, false)}
+        {chart("bocche", t("chartBocche"), `${t("unitParenti")} · ${fuochiTot}`)}
         {chart("mestieri", t("chartMestieri"), fuochiTot)}
         {chart("quartieri", t("chartQuartieri"), fuochiTot)}
         <AgePyramid eta={stats.eta} />
-        {chart("statoCivile", t("chartStatoCivile"), t("totalParenti", { n: fmt(stats.parenti) }), false)}
+        {chart("statoCivile", t("chartStatoCivile"), t("totalParenti", { n: fmt(stats.parenti) }))}
       </div>
     </div>
   );

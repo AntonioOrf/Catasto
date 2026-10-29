@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { emptyGroup, type Fuoco, type QueryGroup } from "@catasto/shared";
-import { fetchFilterOptions, fetchFuochi, fetchStats } from "../api/catastoService";
+import { fetchFilterOptions, fetchFuochi } from "../api/catastoService";
 import { userMessage } from "../api/client";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
@@ -19,13 +19,12 @@ import CompareBar from "../features/compare/components/CompareBar";
 import { bancoMessages, type BancoMessageKey } from "../features/banco/banco.messages";
 import { loadTargetKey, storeTargetKey, useAddTarget, type TargetKey } from "../features/banco/add-target";
 import { addToCollection, loadCollections, readCollectionFromHash, type Raccolta } from "../features/banco/collections";
-import type { ChartItem } from "../features/banco/charts-view";
 import { chartsViewMessages } from "../features/banco/charts-view.messages";
 import { useTargetActions } from "../features/banco/useTargetActions";
 import { useCollections } from "../features/banco/useCollections";
 import { loadColumns, resetColumns, storeColumns, visibleColumns, type ColumnsState } from "../features/banco/columns";
 import BancoTable from "../features/banco/components/BancoTable";
-import ChartsView from "../features/banco/components/ChartsView";
+import ChartsView, { type ChartsSubject } from "../features/banco/components/ChartsView";
 import CollectionsPanel from "../features/banco/components/CollectionsPanel";
 import DestinationPanel from "../features/banco/components/DestinationPanel";
 import UndoToast from "../features/banco/components/UndoToast";
@@ -166,22 +165,21 @@ export default function BancoPage() {
   const total = results.data?.pagination?.total ?? 0;
   const totalPages = results.data?.pagination?.totalPages || 1;
 
-  // Medie in fondo alla tabella e vista Grafici.
-  const statsState = useCatastoStats(search, true);
-  const catastoStats = useQuery({
-    queryKey: ["catastoStats", lang, "tutto"],
-    queryFn: ({ signal }) => fetchStats(ALL_FUOCHI, signal),
-    enabled: view === "grafici" && compareAll,
-    staleTime: 30 * 60 * 1000,
-  });
+  // Medie in fondo alla tabella: sulla query mostrata.
+  const statsState = useCatastoStats(search, view === "tabella");
 
-  // Un clic su una voce dei grafici aggiunge le sue condizioni alla query.
-  const restrict = (item: ChartItem) => {
-    if (!item.restrict) return;
-    const before = ast;
-    editAst({ ...ast, children: [...ast.children, ...item.restrict] });
-    actions.notify({ text: tc("restricted", { voce: item.label }), undo: () => editAst(before) });
-  };
+  // Vista Grafici: i fuochi della destinazione (selezione o raccolta); se è
+  // vuota, tutto il catasto.
+  const targetIds = target.ids.join(",");
+  const chartsSearch = useMemo<SearchParams>(() => (targetIds ? { ...ALL_FUOCHI, ids: targetIds } : ALL_FUOCHI), [targetIds]);
+  const chartsStats = useCatastoStats(chartsSearch, view === "grafici");
+  const chartsSubject: ChartsSubject = !targetIds
+    ? { kind: "tutto" }
+    : target.nome
+      ? { kind: "raccolta", nome: target.nome, n: target.ids.length }
+      : { kind: "selezione", n: target.ids.length };
+  // Il confronto chiede tutto il catasto; se i grafici sono già di tutto il catasto è la stessa richiesta.
+  const catastoStats = useCatastoStats(ALL_FUOCHI, view === "grafici" && compareAll && Boolean(targetIds));
 
   const [columns, setColumns] = useState<ColumnsState>(loadColumns);
   const changeColumns = (next: ColumnsState) => {
@@ -260,15 +258,14 @@ export default function BancoPage() {
 
           {view === "grafici" ? (
             <ChartsView
-              stats={statsState.stats}
-              loading={statsState.loading}
-              error={statsState.unavailable ? null : statsState.error}
-              unavailable={statsState.unavailable}
-              catasto={catastoStats.data}
+              subject={chartsSubject}
+              stats={chartsStats.stats}
+              loading={chartsStats.loading}
+              error={chartsStats.unavailable ? null : chartsStats.error}
+              unavailable={chartsStats.unavailable}
+              catasto={catastoStats.stats}
               compare={compareAll}
               onCompare={setCompareAll}
-              options={filterOptions}
-              onRestrict={source.kind === "query" ? restrict : undefined}
             />
           ) : (
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem] items-start">

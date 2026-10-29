@@ -1,11 +1,10 @@
-import { IMPONIBILE_BANDS, type CatastoStats, type Distribution, type FilterOption, type QueryCondition } from "@catasto/shared";
+import { IMPONIBILE_BANDS, type CatastoStats, type Distribution } from "@catasto/shared";
 import { bandLabel, boccheCounts } from "./charts";
 
 /**
  * Dati dei grafici della vista «Grafici» del Banco, dalle statistiche di
- * tutta la query. Ogni voce ha una chiave stabile (per confrontarla con la
- * stessa voce su tutto il catasto) e, se la query si può restringere a quella
- * voce, le condizioni da aggiungere.
+ * fuochi mostrati. Ogni voce ha una chiave stabile, per confrontarla con la
+ * stessa voce su tutto il catasto.
  */
 export interface ChartItem {
   key: string;
@@ -13,17 +12,13 @@ export interface ChartItem {
   n: number;
   /** «Non indicato» nella fonte: tratteggiato e sempre a parte. */
   missing?: boolean;
-  /** Voce che raccoglie le altre («Altro»): non si restringe e in torta va in «Altre voci». */
+  /** Voce che raccoglie le altre («Altro»): in torta va in «Altre voci». */
   other?: boolean;
   /** Voci finite in «Altre voci» (solo nella torta). */
   rest?: string[];
-  restrict?: QueryCondition[];
 }
 
-const cond = (field: string, operator: QueryCondition["operator"], value?: QueryCondition["value"]): QueryCondition =>
-  value === undefined ? { kind: "condition", field, operator } : { kind: "condition", field, operator, value };
-
-/** Fasce dell'imponibile: ognuna restringe a «≥ inizio e < inizio della successiva», come le conta il backend. */
+/** Fasce dell'imponibile, nell'ordine di IMPONIBILE_BANDS. */
 export function imponibileItems(
   stats: CatastoStats,
   format: (n: number) => string,
@@ -36,43 +31,23 @@ export function imponibileItems(
     ...fasce.fasce.map((f) => {
       // Dal valore, non dalla posizione: una fascia mancante non sposta le altre.
       const index = (IMPONIBILE_BANDS as readonly number[]).indexOf(f.da);
-      const next = IMPONIBILE_BANDS[index + 1];
-      return {
-        key: `b${f.da}`,
-        label: bandLabel(index, format, over),
-        n: f.n,
-        restrict: [cond("imponibile", "gte", f.da), ...(next === undefined ? [] : [cond("imponibile", "lt", next)])],
-      };
+      return { key: `b${f.da}`, label: bandLabel(index, format, over), n: f.n };
     }),
-    ...(fasce.assenti > 0 ? [{ key: "na", label: notStated, n: fasce.assenti, missing: true, restrict: [cond("imponibile", "is_empty")] }] : []),
+    ...(fasce.assenti > 0 ? [{ key: "na", label: notStated, n: fasce.assenti, missing: true }] : []),
   ];
 }
 
-/** Bocche per fuoco: non sono un campo della query, quindi non restringono. */
+/** Bocche per fuoco, con le famiglie molto grandi in una voce sola. */
 export function boccheItems(stats: CatastoStats, label: (n: number) => string): ChartItem[] {
   return boccheCounts(stats.membri).map((b) => ({ key: `m${b.bocche}`, label: label(b.bocche), n: b.fuochi }));
 }
 
-/**
- * Una distribuzione per categoria (mestieri, quartieri, stato civile). Una
- * voce restringe la query se il campo c'è e l'etichetta corrisponde a una
- * delle opzioni dei filtri (stessa lingua delle statistiche).
- */
-export function distributionItems(
-  d: Distribution,
-  labels: { other: string; notStated: string },
-  field?: { key: string; options: readonly FilterOption[] },
-): ChartItem[] {
-  const idOf = (label: string) => field?.options.find((o) => o.label === label)?.id;
+/** Una distribuzione per categoria (mestieri, quartieri, stato civile), con «Altro» e «Non indicato» in coda. */
+export function distributionItems(d: Distribution, labels: { other: string; notStated: string }): ChartItem[] {
   return [
-    ...d.voci.map((v) => {
-      const id = idOf(v.label);
-      return { key: `v:${v.label}`, label: v.label, n: v.n, ...(field && id !== undefined ? { restrict: [cond(field.key, "eq", id)] } : {}) };
-    }),
+    ...d.voci.map((v) => ({ key: `v:${v.label}`, label: v.label, n: v.n })),
     ...(d.altro > 0 ? [{ key: "altro", label: labels.other, n: d.altro, other: true }] : []),
-    ...(d.assenti > 0
-      ? [{ key: "na", label: labels.notStated, n: d.assenti, missing: true, ...(field ? { restrict: [cond(field.key, "is_empty")] } : {}) }]
-      : []),
+    ...(d.assenti > 0 ? [{ key: "na", label: labels.notStated, n: d.assenti, missing: true }] : []),
   ];
 }
 
@@ -80,6 +55,17 @@ export function distributionItems(
 export function sharesByKey(items: readonly ChartItem[]): Map<string, number> {
   const total = items.reduce((s, i) => s + i.n, 0);
   return new Map(items.map((i) => [i.key, total > 0 ? i.n / total : 0]));
+}
+
+/**
+ * Voci per il confronto: quelle di tutto il catasto nel loro ordine, a zero
+ * se mancano fra i fuochi mostrati, poi quelle che ha solo la selezione.
+ * Così ogni tacca ha la sua riga.
+ */
+export function withCatastoItems(items: readonly ChartItem[], catasto: readonly ChartItem[]): ChartItem[] {
+  const own = new Map(items.map((i) => [i.key, i]));
+  const inCatasto = new Set(catasto.map((c) => c.key));
+  return [...catasto.map((c) => own.get(c.key) ?? { ...c, n: 0 }), ...items.filter((i) => !inCatasto.has(i.key))];
 }
 
 /** Fette leggibili in una torta: oltre questo numero le più piccole si uniscono. */

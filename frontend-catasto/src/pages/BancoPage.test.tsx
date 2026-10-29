@@ -101,10 +101,18 @@ describe("Banco di lavoro", () => {
     expect(within(table).getAllByRole("columnheader").map((th) => th.textContent)).not.toContain("Età media");
   });
 
-  it("vista Grafici: cifre, barre o torta, confronto con tutto il catasto, clic che restringe la query", async () => {
+  it("vista Grafici: tutto il catasto se la destinazione è vuota, altrimenti i suoi fuochi; barre o torta; confronto", async () => {
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Grafici" }));
     expect(screen.queryByRole("table", { name: /Risultati della query/ })).toBeNull();
+    expect(await screen.findByText(/Grafici di tutto il catasto: la destinazione è vuota/)).toBeTruthy();
+    await waitFor(() => {
+      const [stats] = api.fetchStats.mock.calls.at(-1)!;
+      expect([stats.advancedMode, stats.ids ?? ""]).toEqual([false, ""]);
+    });
+    // Già tutto il catasto: niente confronto da accendere.
+    expect(screen.queryByRole("checkbox", { name: "Confronta con tutto il catasto" })).toBeNull();
+
     const imponibile = await screen.findByRole("figure", { name: "Fuochi per fasce dell'imponibile" });
     // Mestieri partono a torta, imponibile a barre; l'interruttore cambia il singolo grafico.
     expect(within(screen.getByRole("figure", { name: "Fuochi per mestiere" })).getByRole("img")).toBeTruthy();
@@ -112,22 +120,17 @@ describe("Banco di lavoro", () => {
     expect(within(imponibile).getByRole("img").getAttribute("aria-label")).toContain("201–500 50%");
     fireEvent.click(within(imponibile).getByRole("button", { name: "Barre" }));
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "Confronta con tutto il catasto" }));
-    await waitFor(() => expect(api.fetchStats.mock.calls.some(([s]) => !s.advancedMode && s.ast.children.length === 0)).toBe(true));
+    // Un fuoco nella selezione: i grafici diventano i suoi.
+    const box = screen.getByRole("combobox", { name: "Cerca un fuoco" });
+    fireEvent.change(box, { target: { value: "medici" } });
+    await screen.findByRole("option", { name: "MEDICI COSIMO" });
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(await screen.findByText("selezione")).toBeTruthy();
+    await waitFor(() => expect(api.fetchStats.mock.calls.at(-1)![0]).toMatchObject({ ids: "5" }));
 
-    fireEvent.click(within(imponibile).getByRole("button", { name: /^201–500: .*Restringi la query: 201–500$/ }));
-    await waitFor(() => {
-      const ast = api.fetchStats.mock.calls.at(-1)![0].ast;
-      expect(ast.children).toEqual([
-        { kind: "condition", field: "imponibile", operator: "gte", value: 201 },
-        { kind: "condition", field: "imponibile", operator: "lt", value: 501 },
-      ]);
-    });
-    expect(screen.getByText("Query ristretta: 201–500. I grafici si ricalcolano.")).toBeTruthy();
-    expect(screen.queryByText("Tutti i fuochi")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Annulla" }));
-    // Torna la query di prima (le statistiche arrivano dalla cache).
-    expect(await screen.findByText("Tutti i fuochi")).toBeTruthy();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Confronta con tutto il catasto" }));
+    expect(localStorage.getItem("catasto.banco.confronto.v1")).toBe("1");
+    expect(await screen.findByText(/tutto il catasto \(/)).toBeTruthy();
     expect(localStorage.getItem("catasto.banco.vista.v1")).toBe("grafici");
   });
 

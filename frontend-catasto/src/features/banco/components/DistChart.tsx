@@ -14,8 +14,6 @@ interface DistChartProps {
   onKind: (kind: ChartKind) => void;
   /** Quota della stessa voce su tutto il catasto; assente = nessun confronto. */
   catasto?: Map<string, number>;
-  /** Restringe la query alla voce; assente = voci non cliccabili. */
-  onRestrict?: (item: ChartItem) => void;
 }
 
 const SLICE_COLORS = ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5", "--chart-6", "--chart-7", "--chart-8"];
@@ -32,10 +30,9 @@ function arc(r0: number, r1: number, a0: number, a1: number): string {
  * Un grafico della vista «Grafici»: barre orizzontali o torta ad anello, la
  * stessa informazione in tabella. Con il confronto ogni barra ha una tacca
  * alla quota di tutto il catasto e la legenda della torta la scrive. I non
- * indicati sono tratteggiati e restano a parte; un clic su una voce (barra,
- * fetta o voce di legenda) restringe la query, quando si può.
+ * indicati sono tratteggiati e restano a parte.
  */
-export default function DistChart({ title, subtitle, items, kind, onKind, catasto, onRestrict }: DistChartProps) {
+export default function DistChart({ title, subtitle, items, kind, onKind, catasto }: DistChartProps) {
   const t = useT(chartsViewMessages);
   const { locale } = useLanguage();
   const id = useId();
@@ -45,7 +42,6 @@ export default function DistChart({ title, subtitle, items, kind, onKind, catast
   const fmt = (n: number) => new Intl.NumberFormat(locale, { useGrouping: "always" } as Intl.NumberFormatOptions).format(n);
   const pct = (share: number) => share.toLocaleString(locale, { style: "percent", maximumFractionDigits: 1 });
   const share = (n: number) => (total > 0 ? n / total : 0);
-  const canRestrict = (item: ChartItem) => Boolean(onRestrict && item.restrict && !item.other);
 
   const label = (item: ChartItem) => {
     const cat = catasto?.get(item.key);
@@ -69,7 +65,6 @@ export default function DistChart({ title, subtitle, items, kind, onKind, catast
     <ul className="space-y-0.5">
       {items.map((item) => {
         const cat = catasto?.get(item.key);
-        const clickable = canRestrict(item);
         const body = (
           <>
             <span className={`truncate text-right ${item.missing || item.other ? "italic text-text-accent" : ""}`}>{item.label}</span>
@@ -85,18 +80,10 @@ export default function DistChart({ title, subtitle, items, kind, onKind, catast
             </span>
           </>
         );
-        const grid = "grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_7rem] gap-2 items-center w-full text-xs py-0.5 px-1 rounded-ui";
+        const grid = "grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_7rem] gap-2 items-center text-xs py-0.5 px-1";
         return (
-          <li key={item.key}>
-            {clickable ? (
-              <button type="button" onClick={() => onRestrict?.(item)} title={t("restrictTitle", { voce: item.label })} aria-label={`${label(item)}. ${t("restrictTitle", { voce: item.label })}`} className={`${grid} text-left hover:bg-item-hover`}>
-                {body}
-              </button>
-            ) : (
-              <div className={grid} title={label(item)}>
-                {body}
-              </div>
-            )}
+          <li key={item.key} className={grid} title={label(item)}>
+            {body}
           </li>
         );
       })}
@@ -126,8 +113,6 @@ export default function DistChart({ title, subtitle, items, kind, onKind, catast
               key={s.key}
               d={arc(52, 96, a0, a1)}
               style={{ fill: fill(s, i), stroke: "var(--color-bg-card)", strokeWidth: 1.5 }}
-              className={canRestrict(s) ? "cursor-pointer hover:opacity-80" : ""}
-              onClick={canRestrict(s) ? () => onRestrict?.(s) : undefined}
             >
               <title>{s.rest ? `${label(s)} — ${s.rest.join(", ")}` : label(s)}</title>
             </path>
@@ -148,16 +133,10 @@ export default function DistChart({ title, subtitle, items, kind, onKind, catast
               <span className="tabular-nums text-text-accent text-right min-w-16">{cat !== undefined ? t("catastoShare", { p: pct(cat) }) : fmt(s.n)}</span>
             </>
           );
-          const grid = "grid grid-cols-[0.75rem_minmax(0,1fr)_auto_auto] gap-2 items-center w-full text-xs py-0.5 px-1 rounded-ui";
+          const grid = "grid grid-cols-[0.75rem_minmax(0,1fr)_auto_auto] gap-2 items-center text-xs py-0.5 px-1";
           return (
-            <li key={s.key} title={s.rest?.join(", ")}>
-              {canRestrict(s) ? (
-                <button type="button" onClick={() => onRestrict?.(s)} aria-label={`${label(s)}. ${t("restrictTitle", { voce: s.label })}`} className={`${grid} text-left hover:bg-item-hover`}>
-                  {body}
-                </button>
-              ) : (
-                <div className={grid}>{body}</div>
-              )}
+            <li key={s.key} title={s.rest?.join(", ")} className={grid}>
+              {body}
             </li>
           );
         })}
