@@ -23,7 +23,7 @@ Applicazione **React 18 + TypeScript** costruita con **Vite 6**, stile **Tailwin
 
 | Percorso | Componente | Contenuto |
 |---|---|---|
-| `/` | `pages/HomePage.tsx` | Applicazione principale: indice laterale, ricerca semplice/avanzata, esempi pronti, tabella e statistiche, paginazione, visore, segnalazioni, export, confronto |
+| `/` | `pages/HomePage.tsx` | Applicazione principale: indice laterale, ricerca semplice/avanzata, tabella e statistiche, paginazione, visore, segnalazioni, export, confronto |
 | `/banco` | `pages/BancoPage.tsx` | Banco di lavoro: query come frase, colonne a scelta, grafici sui risultati, raccolte, tabella densa (lazy) |
 | `/informazioni` | `pages/InfoPage.tsx` | Descrizione del progetto e crediti (caricata in lazy) |
 | `/glossario` | `pages/GlossarioPage.tsx` | Termini del catasto con le definizioni, un'ancora per voce (lazy) |
@@ -135,7 +135,8 @@ flowchart TD
 | `fetchFilterOptions(geo)` | `GET /api/filters?serie=&quartiere=&piviere=` | avvio e cambio di livello geografico |
 | `fetchManifest(id)` | `GET /api/catasto/manifest/:id` | apertura del visore |
 | `createSegnalazione(body)` | `POST /api/segnalazioni` | invio di una segnalazione |
-| `fetchFuochiByIds(ids)` | `GET /api/catasto/fuochi?ids=` | selezione del confronto |
+| `fetchFuochiByIds(ids)` | `GET /api/catasto/fuochi?ids=` | selezione del confronto (`api/fuochi-by-ids.ts` divide le liste lunghe in blocchi) |
+| `fetchSuggest(q)` | `GET /api/catasto/suggest?q=` | «Trova e aggiungi» del Banco |
 | `fetchStats(search)` | `GET /api/catasto/stats` o `POST /api/catasto/query/stats` | scheda **Statistiche** aperta |
 | `downloadExport(search, opzioni)` | `GET /api/catasto/export` o `POST /api/catasto/query/export` | pulsante **Esporta** |
 
@@ -147,7 +148,8 @@ flowchart TD
 
 ### Ricerca semplice (`FilterPanel`)
 
-- Sempre visibili: **Cerca Persona**, **Cerca Località**, **Volume**, pulsante **Aggiorna**.
+- In alto l'interruttore **Ricerca semplice | Ricerca avanzata** e, a destra, **Azzera filtri**.
+- Su una riga sola: **Cerca Persona**, **Cerca Località**, **Volume**, i pulsanti **Altri filtri** e **Aggiorna**.
 - Pannello **Altri filtri** (con contatore dei filtri attivi):
   - attributi a scelta con autocompletamento: Mestiere, Rapporto, Bestiame, Immigrazione, Particolarità parente, Casa;
   - geografia a cascata **Serie → Quartiere → Piviere → Popolo** (cambiare un livello azzera quelli sotto e restringe le opzioni);
@@ -178,13 +180,12 @@ Elenco virtualizzato (nome + mestiere) dei fuochi della ricerca corrente. Clicca
   - *Composizione familiare*: parentela, sesso, età, stato civile, particolarità di ogni membro;
   - azioni **Segnala un errore** e, se manca la portata, **contribuisci** con la segnatura.
 
-### Glossario e aiuto contestuale (`features/glossary`, `features/tour`, `features/examples`)
+### Glossario e aiuto contestuale (`features/glossary`, `features/tour`)
 
 - **Glossario come dato unico**: `src/i18n/glossary.ts` (termine, definizione breve e, se serve, estesa, in italiano e inglese). Le definizioni riprendono il glossario di `docs/architettura.md` e vanno riviste dagli autori prima di aggiungere voci: un termine senza definizione verificata non entra. `FIELD_TERMS` dice, per **ogni** campo di `FIELD_REGISTRY`, quale voce lo spiega (`null` = nessun termine tecnico o nessuna definizione verificata); un test fallisce se un campo nuovo non ha una decisione.
 - **Suggerimenti** (`GlossaryTerm`): pulsante "i" accanto alle etichette nella tabella (Capofamiglia → fuoco, Riferimenti → campione), nella scheda del fuoco (dati economici), nei filtri (volume, serie, quartiere, piviere, popolo, intervalli in fiorini), nel QueryBuilder (campo scelto) e nella tabella delle statistiche. Si apre al passaggio del mouse, al focus e al tocco; Esc lo chiude e restituisce il focus; la definizione è sempre collegata con `aria-describedby`; il riquadro (in un portal, così la tabella non lo taglia) contiene il link **Approfondisci** alla voce del glossario. Sta accanto ai controlli, mai dentro un altro pulsante o un `<label>`.
 - **Pagina `/glossario`**: tutte le voci in ordine alfabetico, ciascuna con l'ancora `#termine-<id>` (portata in vista e messa a fuoco all'arrivo) e un indice iniziale. Collegata dal footer.
 - **Percorso guidato** (`GuidedTour`): cinque passi (ricerca, scheda del fuoco, visore, segnalazione, confronto/export/statistiche) in una finestra modale. Si apre da sola alla prima visita della home, ma non sopra un link condiviso; chiuderla in qualunque modo (Salta, Esc, Ho capito) la segna come vista in `localStorage` (`catasto.tour.v1`); il pulsante **Guida** nell'header la riapre.
-- **Esempi pronti** nella home, visibili finché non c'è alcun filtro: "I fuochi più ricchi di San Giovanni", "Immigrati dal contado", "Imponibile di almeno 1000 fiorini", "Fuochi con un parente di 80 anni o più". Un clic carica la query nella ricerca avanzata (come un link `#q=`), con l'ordinamento dell'esempio. Le opzioni (quartiere, immigrazione) si cercano per etichetta fra quelle di `/api/filters`: un esempio la cui opzione non esiste non compare.
 
 ### Selezione e confronto tra fuochi (`features/compare`)
 
@@ -197,10 +198,11 @@ Elenco virtualizzato (nome + mestiere) dei fuochi della ricerca corrente. Clicca
 ### Banco di lavoro (`pages/BancoPage.tsx`, `features/banco`)
 
 - **Query**: lo stesso AST della ricerca avanzata della Consultazione (`FilterContext`), quindi stessi risultati per la stessa query. Si legge come una frase («Fuochi dove serie è Città e mestiere è lanaiolo», da `describeNode`), con «+ condizione», «Modifica come gruppi E/O» (apre `QueryBuilder`), «Salva la query» (`saved-queries.ts`) e «Copia il link» (`#q=`). Modificarla qui porta anche la Consultazione in ricerca avanzata.
-- **Tabella densa** (`BancoTable`): righe di 32 px, cifre tabellari a destra con il separatore delle migliaia, righe alterne appena tinte, ordinamento dalle intestazioni (le colonne che il backend sa ordinare); in fondo **media** e **mediana** di tutti i risultati, dalle statistiche (le bocche dalla distribuzione dei membri). 25, 50 (default), 100 o 200 righe per pagina. Il riferimento «Vol., c.» apre `ArchivioViewerModal`. I dati arrivano dalla vista `banco` (`fetchFuochi(search, "banco", …)`), che aggiunge bocche ed età media.
+- **Trova e aggiungi** (`FinderPanel`): per mettere fuochi in una raccolta o nella selezione senza cambiare la query. La scheda **Cerca** è una casella (combobox ARIA) che chiede `GET /api/catasto/suggest` mentre si scrive (pausa di 200 ms): capofamiglia, mestiere, popolo, quartiere, piviere, `#numero` o `vol. 79 c. 12`. `/` da qualunque punto della pagina porta nella casella, ↑↓ scorrono, Invio aggiunge (e non toglie mai), Esc chiude; un clic su una voce già dentro la toglie. La scheda **Incolla un elenco** legge i numeri da qualunque testo (`paste-ids.ts`), li controlla con `fetchFuochiByIds` e dice prima di aggiungere quanti sono nuovi, già dentro, ripetuti, oltre il limite o inesistenti. **Destinazione** sceglie fra la selezione, una raccolta o «+ nuova raccolta…» (`add-target.ts`, stesse operazioni per le due); aprire una raccolta la rende destinazione. Ogni aggiunta e rimozione da qui ha **Annulla**, che rimette anche l'ordine di prima.
+- **Tabella densa** (`BancoTable`): righe di 32 px, cifre tabellari a destra con il separatore delle migliaia, righe alterne appena tinte, ordinamento dalle intestazioni (le colonne che il backend sa ordinare); in fondo **media** e **mediana** di tutti i risultati, dalle statistiche (le bocche dalla distribuzione dei membri). 25, 50 (default), 100 o 200 righe per pagina. Il riferimento «Vol., c.» apre `ArchivioViewerModal`. La casella a sinistra segue la destinazione di «Trova e aggiungi»: con la selezione è la casella di sempre, con una raccolta aggiunge e toglie il fuoco da quella; la riga che c'è dentro ha il fondo tinto e il filetto. I dati arrivano dalla vista `banco` (`fetchFuochi(search, "banco", …)`), che aggiunge bocche ed età media.
 - **Colonne** (`columns.ts`, `ColumnsMenu`): l'elenco viene da `FIELD_REGISTRY` più quattro colonne derivate (campione, quartiere » popolo, bocche, età media); i campi dei parenti restano filtri. Ogni colonna si accende o spegne e si trascina; le frecce ↑↓ fanno lo stesso da tastiera. La scelta sta in `localStorage` (`catasto.banco.colonne.v1`), ripulita alla lettura (chiavi ignote fuori, colonne nuove in coda); «ripristina» torna alla partenza. Il capofamiglia non si spegne.
 - **Grafici** (`BancoCharts`, `charts.ts`): imponibile per fasce, fuochi per numero di bocche e mestieri più frequenti, da `GET /api/catasto/stats` su tutta la query. La voce che contiene la riga attiva (sotto il mouse o il focus) è nel secondo colore e detta a parole; ogni grafico ha la sua tabella dei dati.
-- **Raccolte** (`collections.ts`, `CollectionsPanel`): insiemi di fuochi scelti a mano, in `localStorage` (`catasto.raccolte.v1`, al massimo 50). Si aprono nel Banco (ricerca con il filtro `ids`), si mettono nella selezione per confrontarli o esportarli, si condividono con un link `/banco#raccolta=<nome>:<id,…>` che all'apertura salva la raccolta sul dispositivo. Le modifiche passano da un evento `catasto:raccolte`, così barra e pagina restano allineate anche senza `localStorage`.
+- **Raccolte** (`collections.ts`, `CollectionsPanel`): insiemi di fuochi scelti a mano, in `localStorage` (`catasto.raccolte.v1`, al massimo 50). Si aprono nel Banco (ricerca con il filtro `ids`), diventano la destinazione con «Aggiungi qui», si rinominano sul posto (`renameCollection`: niente nomi vuoti o già usati, senza badare alle maiuscole; Invio salva, Esc annulla), si mettono nella selezione per confrontarli o esportarli, si condividono con un link `/banco#raccolta=<nome>:<id,…>` che all'apertura salva la raccolta sul dispositivo. Le modifiche passano da un evento `catasto:raccolte`, così barra e pagina restano allineate anche senza `localStorage`.
 - **Telefono**: un avviso dice che la pagina è pensata per il computer; resta usabile, con la tabella che scorre di lato.
 
 ### Statistiche (`StatsPanel`)
@@ -298,7 +300,6 @@ Test di componenti e hook con Testing Library, in jsdom (dichiarato in testa al 
 - `GlossaryTerm.test.tsx`: descrizione sempre collegata, apertura al focus, Esc con focus restituito, tocco senza propagare il clic alla riga;
 - `GuidedTour.test.tsx`: apertura alla prima visita, percorso completo, Salta ed Esc ricordati, riapertura dal pulsante;
 - `GlossarioPage.test.tsx`: un'ancora per ogni voce e l'indice;
-- `example-queries.test.ts`: esempi risolti per etichetta (anche id raggruppati), esempi senza opzione nascosti;
 - `compare-selection.test.ts` e `compare-format.test.ts`: serializzazione e parsing del link `#confronta=`, id non validi, limite di cinque, `sessionStorage` alterato, differenze con dati assenti;
 - `Compare.test.tsx`: caselle e barra, apertura da due fuochi, colonne e differenze, link con id inesistenti, limite di cinque, Esc e Svuota;
 - `StatsPanel.test.tsx`: barre di "Altro" e "Non indicato", raggruppamento dei fuochi numerosi, tabella economica con valori non calcolabili, tabelle dei dati, errore con Riprova;

@@ -30,6 +30,7 @@ const api = vi.hoisted(() => ({
   fetchFuochiByIds: vi.fn(),
   fetchParentiData: vi.fn(),
   downloadExport: vi.fn(),
+  fetchSuggest: vi.fn(),
 }));
 vi.mock("../api/catastoService", () => api);
 vi.mock("../features/catasto/components/ArchivioViewerModal", () => ({ default: () => null }));
@@ -60,6 +61,10 @@ describe("Banco di lavoro", () => {
     api.fetchStats.mockResolvedValue(STATS);
     api.fetchFilterOptions.mockResolvedValue({});
     api.fetchFuochiByIds.mockImplementation(async (ids: number[]) => ROWS.filter((r) => ids.includes(r.id)));
+    api.fetchSuggest.mockImplementation(async (q: string) => {
+      const data = ROWS.filter((r) => r.nome.toLowerCase().includes(q.toLowerCase()));
+      return { data, total: data.length, mode: "testo" };
+    });
   });
 
   it("chiede la vista banco con la query avanzata; colonne di partenza, media e mediana in fondo", async () => {
@@ -121,5 +126,69 @@ describe("Banco di lavoro", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Torna alla query" }));
     await waitFor(() => expect(api.fetchFuochi.mock.calls.at(-1)![0].ids).toBeUndefined());
+  });
+
+  it("trova e aggiungi: Invio mette il fuoco nella selezione, Annulla lo toglie", async () => {
+    renderPage();
+    const finder = screen.getByRole("region", { name: "Trova e aggiungi fuochi" });
+    const box = within(finder).getByRole("combobox", { name: "Cerca un fuoco" });
+    fireEvent.change(box, { target: { value: "medici" } });
+    await within(finder).findByRole("option", { name: "MEDICI COSIMO" });
+    expect(api.fetchSuggest).toHaveBeenLastCalledWith("medici", expect.anything());
+
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(await within(finder).findByText("Aggiunto MEDICI COSIMO alla selezione.")).toBeTruthy();
+    const row = (await screen.findByText("MEDICI COSIMO", { selector: "td" })).closest("tr")!;
+    expect(within(row).getByRole("checkbox")).toHaveProperty("checked", true);
+    expect(within(finder).getByRole("option", { name: "MEDICI COSIMO, Già dentro" })).toBeTruthy();
+
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(await within(finder).findByText("MEDICI COSIMO è già nella selezione.")).toBeTruthy();
+
+    fireEvent.change(box, { target: { value: "" } });
+    fireEvent.change(box, { target: { value: "medici" } });
+    fireEvent.click(await within(finder).findByRole("option", { name: "MEDICI COSIMO, Già dentro" }));
+    fireEvent.click(within(finder).getByRole("button", { name: "Annulla" }));
+    expect(within(row).getByRole("checkbox")).toHaveProperty("checked", true);
+  });
+
+  it("una nuova raccolta diventa la destinazione; la casella della riga aggiunge e toglie; si rinomina", async () => {
+    renderPage();
+    const finder = screen.getByRole("region", { name: "Trova e aggiungi fuochi" });
+    fireEvent.change(within(finder).getByRole("combobox", { name: "Destinazione" }), { target: { value: "new" } });
+    const name = within(finder).getByRole("textbox", { name: "Nome della raccolta" });
+    fireEvent.change(name, { target: { value: "Lanaioli" } });
+    fireEvent.submit(name.closest("form")!);
+    expect(await within(finder).findByText("Raccolta «Lanaioli» creata: i fuochi trovati ora vanno lì.")).toBeTruthy();
+
+    const row = (await screen.findByText("RUCELLAI GIOVANNI", { selector: "td" })).closest("tr")!;
+    const box = within(row).getByRole("checkbox", { name: "RUCELLAI GIOVANNI nella raccolta «Lanaioli»" });
+    fireEvent.click(box);
+    expect(JSON.parse(localStorage.getItem(COLLECTIONS_STORAGE_KEY)!)[0]).toMatchObject({ nome: "Lanaioli", ids: [1] });
+    fireEvent.click(box);
+    expect(JSON.parse(localStorage.getItem(COLLECTIONS_STORAGE_KEY)!)[0].ids).toEqual([]);
+
+    fireEvent.click(within(finder).getByRole("button", { name: "Rinomina la raccolta Lanaioli" }));
+    const rename = within(finder).getByRole("textbox", { name: "Nome della raccolta" });
+    fireEvent.change(rename, { target: { value: "  " } });
+    fireEvent.submit(rename.closest("form")!);
+    expect(within(finder).getByRole("alert").textContent).toBe("Il nome non può essere vuoto.");
+    fireEvent.change(rename, { target: { value: "Lanaioli di Oltrarno" } });
+    fireEvent.submit(rename.closest("form")!);
+    expect(await within(finder).findByText("Raccolta rinominata in «Lanaioli di Oltrarno».")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Raccolte" }).textContent).toContain("Lanaioli di Oltrarno");
+  });
+
+  it("incolla un elenco: conta nuovi, ripetuti e inesistenti prima di aggiungere", async () => {
+    renderPage();
+    const finder = screen.getByRole("region", { name: "Trova e aggiungi fuochi" });
+    fireEvent.click(within(finder).getByRole("tab", { name: "Incolla un elenco" }));
+    fireEvent.change(within(finder).getByRole("textbox", { name: /Numeri dei fuochi/ }), { target: { value: "1, 5\n999 1" } });
+    expect(await within(finder).findByText("non esistono: 999")).toBeTruthy();
+    expect(within(finder).getByText("2 da aggiungere")).toBeTruthy();
+    expect(within(finder).getByText("1 ripetuto, contato una volta")).toBeTruthy();
+    fireEvent.click(within(finder).getByRole("button", { name: "Aggiungi 2 fuochi" }));
+    expect(await within(finder).findByText("Aggiunti 2 fuochi alla selezione.")).toBeTruthy();
+    expect(within(finder).getByText("2 già dentro")).toBeTruthy();
   });
 });

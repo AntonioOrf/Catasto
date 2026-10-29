@@ -83,6 +83,41 @@ export function removeFromCollection(id: string, fuocoId: number): Raccolta[] {
   return persist(loadCollections().map((r) => (r.id === id ? { ...r, ids: r.ids.filter((x) => x !== fuocoId) } : r)));
 }
 
+/**
+ * Sostituisce i fuochi di una raccolta, al suo posto nella lista: aggiunte e
+ * rimozioni da «Trova e aggiungi» e dalle caselle del Banco, e il loro
+ * annullamento (che rimette anche l'ordine di prima).
+ */
+export function setCollectionIds(id: string, ids: readonly number[]): Raccolta[] {
+  return persist(loadCollections().map((r) => (r.id === id ? { ...r, ids: normalizeIds(ids) } : r)));
+}
+
+export type RenameResult = { ok: true } | { ok: false; reason: "empty" | "taken" };
+
+/**
+ * Rinomina una raccolta. Il nome non può restare vuoto né ripetere quello di
+ * un'altra raccolta (le raccolte si aggiungono per nome dalla barra della
+ * selezione), senza badare a maiuscole e minuscole.
+ */
+export function renameCollection(id: string, nome: string): RenameResult {
+  const name = cleanName(nome);
+  if (!name) return { ok: false, reason: "empty" };
+  const all = loadCollections();
+  if (all.some((r) => r.id !== id && r.nome.toLocaleLowerCase() === name.toLocaleLowerCase())) return { ok: false, reason: "taken" };
+  persist(all.map((r) => (r.id === id ? { ...r, nome: name } : r)));
+  return { ok: true };
+}
+
+/** Raccolta vuota col nome dato, in cima alla lista; null se il nome è vuoto o già usato. */
+export function createCollection(nome: string): Raccolta | null {
+  const name = cleanName(nome);
+  const all = loadCollections();
+  if (!name || all.some((r) => r.nome.toLocaleLowerCase() === name.toLocaleLowerCase())) return null;
+  const entry: Raccolta = { id: generateId(), nome: name, ids: [], createdAt: new Date().toISOString() };
+  persist([entry, ...all].slice(0, MAX_COLLECTIONS));
+  return entry;
+}
+
 export function deleteCollection(id: string): Raccolta[] {
   return persist(loadCollections().filter((r) => r.id !== id));
 }

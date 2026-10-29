@@ -34,6 +34,16 @@ const statsLimiter = rateLimit({
   message: { error: "Troppe richieste di statistiche. Riprova tra qualche minuto." },
 });
 
+// Una richiesta a ogni parola scritta nella casella (dopo una breve pausa):
+// limite proprio, largo, per non consumare la quota della tabella.
+const suggestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Troppe ricerche in poco tempo. Riprova tra qualche minuto." },
+});
+
 router.get("/", asyncHandler(CatastoController.getAll));
 router.get("/stats", statsLimiter, asyncHandler(CatastoController.stats));
 router.post("/query/stats", statsLimiter, asyncHandler(CatastoController.queryStats));
@@ -42,6 +52,7 @@ router.post("/query/export", exportLimiter, asyncHandler(CatastoController.expor
 router.post("/query", asyncHandler(CatastoController.query));
 router.get("/sidebar", asyncHandler(CatastoController.getSidebar));
 router.get("/fuochi", asyncHandler(CatastoController.getByIds));
+router.get("/suggest", suggestLimiter, asyncHandler(CatastoController.suggest));
 router.get("/manifest/:id", manifestLimiter, asyncHandler(CatastoController.getManifest));
 
 export default router;

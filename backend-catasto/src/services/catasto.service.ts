@@ -2,8 +2,10 @@ import { FuocoModel, type FuocoQuery } from "../models/fuoco.model.js";
 import { CommonModel } from "../models/common.model.js";
 import { buildQuery, buildOrderBy } from "../utils/query-builder.js";
 import { buildQueryFromAst } from "../utils/query-ast-builder.js";
+import { buildSuggestFilters, parseSuggestQuery } from "../utils/suggest-query.js";
 import { HttpError, type Pagination } from "../utils/validation.js";
 import { TraduzioniModel, type Lingua, type TabellaLookup } from "../models/traduzioni.model.js";
+import { SUGGEST_LIMIT } from "@catasto/shared";
 import type {
   Fuoco,
   ApiResponse,
@@ -11,6 +13,7 @@ import type {
   SidebarItem,
   Parenti,
   QueryGroup,
+  SuggestResponse,
 } from "@catasto/shared";
 
 /** "banco": la vista tabella con bocche ed età media (Banco di lavoro). */
@@ -176,6 +179,22 @@ export class CatastoService {
     const [rows, traduttore] = await Promise.all([FuocoModel.findAll(query), TraduzioniModel.forLang(lang)]);
     const byId = new Map(traduttore.translateRows(rows, FUOCO_LOOKUP_FIELDS).map((f) => [Number(f.id), f]));
     return ids.flatMap((id) => byId.get(id) ?? []);
+  }
+
+  /**
+   * «Trova e aggiungi» del Banco: numero del fuoco, carta del campione o
+   * parole cercate in nome, mestiere, popolo, quartiere e piviere. Le parole
+   * si cercano nei testi del dump, in italiano; il mestiere torna tradotto.
+   */
+  static async suggestFuochi(raw: unknown, lang: Lingua = "it"): Promise<SuggestResponse> {
+    const parsed = parseSuggestQuery(raw);
+    if (!parsed) return { data: [], total: 0, mode: "testo" };
+    const { mode, ...filters } = buildSuggestFilters(parsed);
+    const [{ rows, total }, traduttore] = await Promise.all([
+      FuocoModel.suggest(filters, SUGGEST_LIMIT),
+      TraduzioniModel.forLang(lang),
+    ]);
+    return { data: traduttore.translateRows(rows, { mestiere: "mestieri" }), total, mode };
   }
 
   static async getParenti(fuocoId: number, lang: Lingua = "it"): Promise<Parenti[]> {

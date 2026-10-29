@@ -17,11 +17,14 @@ import { EMPTY_SIMPLE_FILTERS, type SearchParams } from "../features/catasto/lib
 import { viewerVolume } from "../features/catasto/lib/viewer-volume";
 import CompareBar from "../features/compare/components/CompareBar";
 import { bancoMessages, type BancoMessageKey } from "../features/banco/banco.messages";
+import { SELEZIONE, useAddTarget, type TargetKey } from "../features/banco/add-target";
 import { addToCollection, readCollectionFromHash, type Raccolta } from "../features/banco/collections";
+import { useCollections } from "../features/banco/useCollections";
 import { loadColumns, resetColumns, storeColumns, visibleColumns, type ColumnsState } from "../features/banco/columns";
 import BancoCharts from "../features/banco/components/BancoCharts";
 import BancoTable from "../features/banco/components/BancoTable";
 import CollectionsPanel from "../features/banco/components/CollectionsPanel";
+import FinderPanel from "../features/banco/components/FinderPanel";
 import ColumnsMenu from "../features/banco/components/ColumnsMenu";
 import QueryPanel from "../features/banco/components/QueryPanel";
 
@@ -54,13 +57,22 @@ export default function BancoPage() {
 
   const [source, setSource] = useState<Source>({ kind: "query" });
   const [notice, setNotice] = useState("");
+  // Dove vanno i fuochi trovati e le caselle della tabella; una raccolta
+  // aperta diventa anche la destinazione.
+  const [targetKey, setTargetKey] = useState<TargetKey>(SELEZIONE);
+  const target = useAddTarget(targetKey);
+  const collections = useCollections();
+  const openCollection = (raccolta: Pick<Raccolta, "id" | "nome" | "ids">) => {
+    setSource({ kind: "raccolta", raccolta });
+    if (raccolta.id) setTargetKey({ kind: "raccolta", id: raccolta.id });
+  };
 
   // Un link #raccolta= salva la raccolta sul dispositivo e la apre.
   useEffect(() => {
     const shared = readCollectionFromHash(window.location.hash);
     if (!shared) return;
     const saved = addToCollection(shared.nome, shared.ids).find((r) => r.nome === shared.nome);
-    setSource({ kind: "raccolta", raccolta: saved ?? { id: "", ...shared } });
+    openCollection(saved ?? { id: "", ...shared });
     setNotice(t("collectionOpened", { nome: shared.nome }));
     const { origin, pathname, search } = window.location;
     window.history.replaceState(null, "", `${origin}${pathname}${search}`);
@@ -145,7 +157,8 @@ export default function BancoPage() {
 
         {source.kind === "raccolta" ? (
           <p className="text-lg md:text-xl">
-            {t("showingCollection", { nome: source.raccolta.nome })}
+            {/* Il nome attuale: la raccolta si può rinominare mentre è aperta. */}
+            {t("showingCollection", { nome: collections.find((r) => r.id === source.raccolta.id)?.nome ?? source.raccolta.nome })}
             {" · "}
             <button type="button" onClick={() => setSource({ kind: "query" })} className="text-base text-primary underline underline-offset-4 min-h-11">
               {t("backToQuery")}
@@ -154,6 +167,8 @@ export default function BancoPage() {
         ) : (
           <QueryPanel ast={ast} onChange={editAst} options={filterOptions} />
         )}
+
+        <FinderPanel target={target} onTarget={setTargetKey} />
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem] items-start">
           <section aria-labelledby="banco-risultati" className="min-w-0 space-y-2">
@@ -186,6 +201,7 @@ export default function BancoPage() {
               fetching={results.isFetching}
               error={results.isError ? userMessage(results.error, t("loadError"), lang) : null}
               onRetry={() => void results.refetch()}
+              target={target}
             />
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
@@ -234,7 +250,9 @@ export default function BancoPage() {
 
         <CollectionsPanel
           activeId={source.kind === "raccolta" ? source.raccolta.id : null}
-          onOpen={(r) => setSource({ kind: "raccolta", raccolta: r })}
+          onOpen={openCollection}
+          targetId={target.key.kind === "raccolta" ? target.key.id : null}
+          onTarget={(r) => setTargetKey({ kind: "raccolta", id: r.id })}
         />
       </main>
       <Footer />

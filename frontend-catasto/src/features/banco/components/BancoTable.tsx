@@ -1,7 +1,8 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { CatastoStats, Fuoco } from "@catasto/shared";
 import { CompareCheckbox } from "../../catasto/components/CatastoRow";
-import { useOptionalCompare } from "../../compare/compare-context";
+import { SELECTION_MAX_FUOCHI } from "@catasto/shared";
+import type { AddTarget } from "../add-target";
 import { useLanguage, useT } from "../../../i18n";
 import { bancoMessages } from "../banco.messages";
 import { weightedMedian } from "../charts";
@@ -23,9 +24,37 @@ interface BancoTableProps {
   fetching: boolean;
   error: string | null;
   onRetry: () => void;
+  /** Destinazione della casella a sinistra: la selezione o una raccolta. */
+  target: AddTarget;
 }
 
 const MISSING = "—";
+
+/**
+ * Casella della riga quando la destinazione è una raccolta: spuntata se il
+ * fuoco è dentro; si toglie da qui come si aggiunge.
+ */
+function CollectionCheckbox({ row, target }: { row: Fuoco; target: AddTarget }) {
+  const t = useT(bancoMessages);
+  const checked = target.has(row.id);
+  const disabled = !checked && target.full;
+  return (
+    <label
+      onClick={(e) => e.stopPropagation()}
+      title={disabled ? t("collectionFull", { max: SELECTION_MAX_FUOCHI }) : undefined}
+      className={`inline-flex items-center justify-center min-h-8 min-w-8 ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={() => (checked ? target.remove([row.id]) : target.add([row.id]))}
+        aria-label={t("inCollectionAria", { nome: row.nome, raccolta: target.nome ?? "" })}
+        className="h-[15px] w-[15px] m-0"
+      />
+    </label>
+  );
+}
 
 /**
  * Tabella densa del Banco: righe di 32 px, cifre tabellari allineate a
@@ -33,10 +62,9 @@ const MISSING = "—";
  * risultati della query (dalle statistiche, non dalla pagina).
  */
 export default function BancoTable(props: BancoTableProps) {
-  const { columns, rows, label, stats, sortBy, sortOrder, onSort, activeId, onActive, onOpenCarta, loading, stale, fetching, error, onRetry } = props;
+  const { columns, rows, label, stats, sortBy, sortOrder, onSort, activeId, onActive, onOpenCarta, loading, stale, fetching, error, onRetry, target } = props;
   const t = useT(bancoMessages);
   const { locale } = useLanguage();
-  const compare = useOptionalCompare();
 
   const number = (value: number | null | undefined, digits = 0) =>
     value === null || value === undefined || Number.isNaN(Number(value))
@@ -148,7 +176,7 @@ export default function BancoTable(props: BancoTableProps) {
             </tr>
           ) : (
             rows.map((row) => {
-              const selected = compare?.isSelected(row.id) ?? false;
+              const selected = target.has(row.id);
               const isActive = activeId === row.id;
               return (
                 <tr
@@ -161,7 +189,7 @@ export default function BancoTable(props: BancoTableProps) {
                   }`}
                 >
                   <td className={`w-8 pl-1.5 border-l-[3px] ${selected ? "border-l-primary" : "border-l-transparent"}`}>
-                    <CompareCheckbox row={row} />
+                    {target.nome === null ? <CompareCheckbox row={row} /> : <CollectionCheckbox row={row} target={target} />}
                   </td>
                   {columns.map((col) => {
                     const value = cell(col, row);

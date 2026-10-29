@@ -14,6 +14,7 @@ export const clientMessages = defineMessages({
     exportFailed: "L'export non è riuscito",
     statsFailed: "Impossibile calcolare le statistiche",
     compareFailed: "Impossibile caricare i fuochi da confrontare",
+    suggestFailed: "Impossibile cercare i fuochi",
   },
   en: {
     serverUnreachable: "The server is not responding. Check your connection and try again.",
@@ -28,5 +29,6 @@ export const clientMessages = defineMessages({
     exportFailed: "The export failed",
     statsFailed: "Could not compute the statistics",
     compareFailed: "Could not load the households to compare",
+    suggestFailed: "Could not search the households",
   },
 });
