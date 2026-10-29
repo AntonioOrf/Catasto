@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { COMPARE_MAX_FUOCHI } from "@catasto/shared";
+import { COMPARE_MAX_FUOCHI, type Fuoco } from "@catasto/shared";
 import { fetchFuochiByIds } from "../../api/catastoService";
 import { userMessage } from "../../api/client";
 import { useLanguage, useT } from "../../i18n";
 import { CompareContext, type CompareState } from "./compare-context";
 import { compareMessages } from "./compare.messages";
-import { loadSelection, readCompareFromHash, storeSelection, toggleId } from "./lib/compare-selection";
+import {
+  loadSelection,
+  loadSnapshots,
+  readCompareFromHash,
+  storeSelection,
+  storeSnapshots,
+  toggleId,
+} from "./lib/compare-selection";
 
 /** Toglie `confronta` dal fragment lasciando il resto (es. `#q=` di una ricerca condivisa). */
 function clearCompareFromUrl() {
@@ -26,12 +33,17 @@ export function CompareProvider({ children }: { children: ReactNode }) {
   const [ids, setIds] = useState<number[]>(() => fromLink ?? loadSelection());
   const [viewOpen, setViewOpen] = useState(() => (fromLink?.length ?? 0) >= 2);
   const [removedCount, setRemovedCount] = useState(0);
+  const [snapshots, setSnapshots] = useState<Record<number, Fuoco>>(loadSnapshots);
 
   useEffect(() => {
     if (fromLink) clearCompareFromUrl();
   }, [fromLink]);
 
   useEffect(() => storeSelection(ids), [ids]);
+  // Solo le copie dei fuochi ancora selezionati.
+  useEffect(() => {
+    storeSnapshots(Object.fromEntries(ids.flatMap((id) => (snapshots[id] ? [[id, snapshots[id]]] : []))));
+  }, [ids, snapshots]);
 
   const query = useQuery({
     queryKey: ["fuochiByIds", lang, ids],
@@ -51,12 +63,20 @@ export function CompareProvider({ children }: { children: ReactNode }) {
     setIds((current) => current.filter((id) => found.has(id)));
   }, [query.data, query.isPlaceholderData, ids]);
 
+  // Dati del server se ci sono (lingua attuale), altrimenti la copia presa dalla tabella.
   const fuochi = useMemo(() => {
     const byId = new Map((query.data ?? []).map((f) => [Number(f.id), f]));
-    return ids.flatMap((id) => byId.get(id) ?? []);
-  }, [query.data, ids]);
+    return ids.flatMap((id) => byId.get(id) ?? snapshots[id] ?? []);
+  }, [query.data, ids, snapshots]);
 
-  const toggle = useCallback((id: number) => setIds((current) => toggleId(current, id)), []);
+  // Un errore conta solo se lascia fuori qualche fuoco: con le copie il confronto funziona lo stesso.
+  const incomplete = fuochi.length < ids.length;
+
+  const toggle = useCallback((row: Fuoco) => {
+    const id = Number(row.id);
+    setSnapshots((current) => ({ ...current, [id]: row }));
+    setIds((current) => toggleId(current, id));
+  }, []);
   const remove = useCallback((id: number) => setIds((current) => current.filter((x) => x !== id)), []);
   const clear = useCallback(() => {
     setIds([]);
@@ -72,8 +92,8 @@ export function CompareProvider({ children }: { children: ReactNode }) {
     () => ({
       ids,
       fuochi,
-      loading: query.isLoading,
-      error: query.isError ? userMessage(query.error, t("loadError"), lang) : null,
+      loading: query.isLoading && incomplete,
+      error: query.isError && incomplete ? userMessage(query.error, t("loadError"), lang) : null,
       removedCount,
       full: ids.length >= COMPARE_MAX_FUOCHI,
       isSelected: (id) => ids.includes(id),
@@ -84,7 +104,7 @@ export function CompareProvider({ children }: { children: ReactNode }) {
       openView: () => setViewOpen(true),
       closeView: () => setViewOpen(false),
     }),
-    [ids, fuochi, query.isLoading, query.isError, query.error, t, lang, removedCount, toggle, remove, clear, viewOpen],
+    [ids, fuochi, incomplete, query.isLoading, query.isError, query.error, t, lang, removedCount, toggle, remove, clear, viewOpen],
   );
 
   return <CompareContext.Provider value={value}>{children}</CompareContext.Provider>;

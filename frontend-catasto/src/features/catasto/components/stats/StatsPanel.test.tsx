@@ -76,4 +76,12 @@ describe("StatsPanel", () => {
     expect(alert.textContent).toContain("Troppe richieste");
     expect(screen.getByRole("button", { name: "Riprova" })).toBeTruthy();
   });
+
+  it("con un backend senza l'endpoint (404) spiega che la funzione non è ancora disponibile", async () => {
+    const { ApiError } = await import("../../../../api/client");
+    api.fetchStats.mockRejectedValue(new ApiError("Risorsa non trovata", 404));
+    renderWithProviders(<StatsPanel search={search} />);
+    expect(await screen.findByText("Statistiche non ancora disponibili")).toBeTruthy();
+    expect(screen.queryByText("Risorsa non trovata")).toBeNull();
+  });
 });

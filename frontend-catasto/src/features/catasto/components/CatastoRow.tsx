@@ -104,7 +104,7 @@ const CompareCheckbox = ({ row }: { row: Fuoco }) => {
         type="checkbox"
         checked={checked}
         disabled={disabled}
-        onChange={() => compare.toggle(row.id)}
+        onChange={() => compare.toggle(row)}
         aria-label={t("checkboxAria", { nome: row.nome })}
         className="h-4 w-4"
       />

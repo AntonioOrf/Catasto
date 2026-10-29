@@ -17,12 +17,23 @@ export const userMessage = (error: unknown, fallback: string, lang: Lang = getLa
   return error.message || fallback;
 };
 
+/** Errore HTTP dell'API: il messaggio è per l'utente, lo status serve a distinguere i casi. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 /** Lingua nella query string: in italiano non serve dichiararla. */
 const withLang = (path: string, lang: Lang) =>
   lang === "it" ? path : `${path}${path.includes("?") ? "&" : "?"}lang=${lang}`;
 
 /** Errore da una risposta non 2xx: il messaggio del backend per i 4xx, il fallback per il resto. */
-async function responseError(response: Response, fallbackError: string, lang: Lang): Promise<Error> {
+async function responseError(response: Response, fallbackError: string, lang: Lang): Promise<ApiError> {
   let message = translate(messages, "withStatus", { message: fallbackError, status: response.status }, lang);
   try {
     const body = await response.json();
@@ -32,7 +43,7 @@ async function responseError(response: Response, fallbackError: string, lang: La
   } catch {
     // il body non è JSON: teniamo il messaggio generico
   }
-  return new Error(message);
+  return new ApiError(message, response.status);
 }
 
 /**

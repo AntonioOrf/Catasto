@@ -99,4 +99,18 @@ describe("confronto tra fuochi", () => {
     fireEvent.click(within(bar).getByRole("button", { name: "Svuota" }));
     await waitFor(() => expect(screen.queryByRole("region", { name: "Confronto tra fuochi" })).toBeNull());
   });
+
+  it("senza l'endpoint (404) il confronto usa i dati delle righe scelte", async () => {
+    const { ApiError } = await import("../../../api/client");
+    api.fetchFuochiByIds.mockRejectedValue(new ApiError("Risorsa non trovata", 404));
+    renderWithProviders(<App rows={[DB[1], DB[5]]} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Confronta RUCELLAI GIOVANNI" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Confronta MEDICI COSIMO" }));
+    const bar = await screen.findByRole("region", { name: "Confronto tra fuochi" });
+    expect(within(bar).getByText("MEDICI COSIMO")).toBeTruthy();
+    fireEvent.click(within(bar).getByRole("button", { name: "Confronta" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByRole("alert")).toBeNull();
+    expect(within(dialog).getAllByRole("columnheader")).toHaveLength(3);
+  });
 });

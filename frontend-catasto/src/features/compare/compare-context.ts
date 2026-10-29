@@ -11,7 +11,8 @@ export interface CompareState {
   removedCount: number;
   full: boolean;
   isSelected: (id: number) => boolean;
-  toggle: (id: number) => void;
+  /** Aggiunge o toglie il fuoco; la riga della tabella resta come copia dei dati. */
+  toggle: (row: Fuoco) => void;
   remove: (id: number) => void;
   clear: () => void;
   viewOpen: boolean;

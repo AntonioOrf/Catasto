@@ -1,4 +1,4 @@
-import { COMPARE_MAX_FUOCHI } from "@catasto/shared";
+import { COMPARE_MAX_FUOCHI, type Fuoco } from "@catasto/shared";
 
 /**
  * Selezione dei fuochi da confrontare: una lista di id, al massimo
@@ -62,5 +62,35 @@ export function storeSelection(ids: readonly number[]): void {
     sessionStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(ids));
   } catch {
     // selezione non persistita: resta valida finché la pagina è aperta
+  }
+}
+
+/**
+ * Copia dei fuochi scelti dalla tabella, per id. Il confronto si mostra con
+ * questi dati anche se GET /api/catasto/fuochi non risponde (backend non
+ * aggiornato, rete): l'endpoint serve solo ai link condivisi e ad aggiornare
+ * le etichette.
+ */
+export const COMPARE_ROWS_STORAGE_KEY = "catasto.compare.rows.v1";
+
+export function loadSnapshots(): Record<number, Fuoco> {
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(COMPARE_ROWS_STORAGE_KEY) ?? "{}");
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        ([id, row]) => typeof row === "object" && row !== null && Number((row as Fuoco).id) === Number(id) && typeof (row as Fuoco).nome === "string",
+      ),
+    ) as Record<number, Fuoco>;
+  } catch {
+    return {};
+  }
+}
+
+export function storeSnapshots(rows: Record<number, Fuoco>): void {
+  try {
+    sessionStorage.setItem(COMPARE_ROWS_STORAGE_KEY, JSON.stringify(rows));
+  } catch {
+    // copia non persistita: resta in memoria finché la pagina è aperta
   }
 }

@@ -15,8 +15,16 @@ import { statsMessages } from "./StatsPanel.messages";
 export default function StatsPanel({ search }: { search: SearchParams }) {
   const t = useT(statsMessages);
   const { locale } = useLanguage();
-  const { stats, loading, fetching, stale, error, retry } = useCatastoStats(search, true);
+  const { stats, loading, fetching, stale, error, unavailable, retry } = useCatastoStats(search, true);
 
+  if (unavailable) {
+    return (
+      <div role="status" className="px-6 py-10 text-center bg-bg-sidebar border border-border-base rounded">
+        <p className="font-bold mb-1">{t("unavailableTitle")}</p>
+        <p className="text-sm text-text-accent">{t("unavailableBody")}</p>
+      </div>
+    );
+  }
   if (error) {
     return (
       <div role="alert" className="px-6 py-10 text-center bg-red-500/10 border border-red-500/40 rounded">
