@@ -18,6 +18,9 @@ import Tabs from "../components/common/Tabs";
 import { tabIds } from "../components/common/tab-ids";
 import StatsPanel from "../features/catasto/components/stats/StatsPanel";
 import { homePageMessages } from "./HomePage.messages";
+import { CompareProvider } from "../features/compare/CompareProvider";
+import CompareBar from "../features/compare/components/CompareBar";
+import CompareView from "../features/compare/components/CompareView";
 
 type ResultsView = "table" | "stats";
 
@@ -37,7 +40,16 @@ const EMPTY_FILTER_OPTIONS: FilterOptions = {
   casa: [],
 };
 
+/** La selezione del confronto attraversa tabella, barra e vista: un provider per tutta la home. */
 export default function HomePage() {
+  return (
+    <CompareProvider>
+      <HomeContent />
+    </CompareProvider>
+  );
+}
+
+function HomeContent() {
   const isDesktop = useIsDesktop();
   // Aperta di default solo dove c'è spazio per affiancarla alla tabella.
   const [isSidebarOpen, setIsSidebarOpen] = useState(
@@ -208,8 +220,10 @@ export default function HomePage() {
             </div>
           </div>
           <Footer />
+          <CompareBar />
         </main>
       </div>
+      <CompareView />
     </div>
   );
 }

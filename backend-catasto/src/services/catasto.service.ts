@@ -159,6 +159,24 @@ export class CatastoService {
     return this.runQuery(buildQueryFromAst(ast), pagination, view, lang);
   }
 
+  /**
+   * Fuochi per id, nell'ordine richiesto (confronto). Gli id inesistenti
+   * mancano dalla risposta: il client li riconosce confrontando gli id.
+   */
+  static async getFuochiByIds(ids: number[], lang: Lingua = "it"): Promise<Fuoco[]> {
+    const query: FuocoQuery = {
+      conditions: `WHERE f.ID_Fuochi IN (${ids.map(() => "?").join(",")})`,
+      params: ids,
+      usedTables: new Set(["f"]),
+      orderByClause: "ORDER BY f.ID_Fuochi",
+      limit: ids.length,
+      offset: 0,
+    };
+    const [rows, traduttore] = await Promise.all([FuocoModel.findAll(query), TraduzioniModel.forLang(lang)]);
+    const byId = new Map(traduttore.translateRows(rows, FUOCO_LOOKUP_FIELDS).map((f) => [Number(f.id), f]));
+    return ids.flatMap((id) => byId.get(id) ?? []);
+  }
+
   static async getParenti(fuocoId: number, lang: Lingua = "it"): Promise<Parenti[]> {
     const [rows, traduttore] = await Promise.all([CommonModel.getParenti(fuocoId), TraduzioniModel.forLang(lang)]);
     return traduttore.translateRows(rows, PARENTI_LOOKUP_FIELDS);

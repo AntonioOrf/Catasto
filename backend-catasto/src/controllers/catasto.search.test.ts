@@ -128,3 +128,28 @@ describe("CatastoController: statistiche", () => {
     expect(statsService.queryStats).not.toHaveBeenCalled();
   });
 });
+
+describe("CatastoController: fuochi per id", () => {
+  const getFuochiByIds = vi.fn();
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (service as Record<string, unknown>).getFuochiByIds = getFuochiByIds;
+  });
+
+  it("id numerici, senza duplicati, nell'ordine dato", async () => {
+    await CatastoController.getByIds({ query: { ids: "12, 345,12,678", lang: "en" } } as unknown as Request, res());
+    expect(getFuochiByIds).toHaveBeenCalledWith([12, 345, 678], "en");
+  });
+
+  it.each([
+    ["assente", undefined],
+    ["vuoto", ""],
+    ["non numerico", "1,a"],
+    ["virgola finale", "1,2,"],
+    ["array", ["1", "2"]],
+    ["oltre il massimo", "1,2,3,4,5,6"],
+  ])("%s: 400", async (_caso, ids) => {
+    await expect(CatastoController.getByIds({ query: { ids } } as unknown as Request, res())).rejects.toThrow(ValidationError);
+    expect(getFuochiByIds).not.toHaveBeenCalled();
+  });
+});

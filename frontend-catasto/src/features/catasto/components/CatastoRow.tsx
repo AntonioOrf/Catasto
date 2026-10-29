@@ -23,6 +23,9 @@ import { parseSegnaturaPortata } from "../lib/segnatura";
 import { eta, fiorini, piviereEPopolo } from "../lib/formato";
 import { useLanguage, useT } from "../../../i18n";
 import { catastoRowMessages } from "./CatastoRow.messages";
+import { COMPARE_MAX_FUOCHI } from "@catasto/shared";
+import { useOptionalCompare } from "../../compare/compare-context";
+import { compareMessages } from "../../compare/compare.messages";
 
 export interface CatastoRowProps {
   row: Fuoco;
@@ -75,6 +78,37 @@ const ExpandButton = ({ row, expanded, onRowClick }: Pick<CatastoRowProps, "row"
     >
       <ExpandIcon expanded={expanded} />
     </button>
+  );
+};
+
+/**
+ * Casella "Confronta": aggiunge il fuoco alla selezione, che sopravvive al
+ * cambio di pagina o di ricerca. Fuori dalla home (nessun provider) non c'è.
+ */
+const CompareCheckbox = ({ row }: { row: Fuoco }) => {
+  const compare = useOptionalCompare();
+  const t = useT(compareMessages);
+  if (!compare) return null;
+  const checked = compare.isSelected(row.id);
+  const disabled = !checked && compare.full;
+  return (
+    <label
+      onClick={(e) => e.stopPropagation()}
+      title={disabled ? t("full", { max: COMPARE_MAX_FUOCHI }) : undefined}
+      className={`inline-flex items-center gap-1.5 min-h-8 pr-2 text-[11px] md:text-xs uppercase tracking-wider ${
+        disabled ? "text-text-accent opacity-60 cursor-not-allowed" : "text-text-accent hover:text-primary cursor-pointer"
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={() => compare.toggle(row.id)}
+        aria-label={t("checkboxAria", { nome: row.nome })}
+        className="h-4 w-4"
+      />
+      <span aria-hidden="true">{t("checkbox")}</span>
+    </label>
   );
 };
 
@@ -429,6 +463,9 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
             <div className="text-xs text-text-accent flex items-center gap-1 mt-1">
               <Briefcase className="h-3 w-3" aria-hidden="true" /> {row.mestiere || t("noOccupation")}
             </div>
+            <div className="mt-1">
+              <CompareCheckbox row={row} />
+            </div>
           </td>
 
           <td className="px-6 py-4">
@@ -492,6 +529,7 @@ export const CatastoMobileCard = React.memo(
                 <Briefcase className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
                 {row.mestiere || t("noOccupation")}
               </p>
+              <CompareCheckbox row={row} />
             </div>
             <div className="flex-shrink-0 -mt-2 -mr-2">
               <ExpandButton row={row} expanded={expanded} onRowClick={onRowClick} />

@@ -59,3 +59,12 @@ describe("ricerca su MySQL", () => {
     }
   });
 });
+
+describe("fuochi per id (confronto)", () => {
+  it("restituisce i fuochi nell'ordine chiesto e omette gli inesistenti", async () => {
+    const fuochi = await CatastoService.getFuochiByIds([5, 999, 1]);
+    expect(fuochi.map((f) => f.id)).toEqual([5, 1]);
+    expect(fuochi[0].nome).toBe("MEDICI COSIMO");
+    expect(fuochi[0].quartiere).toBe("San Giovanni (I)");
+  });
+});

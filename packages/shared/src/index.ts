@@ -136,3 +136,10 @@ export interface CatastoStats {
   eta: { fasce: { da: number; sesso: string | null; n: number }[]; assenti: number };
   statoCivile: Distribution;
 }
+
+/**
+ * Fuochi confrontabili insieme (vista di confronto) e tetto di id di
+ * GET /api/catasto/fuochi?ids=…, che serve a caricarli in una richiesta.
+ */
+export const COMPARE_MIN_FUOCHI = 2;
+export const COMPARE_MAX_FUOCHI = 5;

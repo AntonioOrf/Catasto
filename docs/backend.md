@@ -122,6 +122,7 @@ Base URL: stessa origine del sito (`/api`, proxato da nginx) oppure `http://loca
 |---|---|---|---|
 | GET | `/health` | pubblico | Stato del servizio e del database |
 | GET | `/api/catasto` | pubblico | Ricerca semplice, vista tabella (paginata) |
+| GET | `/api/catasto/fuochi?ids=` | pubblico | Fino a 5 fuochi per id, per il confronto |
 | GET | `/api/catasto/sidebar` | pubblico | Ricerca semplice, indice leggero per la sidebar |
 | POST | `/api/catasto/query` | pubblico | Ricerca avanzata con AST |
 | GET | `/api/catasto/stats` | pubblico, 150 req/15 min | Statistiche sulla ricerca semplice |
@@ -227,6 +228,12 @@ Stessi filtri. Risposta **senza wrapper**, pensata per un elenco lungo e leggero
 ```
 
 `view` è `"table"` (risposta come `GET /api/catasto`) o `"sidebar"` (risposta come `GET /sidebar`). Un AST non valido → `400 {"error":"Query non valida: …"}`. Il formato è descritto [più sotto](#ricerca-avanzata-formato-dellast).
+
+### `GET /api/catasto/fuochi?ids=12,345,678` — fuochi per id
+
+Carica in una sola richiesta i fuochi della vista di confronto, presi anche da pagine o ricerche diverse. `ids` è una lista di id numerici separati da virgola, al massimo `COMPARE_MAX_FUOCHI` (5, in `@catasto/shared`); i duplicati contano una volta. Qualunque altra forma (vuoto, non numerico, array, troppi id) → `400`.
+
+Risposta: array di fuochi con gli stessi campi di `GET /api/catasto`, **nell'ordine degli id richiesti**; gli id inesistenti mancano senza errore (il client li confronta con quelli chiesti). Accetta `lang`.
 
 ### `GET /api/catasto/stats` — statistiche della ricerca
 

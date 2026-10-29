@@ -149,3 +149,7 @@ export const fetchStats = (search: SearchParams, signal?: AbortSignal) => {
   const query = params.toString() ? `?${params}` : "";
   return apiRequest<CatastoStats>(`/api/catasto/stats${query}`, fallback, { signal });
 };
+
+/** Fuochi per id (vista di confronto), nell'ordine dato; gli inesistenti mancano. */
+export const fetchFuochiByIds = (ids: readonly number[], signal?: AbortSignal) =>
+  apiRequest<Fuoco[]>(`/api/catasto/fuochi?ids=${ids.join(",")}`, translate(messages, "compareFailed"), { signal });

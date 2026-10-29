@@ -121,7 +121,7 @@ flowchart TD
 - **Modalità esclusive**: in ricerca avanzata l'AST *sostituisce* i filtri semplici (non li combina).
 - **Tabella** (`useCatastoData`): chiave React Query `["catastoData", search, page]`, 50 righe per pagina, `keepPreviousData` durante il cambio pagina. Una sola riga aperta alla volta; i parenti si caricano solo quando la riga viene aperta (cache 10 min).
 - **Indice** (`useCatastoSidebar`): blocchi da 1000 voci con scroll infinito; ogni nuova ricerca annulla la precedente.
-- **URL**: l'unico stato nell'URL è il frammento `#q=` dei link condivisi, letto una volta all'avvio e poi rimosso.
+- **URL**: l'unico stato nell'URL sono i frammenti `#q=` (ricerca condivisa) e `#confronta=` (confronto condiviso), letti una volta all'avvio e poi rimossi.
 
 ### Chiamate al backend
 
@@ -133,6 +133,7 @@ flowchart TD
 | `fetchFilterOptions(geo)` | `GET /api/filters?serie=&quartiere=&piviere=` | avvio e cambio di livello geografico |
 | `fetchManifest(id)` | `GET /api/catasto/manifest/:id` | apertura del visore |
 | `createSegnalazione(body)` | `POST /api/segnalazioni` | invio di una segnalazione |
+| `fetchFuochiByIds(ids)` | `GET /api/catasto/fuochi?ids=` | selezione del confronto |
 | `fetchStats(search)` | `GET /api/catasto/stats` o `POST /api/catasto/query/stats` | scheda **Statistiche** aperta |
 | `downloadExport(search, opzioni)` | `GET /api/catasto/export` o `POST /api/catasto/query/export` | pulsante **Esporta** |
 
@@ -174,6 +175,14 @@ Elenco virtualizzato (nome + mestiere) dei fuochi della ricerca corrente. Clicca
   - *Dettagli economici*: credito, credito ai monti, fortune, deduzioni, imponibile in fiorini; bestiame, immigrazione, rapporto di mestiere, particolarità;
   - *Composizione familiare*: parentela, sesso, età, stato civile, particolarità di ogni membro;
   - azioni **Segnala un errore** e, se manca la portata, **contribuisci** con la segnatura.
+
+### Confronto tra fuochi (`features/compare`)
+
+- Casella **Confronta** su ogni riga e scheda: si scelgono da 2 a 5 fuochi, anche da pagine o ricerche diverse. Oltre il quinto le altre caselle si disattivano.
+- **Barra in basso**, sempre visibile mentre la selezione non è vuota: nomi dei fuochi scelti (ognuno con il pulsante per toglierlo), **Svuota** e **Confronta** (attivo da due fuochi). Uno spaziatore evita che copra il fondo della pagina.
+- **Vista di confronto** (finestra modale con `useModal`: Esc, focus intrappolato e restituito): su desktop una tabella con una colonna per fuoco e intestazioni di riga e di colonna; su mobile schede affiancate da scorrere. Righe: mestiere, rapporto di mestiere, località, casa; fortune, credito, credito ai monti, imponibile e deduzioni con la differenza dal primo fuoco scritta in parole e con ▲/▼ (mai solo un colore; con un dato assente nessuna differenza); membri registrati, età e stato civile dei parenti; riferimento al campione con **Apri la carta** nel visore.
+- **Stato**: la selezione (solo id) sta in `sessionStorage` (`catasto.compare.v1`) e vale per la sessione; i dati arrivano da `GET /api/catasto/fuochi?ids=` (chiave `["fuochiByIds", lang, ids]`), i parenti dalla stessa cache della tabella.
+- **Link condiviso** `#confronta=12,345,678` (pulsante **Copia il link**): riapre lo stesso confronto. Id non validi, ripetuti o oltre il quinto vengono scartati senza errori; quelli inesistenti vengono tolti dopo la risposta del server, con un avviso nella barra e nella live region. Al caricamento il parametro viene tolto dal fragment lasciando il resto (es. `#q=`).
 
 ### Statistiche (`StatsPanel`)
 
@@ -265,6 +274,8 @@ Test di componenti e hook con Testing Library, in jsdom (dichiarato in testa al 
 - `CatastoRow.test.tsx`: la riga non è focalizzabile, si apre dal pulsante con `aria-expanded`/`aria-controls`, il visore non espande la riga, i valori assenti non diventano 0;
 - `Pagination.test.tsx`: comandi disabilitati ai bordi e durante il caricamento, cambio pagina solo su Invio;
 - `useCatastoFilters.test.tsx`: cascata geografica, ordinamento, AST eseguibile, apertura da link `#q=`;
+- `compare-selection.test.ts` e `compare-format.test.ts`: serializzazione e parsing del link `#confronta=`, id non validi, limite di cinque, `sessionStorage` alterato, differenze con dati assenti;
+- `Compare.test.tsx`: caselle e barra, apertura da due fuochi, colonne e differenze, link con id inesistenti, limite di cinque, Esc e Svuota;
 - `StatsPanel.test.tsx`: barre di "Altro" e "Non indicato", raggruppamento dei fuochi numerosi, tabella economica con valori non calcolabili, tabelle dei dati, errore con Riprova;
 - `Tabs.test.tsx`: una sola scheda tabulabile, frecce, Home e Fine;
 - `ExportMenu.test.tsx`: apertura e chiusura con Esc, due file per CSV con i parenti, un file per XLSX, messaggio del server oltre il tetto.

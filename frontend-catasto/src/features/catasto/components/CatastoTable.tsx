@@ -9,7 +9,7 @@ import type { SearchParams } from "../lib/simple-filters";
 import { useFilters } from "../../../context/FilterContext";
 import type { Fuoco, Parenti, TipoSegnalazione } from "@catasto/shared";
 import type { RiferimentoArchivio } from "../lib/archivio";
-import { parseSegnaturaPortata } from "../lib/segnatura";
+import { viewerVolume } from "../lib/viewer-volume";
 import { useLanguage, useT } from "../../../i18n";
 import { catastoTableMessages } from "./CatastoTable.messages";
 
@@ -37,21 +37,6 @@ interface CatastoTableProps {
   handlePageChange: (page: number) => void;
   /** Ripete l'ultima richiesta dopo un errore. */
   onRetry?: () => void;
-}
-
-/**
- * Volume e carta da aprire nel visore. La portata ha volume e carta solo
- * nella segnatura accettata, e un codice d'archivio solo se il suo volume è
- * fra quelli digitalizzati del fondo Catasto: altrimenti non si apre.
- */
-function viewerVolume(row: Fuoco, riferimento: RiferimentoArchivio) {
-  if (riferimento === "campione") {
-    return { codiceArchivio: row.codice_archivio ?? "", volume: row.volume ?? "", foglio: row.foglio ?? "" };
-  }
-  if (!row.codice_archivio_portata || !row.segnatura_portata) return null;
-  const { volume, carta } = parseSegnaturaPortata(row.segnatura_portata);
-  if (!volume || !carta) return null;
-  return { codiceArchivio: row.codice_archivio_portata, volume, foglio: carta };
 }
 
 export default function CatastoTable({

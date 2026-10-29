@@ -5,7 +5,7 @@ import { paginationSchema, parseNumericId, splitPaginationQuery, ValidationError
 import { astSchema, buildQueryFromAst } from "../utils/query-ast-builder.js";
 import { buildQuery } from "../utils/query-builder.js";
 import { parseLang } from "../models/traduzioni.model.js";
-import { describeQuery } from "@catasto/shared";
+import { COMPARE_MAX_FUOCHI, describeQuery } from "@catasto/shared";
 import { ExportService, type ExportOptions } from "../services/export.service.js";
 import { describeSimpleFilters } from "../utils/describe-filters.js";
 import { StatsService } from "../services/stats.service.js";
@@ -133,6 +133,23 @@ export const CatastoController = {
       );
     }
     res.json(await StatsService.queryStats(parsed.data.ast, parseLang(req.query.lang)));
+  },
+
+  /**
+   * GET /api/catasto/fuochi?ids=1,2,3: fuochi da pagine o ricerche diverse,
+   * in una richiesta (vista di confronto). Al massimo COMPARE_MAX_FUOCHI id
+   * numerici, validati come gli altri parametri; i duplicati contano una volta.
+   */
+  async getByIds(req: Request, res: Response) {
+    const raw = req.query.ids;
+    if (typeof raw !== "string" || !/^\d{1,10}(,\d{1,10})*$/.test(raw.replace(/\s+/g, ""))) {
+      throw new ValidationError("Parametro ids non valido: servono id numerici separati da virgola");
+    }
+    const ids = [...new Set(raw.replace(/\s+/g, "").split(",").map(Number))];
+    if (ids.length > COMPARE_MAX_FUOCHI) {
+      throw new ValidationError(`Troppi fuochi: al massimo ${COMPARE_MAX_FUOCHI}`);
+    }
+    res.json(await CatastoService.getFuochiByIds(ids, parseLang(req.query.lang)));
   },
 
   async getParenti(req: Request, res: Response) {

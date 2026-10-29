@@ -41,6 +41,7 @@ router.get("/export", exportLimiter, asyncHandler(CatastoController.exportSimple
 router.post("/query/export", exportLimiter, asyncHandler(CatastoController.exportAdvanced));
 router.post("/query", asyncHandler(CatastoController.query));
 router.get("/sidebar", asyncHandler(CatastoController.getSidebar));
+router.get("/fuochi", asyncHandler(CatastoController.getByIds));
 router.get("/manifest/:id", manifestLimiter, asyncHandler(CatastoController.getManifest));
 
 export default router;
