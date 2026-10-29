@@ -51,6 +51,7 @@ The documents draw on the following references, adapted to the nature of the pro
 
 | ID | Italiano (testo di riferimento) | English (translation) | Classificazione · Classification |
 |---|---|---|---|
+| CAT-README | [readme.md](../readme.md) | [README.en.md](../README.en.md) | Pubblico · Public |
 | CAT-DOC-00 | [Standard documentale](standard-documentale.md) | (bilingue · bilingual) | Pubblico · Public |
 | CAT-DOC-01 | [Installazione e deployment](guides.md) | [Installation and deployment](en/installation.md) | Pubblico · Public |
 | CAT-DOC-02 | [Architettura e modello dati](architettura.md) | [Architecture and data model](en/architecture.md) | Pubblico · Public |

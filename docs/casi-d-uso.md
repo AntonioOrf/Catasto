@@ -1,25 +1,47 @@
 # Casi d'uso
 
-Scenari reali di utilizzo del portale, dal punto di vista di chi lo usa e di cosa succede nel sistema. Ogni caso indica attori, precondizioni, flusso principale, varianti e le chiamate API coinvolte.
+🇮🇹 **Italiano** · 🇬🇧 [English](en/use-cases.md)
 
-> Nomi, id e valori negli esempi sono **illustrativi**: servono a mostrare il formato, non riportano dati del catasto.
+| Campo | Valore |
+|---|---|
+| Identificativo | `CAT-DOC-05` |
+| Versione | 2.0 |
+| Data | 2026-10-29 |
+| Stato | Approvato |
+| Classificazione | Pubblico |
+| Responsabili | Antonio Orfitelli, Pasquale Ruotolo |
+| Lingua | Italiano (testo di riferimento) |
+| Traduzione | [Use cases](en/use-cases.md) |
+| Documenti collegati | [CAT-DOC-00 Standard documentale](standard-documentale.md) · [CAT-DOC-01 Installazione e deployment](guides.md) · [CAT-DOC-02 Architettura e modello dati](architettura.md) · [CAT-DOC-03 Backend e API](backend.md) · [CAT-DOC-04 Frontend](frontend.md) · [CAT-DOC-06 Revisione del codice](revisione-codice.md) · [Readme del repository](../readme.md) |
 
 ---
 
-## Indice
+## 1. Scopo e destinatari
+
+Il documento è rivolto a redazione, sviluppatori, amministratori di sistema e a chi progetta l'interfaccia. Descrive scenari reali di utilizzo del portale del Catasto fiorentino del 1427/30, dal punto di vista di chi lo usa e di cosa succede nel sistema. Ogni caso indica attori, precondizioni, flusso principale, varianti e chiamate API coinvolte. I dettagli delle API sono in [Backend e API](backend.md), quelli dell'interfaccia in [Frontend](frontend.md).
+
+> Nomi, id, segnature e valori negli esempi sono **illustrativi**: servono a mostrare il formato, non riportano dati del catasto.
+
+**Convenzioni.** Nei casi d'uso "Serie" (città, contado, distretto) indica sempre la **serie territoriale**, cioè una ripartizione dei fuochi nel modello dati, non una serie archivistica (vedi [Standard documentale, §5.2](standard-documentale.md#52-livelli-di-descrizione--levels-of-description)). Volume e carta corrispondono ai livelli ISAD(G) *unità* e *componente* del fondo Catasto dell'Archivio di Stato di Firenze (ASFi). I valori economici sono in fiorini (fl.), come nei dati di origine.
+
+---
+
+## 2. Quadro d'insieme
+
+### 2.1 Indice dei casi d'uso
 
 | # | Caso d'uso | Attore principale |
 |---|---|---|
-| [UC-1](#uc-1--trovare-un-capofamiglia-e-verificarlo-sulla-carta) | Trovare un capofamiglia e verificarlo sulla carta | Studioso |
-| [UC-2](#uc-2--esplorare-un-quartiere-per-ricchezza) | Esplorare un quartiere per ricchezza | Studente |
-| [UC-3](#uc-3--costruire-salvare-e-condividere-una-query-composta) | Costruire, salvare e condividere una query composta | Demografo |
-| [UC-4](#uc-4--contribuire-la-segnatura-della-portata) | Contribuire la segnatura della portata | Utente anonimo |
-| [UC-5](#uc-5--moderare-una-segnalazione-dallemail) | Moderare una segnalazione dall'email | Redazione |
-| [UC-6](#uc-6--segnalare-e-correggere-un-dato-errato) | Segnalare e correggere un dato errato | Utente + Redazione |
-| [UC-7](#uc-7--estrarre-dati-via-api-per-unanalisi) | Estrarre dati via API per un'analisi | Ricercatore (script) |
-| [UC-8](#uc-8--installare-e-aggiornare-il-portale) | Installare e aggiornare il portale | Amministratore di sistema |
+| [UC-1](#3-uc-1--trovare-un-capofamiglia-e-verificarlo-sulla-carta) | Trovare un capofamiglia e verificarlo sulla carta | Studioso |
+| [UC-2](#4-uc-2--esplorare-un-quartiere-per-ricchezza) | Esplorare un quartiere per ricchezza | Studente |
+| [UC-3](#5-uc-3--costruire-salvare-e-condividere-una-query-composta) | Costruire, salvare e condividere una query composta | Demografo |
+| [UC-4](#6-uc-4--contribuire-la-segnatura-della-portata) | Contribuire la segnatura della portata | Utente anonimo |
+| [UC-5](#7-uc-5--moderare-una-segnalazione-dallemail) | Moderare una segnalazione dall'email | Redazione |
+| [UC-6](#8-uc-6--segnalare-e-correggere-un-dato-errato) | Segnalare e correggere un dato errato | Utente + Redazione |
+| [UC-7](#9-uc-7--estrarre-dati-via-api-per-unanalisi) | Estrarre dati via API per un'analisi | Ricercatore (script) |
+| [UC-8](#10-uc-8--installare-e-aggiornare-il-portale) | Installare e aggiornare il portale | Amministratore di sistema |
 
-### Diagramma dei casi d'uso
+### 2.2 Diagramma dei casi d'uso
 
 ```mermaid
 flowchart LR
@@ -71,9 +93,9 @@ flowchart LR
 
 ---
 
-## UC-1 — Trovare un capofamiglia e verificarlo sulla carta
+## 3. UC-1 — Trovare un capofamiglia e verificarlo sulla carta
 
-**Attore**: studioso · **Obiettivo**: trovare il fuoco di una persona nota da un'altra fonte e controllare la trascrizione sulla carta originale.
+**Attore**: studioso · **Obiettivo**: trovare il fuoco di una persona nota da un'altra fonte e controllare la trascrizione sulla carta originale del campione.
 
 **Precondizioni**: il volume del campione è digitalizzato (compare `codice_archivio`).
 
@@ -83,15 +105,15 @@ flowchart LR
 2. Dopo 350 ms il frontend chiama `GET /api/catasto?q_persona=nuto di nardo&sort_by=nome&order=ASC&page=1&limit=50`; il backend scarta "di" (nel database nome e patronimico sono un unico campo, "NUTO NARDO") e cerca i fuochi il cui nome contiene sia *nuto* sia *nardo*, in qualunque ordine.
 3. La tabella mostra i risultati; l'indice laterale mostra lo stesso elenco.
 4. Lo studioso apre la riga: vede i dati economici e, caricata con `GET /api/parenti/:id`, la composizione familiare.
-5. Clicca **Campione — Vol. 81 c. 245**: il visore chiama `GET /api/catasto/manifest/:id`, individua la carta 245 e mostra le 4 carte che partono da lì.
-6. Confronta la carta con i dati trascritti, ingrandendo con la rotella o col pinch.
+5. Clicca **Campione — Vol. 81 c. 245** (unità: volume 81 del campione; componente: carta 245): il visore chiama `GET /api/catasto/manifest/:id`, individua la carta 245 e mostra le 4 carte che partono da lì.
+6. Confronta la carta con i dati trascritti (dato della fonte), ingrandendo con la rotella o col pinch.
 
 **Varianti**
 
 - *5a. Volume digitalizzato in due parti* (es. vol. 125): il visore sceglie la parte in base alla carta.
 - *5b. Carta non individuata*: il visore apre la prima carta del volume e lo segnala; resta il link **Sito originale**.
 - *5c. Archivio non raggiungibile*: il backend risponde 502, il visore mostra un messaggio d'errore.
-- *6a. La trascrizione non corrisponde*: prosegue con [UC-6](#uc-6--segnalare-e-correggere-un-dato-errato).
+- *6a. La trascrizione non corrisponde*: prosegue con [UC-6](#8-uc-6--segnalare-e-correggere-un-dato-errato).
 
 ```mermaid
 sequenceDiagram
@@ -130,18 +152,18 @@ sequenceDiagram
 
 ---
 
-## UC-2 — Esplorare un quartiere per ricchezza
+## 4. UC-2 — Esplorare un quartiere per ricchezza
 
 **Attore**: studente · **Obiettivo**: vedere chi erano i fuochi più ricchi di un quartiere e di che mestiere.
 
 **Flusso principale**
 
-1. Apre **Altri filtri** e sceglie **Serie = Città**, poi **Quartiere = San Giovanni** (le opzioni dei livelli inferiori si restringono con `GET /api/filters?serie=…`).
-2. Imposta **Fortune min = 1000**.
+1. Apre **Altri filtri** e sceglie **Serie = Città** (serie territoriale), poi **Quartiere = San Giovanni** (le opzioni dei livelli inferiori si restringono con `GET /api/filters?serie=…`).
+2. Imposta **Fortune min = 1000** (fiorini).
 3. Clicca l'intestazione **Dati sintetici** due volte per ordinare per fortune decrescenti.
 4. Il frontend chiama `GET /api/catasto?serie=1&quartiere=3,7&fortune_min=1000&sort_by=fortune&order=DESC&page=1&limit=50`.
 5. Scorre le pagine con la paginazione o salta a una pagina precisa.
-6. Per capire i termini (fortune, imponibile, piviere) consulta la pagina **Informazioni** o il [glossario](architettura.md#glossario).
+6. Per capire i termini (fortune, imponibile, piviere) consulta la pagina **Informazioni** o il [glossario](architettura.md#34-glossario).
 
 **Varianti**
 
@@ -161,7 +183,7 @@ flowchart TD
 
 ---
 
-## UC-3 — Costruire, salvare e condividere una query composta
+## 5. UC-3 — Costruire, salvare e condividere una query composta
 
 **Attore**: demografo · **Obiettivo**: individuare i fuochi di artigiani della lana che hanno almeno un parente oltre i 60 anni, escludendo i nuclei immigrati, e condividere la ricerca con un collega.
 
@@ -202,8 +224,8 @@ Gli id delle voci (mestiere, casa…) sono quelli restituiti da `GET /api/filter
 
 - *2a. Condizione incompleta* (valore non ancora scelto): viene esclusa automaticamente dalla query finché non è completa.
 - *3a. Oltre 5 livelli di annidamento*: il pulsante **+ Gruppo** si disattiva. Una query con più di 50 condizioni viene rifiutata dal backend con `400`.
-- *7a. Link oltre 2000 caratteri*: il portale avvisa che la query è troppo lunga da condividere; resta possibile salvarla.
 - *3b. Condizione geografica*: `Quartiere` **è uguale a** *San Giovanni* comprende tutte le partizioni omonime (`San Giovanni (I)` e `(II)`), come nella ricerca semplice.
+- *7a. Link oltre 2000 caratteri*: il portale avvisa che la query è troppo lunga da condividere; resta possibile salvarla.
 
 ```mermaid
 sequenceDiagram
@@ -231,11 +253,13 @@ sequenceDiagram
 
 ---
 
-## UC-4 — Contribuire la segnatura della portata
+## 6. UC-4 — Contribuire la segnatura della portata
 
-**Attore**: utente anonimo (spesso uno studioso che ha consultato la portata in archivio) · **Obiettivo**: far sapere dove si trova la portata di un fuoco.
+**Attore**: utente anonimo (spesso uno studioso che ha consultato la portata in archivio) · **Obiettivo**: far sapere dove si trova la portata (dichiarazione del contribuente) di un fuoco.
 
 **Precondizioni**: la scheda del fuoco non ha ancora una portata pubblicata.
+
+**Provenienza**: la segnatura proposta è un **dato contribuito**; non è pubblicata, né citata come certa, finché la redazione non l'ha verificata ([UC-5](#7-uc-5--moderare-una-segnalazione-dallemail)).
 
 **Flusso principale**
 
@@ -245,7 +269,9 @@ sequenceDiagram
 4. Invia: `POST /api/segnalazioni` con `{"id_fuoco":1234,"tipo":"segnatura","valore_proposto":"ASFi, Catasto 81, c. 245r",…}`.
 5. Il backend verifica che il fuoco esista, salva la segnalazione come `nuova` (IP solo come hash) e risponde `201`.
 6. L'utente vede la conferma: la segnatura sarà pubblicata dopo la verifica della redazione.
-7. In background parte la notifica alla redazione ([UC-5](#uc-5--moderare-una-segnalazione-dallemail)).
+7. In background parte la notifica alla redazione ([UC-5](#7-uc-5--moderare-una-segnalazione-dallemail)).
+
+> Il valore `ASFi, Catasto 81, c. 245r` è la forma che il portale memorizza e mostra. Nelle citazioni della documentazione si usa la forma normalizzata dello [standard (§5.3)](standard-documentale.md#53-segnature--shelfmarks): `ASFi, Catasto, 81, c. 245r`.
 
 **Varianti**
 
@@ -255,7 +281,7 @@ sequenceDiagram
 
 ---
 
-## UC-5 — Moderare una segnalazione dall'email
+## 7. UC-5 — Moderare una segnalazione dall'email
 
 **Attore**: redazione · **Obiettivo**: accettare o respingere una segnalazione senza accedere a un pannello.
 
@@ -274,7 +300,7 @@ sequenceDiagram
 - *2a. Link scaduto* (oltre 14 giorni): `410`; si decide via API admin.
 - *2b. Segnalazione già decisa* (ad esempio da un'altra redattrice): la pagina lo dice e non mostra il pulsante; un POST risponde `409`.
 - *3a. Respingi*: stato `respinta`, nessuna pubblicazione.
-- *4a. Tipo `dato_errato` o `altro`*: cambia solo lo stato; la correzione va fatta sul dato ([UC-6](#uc-6--segnalare-e-correggere-un-dato-errato)).
+- *4a. Tipo `dato_errato` o `altro`*: cambia solo lo stato; la correzione va fatta sul dato ([UC-6](#8-uc-6--segnalare-e-correggere-un-dato-errato)).
 
 ```mermaid
 sequenceDiagram
@@ -309,13 +335,13 @@ sequenceDiagram
 
 ---
 
-## UC-6 — Segnalare e correggere un dato errato
+## 8. UC-6 — Segnalare e correggere un dato errato
 
-**Attori**: utente, redazione · **Obiettivo**: correggere una trascrizione che non corrisponde alla carta.
+**Attori**: utente, redazione · **Obiettivo**: correggere una trascrizione (dato della fonte) che non corrisponde alla carta.
 
 **Flusso principale**
 
-1. Confrontando la carta (UC-1), l'utente nota che l'imponibile trascritto è 120 ma sulla carta si legge 210.
+1. Confrontando la carta ([UC-1](#3-uc-1--trovare-un-capofamiglia-e-verificarlo-sulla-carta)), l'utente nota che l'imponibile trascritto è 120 ma sulla carta si legge 210.
 2. Clicca **Segnala un errore**, sceglie **Campo errato = Imponibile**; il modulo mostra il valore pubblicato (120) e l'utente scrive **Valore corretto = 210**, con una nota che cita la carta.
 3. `POST /api/segnalazioni` con `{"tipo":"dato_errato","campo":"imponibile","valore_attuale":"120","valore_proposto":"210",…}` → `201`.
 4. La redazione riceve l'email e usa l'API admin per metterla in esame:
@@ -341,11 +367,13 @@ stateDiagram-v2
 
 ---
 
-## UC-7 — Estrarre dati via API per un'analisi
+## 9. UC-7 — Estrarre dati via API per un'analisi
 
 **Attore**: ricercatore con uno script · **Obiettivo**: scaricare tutti i fuochi che rispondono a un criterio per elaborarli altrove.
 
-**Via breve: l'export.** Un'unica richiesta restituisce tutte le righe della ricerca in CSV (UTF-8 con BOM) o XLSX, con la stessa query e lo stesso ordine della tabella:
+### 9.1 Via breve: l'export
+
+Un'unica richiesta restituisce tutte le righe della ricerca in CSV (UTF-8 con BOM) o XLSX, con la stessa query e lo stesso ordine della tabella:
 
 ```bash
 # Tutti i fuochi con imponibile >= 500, ordinati per imponibile, in CSV
@@ -363,9 +391,11 @@ curl -s -X POST "https://catasto.example.org/api/catasto/query/export" \
 fuochi <- read.csv("fuochi.csv", comment.char = "#", fileEncoding = "UTF-8-BOM")
 ```
 
-Oltre `EXPORT_MAX_ROWS` (default 100.000, più dell'intero dataset) la risposta è un `400` con un messaggio; l'export ha un limite di 20 richieste ogni 15 minuti per IP. Dettagli in [Backend](backend.md#get-apicatastoexport--export-della-ricerca).
+Oltre `EXPORT_MAX_ROWS` (default 100.000, più dell'intero dataset) la risposta è un `400` con un messaggio; l'export ha un limite di 20 richieste ogni 15 minuti per IP. Dettagli in [Backend e API](backend.md#411-export-della-ricerca-get-apicatastoexport).
 
-**Via lunga: le pagine dell'API.** Vincoli: 300 richieste ogni 15 minuti per IP, al massimo 2000 righe per pagina.
+### 9.2 Via lunga: le pagine dell'API
+
+Vincoli: 300 richieste ogni 15 minuti per IP, al massimo 2000 righe per pagina.
 
 ```bash
 #!/usr/bin/env bash
@@ -386,19 +416,20 @@ while :; do
 done
 ```
 
-**Note**
+### 9.3 Note
 
 - Rispettare `RateLimit-Remaining` negli header; oltre la soglia si riceve `429`.
 - L'ordinamento è stabile (a parità di valore decide l'id del fuoco): le pagine non si sovrappongono e nessun fuoco viene saltato.
 - Per i parenti di ogni fuoco: `GET /api/parenti/:id`, oppure l'export con `parenti=true`.
+- I dati estratti sono dati della fonte (più eventuali segnature della portata, dati contribuiti già verificati); i valori economici restano in fiorini, non convertiti né arrotondati. Nelle pubblicazioni va citata la fonte (vedi [§11](#11-riferimenti-e-fonti)).
 
 ---
 
-## UC-8 — Installare e aggiornare il portale
+## 10. UC-8 — Installare e aggiornare il portale
 
-**Attore**: amministratore di sistema · **Obiettivo**: mettere in produzione il portale e tenerlo aggiornato.
+**Attore**: amministratore di sistema · **Obiettivo**: mettere in produzione il portale e tenerlo aggiornato. La procedura completa è in [Installazione e deployment](guides.md).
 
-**Flusso principale (prima installazione)**
+### 10.1 Prima installazione
 
 1. Copia `docker-compose.yml` sul server e crea `.env` a partire da `.env.prod.example` (password MySQL, `SEGNALAZIONI_SALT`, `ADMIN_TOKEN`, `MODERAZIONE_SECRET`, `FORMSUBMIT_*`, `CORS_ORIGIN`).
 2. Mette il dump in `init/Catasto.sql`.
@@ -408,7 +439,7 @@ done
 6. Configura il terminatore TLS (reverse proxy o CDN) davanti alla porta 1427.
 7. Invia una segnalazione di prova e conferma l'email di attivazione di FormSubmit.
 
-**Flusso di aggiornamento**
+### 10.2 Aggiornamento
 
 ```mermaid
 flowchart LR
@@ -424,7 +455,25 @@ flowchart LR
     H -->|no| L[docker compose logs backend]
 ```
 
-**Varianti**
+### 10.3 Varianti
 
 - *Ritorno a una versione precedente*: nel compose sostituire `:latest` con il tag SHA corto e rifare `up -d`.
 - *Reimport completo del dump*: fermare i container, cancellare `./mysql_data`, riavviare; il backend riapplica le migrazioni e ricarica le opzioni dei filtri.
+
+---
+
+## 11. Riferimenti e fonti
+
+- Fonte: Archivio di Stato di Firenze (ASFi), fondo Catasto, serie archivistiche dei *campioni* e delle *portate* (Catasto fiorentino del 1427/30).
+- Herlihy, David, e Christiane Klapisch-Zuber. *Les Toscans et leurs familles. Une étude du catasto florentin de 1427*. Paris: Presses de la Fondation nationale des sciences politiques – Éditions de l'EHESS, 1978.
+- Dati digitalizzati: ACRH, <https://journals.openedition.org/acrh/7458>.
+- Immagini: Archivio di Stato di Firenze, Archivio digitale ICAR, servizio IIIF.
+
+---
+
+## 12. Registro delle modifiche
+
+| Versione | Data | Autore | Descrizione |
+|---|---|---|---|
+| 1.x | — | — | Versioni precedenti, senza registro |
+| 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
