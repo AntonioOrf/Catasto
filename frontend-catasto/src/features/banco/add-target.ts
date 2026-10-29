@@ -10,6 +10,33 @@ export type TargetKey = { kind: "selezione" } | { kind: "raccolta"; id: string }
 
 export const SELEZIONE: TargetKey = { kind: "selezione" };
 
+/** Ultima destinazione scelta, per ritrovarla tornando al Banco. */
+export const TARGET_STORAGE_KEY = "catasto.banco.destinazione.v1";
+
+/**
+ * Destinazione di partenza: l'ultima scelta sul dispositivo; la prima volta
+ * la raccolta più recente, se ce n'è una, altrimenti la selezione. Una
+ * raccolta che non esiste più fa tornare alla selezione (in `useAddTarget`).
+ */
+export function loadTargetKey(firstCollectionId: string | undefined): TargetKey {
+  try {
+    const saved = JSON.parse(localStorage.getItem(TARGET_STORAGE_KEY) ?? "null");
+    if (saved?.kind === "selezione") return SELEZIONE;
+    if (saved?.kind === "raccolta" && typeof saved.id === "string") return { kind: "raccolta", id: saved.id };
+  } catch {
+    // localStorage bloccato o alterato: si riparte dal default
+  }
+  return firstCollectionId ? { kind: "raccolta", id: firstCollectionId } : SELEZIONE;
+}
+
+export function storeTargetKey(key: TargetKey): void {
+  try {
+    localStorage.setItem(TARGET_STORAGE_KEY, JSON.stringify(key));
+  } catch {
+    // non salvata: vale finché la pagina è aperta
+  }
+}
+
 export interface AddTarget {
   key: TargetKey;
   /** Nome della raccolta; null per la selezione. */

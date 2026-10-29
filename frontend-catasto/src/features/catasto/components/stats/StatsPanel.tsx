@@ -1,21 +1,47 @@
+import { useState } from "react";
 import Spinner from "../../../../components/common/Spinner";
 import { useCatastoStats } from "../../../../hooks/useCatastoStats";
 import type { SearchParams } from "../../lib/simple-filters";
 import { useLanguage, useT } from "../../../../i18n";
-import BarChart from "./BarChart";
-import { distributionBars, memberBars } from "./stats-bars";
+import { distributionItems, type ChartItem } from "./chart-items";
+import DistChart, { type ChartKind } from "./DistChart";
+import { memberBars } from "./stats-bars";
 import AgePyramid from "./AgePyramid";
 import EconomyTable from "./EconomyTable";
 import { statsMessages } from "./StatsPanel.messages";
 
+/** Barre o torta per ogni grafico, ricordate sul dispositivo. */
+const KINDS_STORAGE_KEY = "catasto.statistiche.grafici.v1";
+type ChartId = "mestieri" | "quartieri" | "serie" | "membri" | "statoCivile";
+
+function loadKinds(): Partial<Record<ChartId, ChartKind>> {
+  try {
+    const saved = JSON.parse(localStorage.getItem(KINDS_STORAGE_KEY) ?? "{}");
+    return typeof saved === "object" && saved !== null ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Pannello "Statistiche": aggregati calcolati dal backend sulla stessa
- * ricerca della tabella (filtri semplici o AST).
+ * ricerca della tabella (filtri semplici o AST). Ogni distribuzione si legge
+ * a barre o a torta.
  */
 export default function StatsPanel({ search }: { search: SearchParams }) {
   const t = useT(statsMessages);
   const { locale } = useLanguage();
   const { stats, loading, fetching, stale, error, unavailable, retry } = useCatastoStats(search, true);
+  const [kinds, setKinds] = useState(loadKinds);
+  const setKind = (id: ChartId, kind: ChartKind) => {
+    const next = { ...kinds, [id]: kind };
+    setKinds(next);
+    try {
+      localStorage.setItem(KINDS_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // non salvata: vale finché la pagina è aperta
+    }
+  };
 
   if (unavailable) {
     return (
@@ -45,6 +71,12 @@ export default function StatsPanel({ search }: { search: SearchParams }) {
   }
 
   const fmt = (n: number) => n.toLocaleString(locale);
+  const labels = { other: t("other"), notStated: t("notStated") };
+  const chart = (id: ChartId, title: string, items: ChartItem[], total: string) => (
+    <DistChart key={id} title={title} subtitle={total} items={items} kind={kinds[id] === "pie" ? "pie" : "bar"} onKind={(k) => setKind(id, k)} />
+  );
+  const fuochi = t("totalFuochi", { n: fmt(stats.fuochi) });
+  const parenti = t("totalParenti", { n: fmt(stats.parenti) });
   const media = stats.fuochi > 0 ? (stats.parenti / stats.fuochi).toLocaleString(locale, { maximumFractionDigits: 2 }) : "—";
   const tiles = [
     [t("households"), fmt(stats.fuochi)],
@@ -78,12 +110,12 @@ export default function StatsPanel({ search }: { search: SearchParams }) {
         <>
           <EconomyTable economia={stats.economia} />
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <BarChart title={t("occupations")} data={distributionBars(stats.mestieri, t)} />
-            <BarChart title={t("quarters")} data={distributionBars(stats.quartieri, t)} />
-            <BarChart title={t("series")} data={distributionBars(stats.serie, t)} />
-            <BarChart title={t("members")} data={memberBars(stats.membri, t)} />
+            {chart("mestieri", t("occupations"), distributionItems(stats.mestieri, labels), fuochi)}
+            {chart("quartieri", t("quarters"), distributionItems(stats.quartieri, labels), fuochi)}
+            {chart("serie", t("series"), distributionItems(stats.serie, labels), fuochi)}
+            {chart("membri", t("members"), memberBars(stats.membri, t), fuochi)}
             <AgePyramid eta={stats.eta} />
-            <BarChart title={t("maritalStatus")} data={distributionBars(stats.statoCivile, t)} />
+            {chart("statoCivile", t("maritalStatus"), distributionItems(stats.statoCivile, labels), parenti)}
           </div>
         </>
       )}

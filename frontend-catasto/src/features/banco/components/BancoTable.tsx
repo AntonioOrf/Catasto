@@ -1,6 +1,5 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { CatastoStats, Fuoco } from "@catasto/shared";
-import { CompareCheckbox } from "../../catasto/components/CatastoRow";
 import { SELECTION_MAX_FUOCHI } from "@catasto/shared";
 import type { AddTarget } from "../add-target";
 import { useLanguage, useT } from "../../../i18n";
@@ -16,43 +15,53 @@ interface BancoTableProps {
   sortBy: string;
   sortOrder: "ASC" | "DESC";
   onSort: (sortKey: string) => void;
-  activeId: number | null;
-  onActive: (id: number) => void;
   onOpenCarta: (row: Fuoco) => void;
   loading: boolean;
   stale: boolean;
   fetching: boolean;
   error: string | null;
   onRetry: () => void;
-  /** Destinazione della casella a sinistra: la selezione o una raccolta. */
+  /** Destinazione della colonna a sinistra: la selezione o una raccolta. */
   target: AddTarget;
+  onToggle: (row: Fuoco) => void;
 }
 
 const MISSING = "—";
 
 /**
- * Casella della riga quando la destinazione è una raccolta: spuntata se il
- * fuoco è dentro; si toglie da qui come si aggiunge.
+ * Colonna a sinistra: «+» aggiunge il fuoco alla destinazione, «✓» dice che
+ * c'è già e lo toglie (al passaggio diventa «−»). Un pulsante con
+ * aria-pressed, così il lettore di schermo legge lo stato e l'azione.
  */
-function CollectionCheckbox({ row, target }: { row: Fuoco; target: AddTarget }) {
+function ToggleCell({ row, target, onToggle }: { row: Fuoco; target: AddTarget; onToggle: (row: Fuoco) => void }) {
   const t = useT(bancoMessages);
-  const checked = target.has(row.id);
-  const disabled = !checked && target.full;
+  const inside = target.has(row.id);
+  const disabled = !inside && target.full;
+  const dest = target.nome ? t("destCollection", { nome: target.nome }) : t("destSelection");
   return (
-    <label
-      onClick={(e) => e.stopPropagation()}
-      title={disabled ? t("collectionFull", { max: SELECTION_MAX_FUOCHI }) : undefined}
-      className={`inline-flex items-center justify-center min-h-8 min-w-8 ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle(row);
+      }}
+      disabled={disabled}
+      aria-pressed={inside}
+      aria-label={inside ? t("toggleRemove", { nome: row.nome, dest }) : t("toggleAdd", { nome: row.nome, dest })}
+      title={disabled ? t("collectionFull", { max: SELECTION_MAX_FUOCHI }) : inside ? t("toggleRemove", { nome: row.nome, dest }) : t("toggleAdd", { nome: row.nome, dest })}
+      className={`group min-h-8 min-w-8 inline-flex items-center justify-center rounded-ui text-base font-semibold disabled:opacity-40 disabled:cursor-not-allowed ${
+        inside ? "text-primary hover:text-chart-2" : "text-text-accent hover:text-primary hover:bg-item-hover"
+      }`}
     >
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={() => (checked ? target.remove([row.id]) : target.add([row.id]))}
-        aria-label={t("inCollectionAria", { nome: row.nome, raccolta: target.nome ?? "" })}
-        className="h-[15px] w-[15px] m-0"
-      />
-    </label>
+      {inside ? (
+        <>
+          <span aria-hidden="true" className="group-hover:hidden group-focus-visible:hidden">✓</span>
+          <span aria-hidden="true" className="hidden group-hover:inline group-focus-visible:inline">−</span>
+        </>
+      ) : (
+        <span aria-hidden="true">+</span>
+      )}
+    </button>
   );
 }
 
@@ -62,7 +71,7 @@ function CollectionCheckbox({ row, target }: { row: Fuoco; target: AddTarget }) 
  * risultati della query (dalle statistiche, non dalla pagina).
  */
 export default function BancoTable(props: BancoTableProps) {
-  const { columns, rows, label, stats, sortBy, sortOrder, onSort, activeId, onActive, onOpenCarta, loading, stale, fetching, error, onRetry, target } = props;
+  const { columns, rows, label, stats, sortBy, sortOrder, onSort, onOpenCarta, loading, stale, fetching, error, onRetry, target, onToggle } = props;
   const t = useT(bancoMessages);
   const { locale } = useLanguage();
 
@@ -177,19 +186,15 @@ export default function BancoTable(props: BancoTableProps) {
           ) : (
             rows.map((row) => {
               const selected = target.has(row.id);
-              const isActive = activeId === row.id;
               return (
                 <tr
                   key={row.id}
-                  onMouseEnter={() => onActive(row.id)}
-                  onFocus={() => onActive(row.id)}
-                  onClick={() => onActive(row.id)}
                   className={`h-8 border-b border-border-base/30 ${
-                    selected ? "bg-primary/10" : isActive ? "bg-primary/5" : "odd:bg-bg-main even:bg-bg-sidebar/60"
+                    selected ? "bg-primary/10" : "odd:bg-bg-main even:bg-bg-sidebar/60"
                   }`}
                 >
                   <td className={`w-8 pl-1.5 border-l-[3px] ${selected ? "border-l-primary" : "border-l-transparent"}`}>
-                    {target.nome === null ? <CompareCheckbox row={row} /> : <CollectionCheckbox row={row} target={target} />}
+                    <ToggleCell row={row} target={target} onToggle={onToggle} />
                   </td>
                   {columns.map((col) => {
                     const value = cell(col, row);
