@@ -1,13 +1,12 @@
-import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
+import base from '../eslint.config.base.mjs'
 
 export default tseslint.config(
   { ignores: ['dist'] },
-  js.configs.recommended,
-  ...tseslint.configs.recommended,
+  ...base,
   {
     // Script classici serviti così come sono (es. theme-init.js), fuori dal bundle.
     files: ['public/**/*.js'],
@@ -24,9 +23,9 @@ export default tseslint.config(
         sourceType: 'module',
       },
     },
-    rules: {
-      '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
-      '@typescript-eslint/no-explicit-any': 'off',
-    },
+  },  {
+    // Test e helper dei test non passano dal fast refresh di Vite.
+    files: ['**/*.test.{ts,tsx}', 'src/test/**'],
+    rules: { 'react-refresh/only-export-components': 'off' },
   },
 )

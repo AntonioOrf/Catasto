@@ -220,7 +220,8 @@ Dopo l'invio compare la conferma "verificata dalla redazione": nulla viene pubbl
 | `npm run build` | bundle in `dist/` |
 | `npm run preview` | serve la build |
 | `npm run lint` | ESLint, zero warning ammessi |
-| `npm test` | Vitest (ambiente node) |
+| `npm test` | Vitest (ambiente node; jsdom nei test di componenti e hook) |
+| `npm run lint` | ESLint, con la configurazione condivisa `eslint.config.base.mjs` della root |
 
 **Variabili**: solo `VITE_API_URL` (facoltativa, letta a build time).
 
@@ -243,7 +244,11 @@ Test unitari sulla logica pura in `features/catasto/lib/`:
 - `query-ast-validate.test.ts`: validazione strutturale dei link condivisi, limiti di profondità, `pruneAst` tollerante;
 - `saved-queries.test.ts`: generazione degli id anche fuori da HTTPS.
 
-Non ci sono ancora test di componenti o hook (niente jsdom).
+Test di componenti e hook con Testing Library, in jsdom (dichiarato in testa al file con `// @vitest-environment jsdom`; `src/test/setup.ts` fissa la lingua italiana e smonta il DOM dopo ogni test, `src/test/render.tsx` fornisce i provider dell'app):
+
+- `CatastoRow.test.tsx`: la riga non è focalizzabile, si apre dal pulsante con `aria-expanded`/`aria-controls`, il visore non espande la riga, i valori assenti non diventano 0;
+- `Pagination.test.tsx`: comandi disabilitati ai bordi e durante il caricamento, cambio pagina solo su Invio;
+- `useCatastoFilters.test.tsx`: cascata geografica, ordinamento, AST eseguibile, apertura da link `#q=`.
 
 ---
 

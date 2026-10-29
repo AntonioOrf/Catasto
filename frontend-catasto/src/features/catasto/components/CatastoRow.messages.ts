@@ -37,6 +37,8 @@ export const catastoRowMessages = defineMessages({
     noRelatives: "Nessun parente registrato.",
     noOccupation: "Nessun mestiere",
     nd: "N/D",
+    expandDetails: "Mostra la scheda di {nome}",
+    collapseDetails: "Chiudi la scheda di {nome}",
   },
   en: {
     vol: "Vol.",
@@ -74,5 +76,7 @@ export const catastoRowMessages = defineMessages({
     noRelatives: "No relatives recorded.",
     noOccupation: "No occupation",
     nd: "n/a",
+    expandDetails: "Show the record of {nome}",
+    collapseDetails: "Close the record of {nome}",
   },
 });

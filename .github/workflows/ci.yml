@@ -20,7 +20,8 @@ jobs:
 
       - run: npm run build
 
-      - run: npm run lint -w catasto-frontend
+      # Frontend e backend, con la configurazione condivisa eslint.config.base.mjs.
+      - run: npm run lint
 
       - name: Type-check backend
         working-directory: backend-catasto
@@ -31,3 +32,40 @@ jobs:
         run: npx tsc --noEmit
 
       - run: npm test
+
+  # Le query compilate (ricerca, statistiche, export) girano su un MySQL vero:
+  # il setup dei test carica il dump di prova e applica le migrazioni.
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: catasto_test
+          MYSQL_USER: catasto
+          MYSQL_PASSWORD: catasto
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      TEST_DB_HOST: 127.0.0.1
+      TEST_DB_PORT: 3306
+      TEST_DB_USER: catasto
+      TEST_DB_PASSWORD: catasto
+      TEST_DB_NAME: catasto_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run test:integration -w catasto-backend

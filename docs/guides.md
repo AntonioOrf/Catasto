@@ -189,7 +189,7 @@ Il workflow si può lanciare anche a mano da Actions → Docker images → Run w
 | Porta già occupata | un altro servizio usa 1427, 3005 o 3306 | liberare la porta o cambiarla in `docker-compose.yml` |
 | Le segnalazioni rispondono 500 | manca `SEGNALAZIONI_SALT` | impostarla in `.env` e riavviare il backend |
 | Le email non arrivano | vedi i log del backend | [diagnosi FormSubmit](backend.md#flusso-email-formsubmit) |
-| I filtri mostrano valori vecchi dopo un reimport | opzioni in cache nel backend | `docker compose restart backend` |
+| I filtri mostrano valori vecchi dopo un reimport | opzioni in cache nel backend (fino a `FILTERS_CACHE_TTL`, di default un'ora) | `POST /api/filters/cache/invalidate` con `ADMIN_TOKEN` (vedi `docs/backend.md`), oppure `docker compose restart backend` |
 | Il visore non carica le carte (errore) | il servizio ICAR non risponde (502 nei log del backend) | riprovare più tardi; resta il link al sito originale |
 | Troppe richieste (`429`) | rate limit per IP | con un proxy davanti, verificare `TRUST_PROXY` |
 | Errori di tipo in build | `@catasto/shared` non ricompilato | `npm run build -w @catasto/shared` |

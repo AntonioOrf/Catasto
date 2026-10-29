@@ -92,7 +92,7 @@ Per la produzione con Docker (porta `1427`) segui la [guida all'installazione](d
 ## Contribuire
 
 1. Crea un ramo dal `main`.
-2. Prima di aprire la PR esegui i controlli della CI: `npm run build`, `npm run lint -w catasto-frontend`, `npx tsc --noEmit` in `backend-catasto/` e `frontend-catasto/`, `npm test`.
+2. Prima di aprire la PR esegui i controlli della CI: `npm run build`, `npm run lint`, `npx tsc --noEmit` in `backend-catasto/` e `frontend-catasto/`, `npm test` e, con un MySQL di prova, `npm run test:integration -w catasto-backend` (vedi [Backend](docs/backend.md#script-e-test)).
 3. Se aggiungi tabelle, crea una nuova migrazione numerata in `backend-catasto/migrations/`.
 4. Se aggiungi un campo interrogabile, basta dichiararlo in `packages/shared/src/fields.ts`: frontend e backend lo usano entrambi.
 

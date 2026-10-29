@@ -37,9 +37,9 @@ backend-catasto/
     ├── config/db.ts               # pool mysql2 (connectionLimit 50, TLS opzionale)
     ├── routes/
     │   ├── catasto.routes.ts      # /api/catasto (+ limiter dedicato al manifest)
-    │   ├── filter.routes.ts       # /api/filters
+    │   ├── filter.routes.ts       # /api/filters (+ invalidazione admin della cache)
     │   ├── parenti.routes.ts      # /api/parenti/:id
-    │   ├── mestieri.routes.ts     # /api/mestieri
+    │   ├── mestieri.routes.ts     # /api/mestieri (API pubblica, non usata dal frontend)
     │   └── segnalazione.routes.ts # /api/segnalazioni (pubblica, admin, moderazione)
     ├── controllers/
     │   ├── catasto.controller.ts  # fuochi, ricerca avanzata, manifest, parenti, mestieri
@@ -51,11 +51,11 @@ backend-catasto/
     │   └── notifica.service.ts    # inoltro email via FormSubmit con link firmati
     ├── models/
     │   ├── fuoco.model.ts         # SELECT sui fuochi, join, segnatura della portata
-    │   ├── common.model.ts        # lookup, filtri (con cache), parenti, mestieri
+    │   ├── common.model.ts        # lookup, filtri (cache con TTL), parenti, mestieri
     │   ├── traduzioni.model.ts    # lingua (`lang`), traduzioni delle etichette (con cache)
     │   └── segnalazione.model.ts
     ├── middlewares/
-    │   ├── admin.middleware.ts    # Bearer ADMIN_TOKEN, confronto timing-safe
+    │   ├── admin.middleware.ts    # Bearer ADMIN_TOKEN, confronto timing-safe, adminLimiter
     │   ├── async-handler.ts       # inoltra gli errori async all'error handler
     │   └── error.middleware.ts    # 404 + gestione errori (maschera i 5xx in produzione)
     ├── utils/
@@ -118,8 +118,9 @@ Base URL: stessa origine del sito (`/api`, proxato da nginx) oppure `http://loca
 | POST | `/api/catasto/query` | pubblico | Ricerca avanzata con AST |
 | GET | `/api/catasto/manifest/:id` | pubblico, 30 req/15 min | Pagine del volume digitalizzato (IIIF) |
 | GET | `/api/filters` | pubblico | Opzioni per i filtri |
+| POST | `/api/filters/cache/invalidate` | admin | Svuota la cache delle opzioni dei filtri e delle traduzioni |
 | GET | `/api/parenti/:id` | pubblico | Membri del fuoco |
-| GET | `/api/mestieri` | pubblico | Elenco grezzo dei mestieri |
+| GET | `/api/mestieri` | pubblico (API) | Elenco grezzo dei mestieri, per chi usa l'API |
 | POST | `/api/segnalazioni` | pubblico, 5 req/ora | Invia una segnalazione |
 | GET | `/api/segnalazioni` | admin | Elenco segnalazioni |
 | PATCH | `/api/segnalazioni/:id` | admin | Cambia lo stato di una segnalazione |
@@ -254,9 +255,18 @@ Per le partizioni geografiche le voci omonime che differiscono solo per il numer
 
 Un fuoco inesistente restituisce `[]`.
 
+### `POST /api/filters/cache/invalidate`
+
+Rotta admin (header `Authorization: Bearer <ADMIN_TOKEN>`, stesso `adminLimiter` delle altre). Svuota la cache delle opzioni dei filtri e quella delle traduzioni: la richiesta successiva le rilegge dal DB. Serve dopo un reimport del dump o un import di traduzioni, per non aspettare la scadenza (`FILTERS_CACHE_TTL`, di default un'ora) né riavviare il backend.
+
+```bash
+curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://catasto.example.org/api/filters/cache/invalidate
+# {"ok":true}
+```
+
 ### `GET /api/mestieri`
 
-Righe grezze della tabella `mestieri`, ordinate per nome. Il frontend usa invece `/api/filters`.
+Righe grezze della tabella `mestieri`, ordinate per nome (per etichetta tradotta con `lang=en`). Il frontend non la usa (prende i mestieri da `/api/filters`): resta come **API pubblica** per chi estrae i dati, con la stessa forma delle colonne del dump. Va considerata stabile: cambiarla rompe i client esterni.
 
 ### `GET /health`
 
@@ -515,6 +525,7 @@ docker compose exec backend node backend-catasto/dist/scripts/migrate.js
 | `FORMSUBMIT_ORIGIN` | primo `CORS_ORIGIN` | Origin inviata a FormSubmit e base dei link |
 | `MODERAZIONE_SECRET` | vuota = niente link | Chiave HMAC dei link Accetta/Respingi |
 | `PUBLIC_API_URL` | origin del sito | Base di `/api` nei link, se diversa dal sito |
+| `FILTERS_CACHE_TTL` | `3600` | Durata in secondi della cache delle opzioni dei filtri; `0` = senza scadenza. Per svuotarla subito: `POST /api/filters/cache/invalidate` |
 
 Esempio completo per la produzione: [`.env.prod.example`](../.env.prod.example).
 
@@ -531,17 +542,32 @@ Esempio completo per la produzione: [`.env.prod.example`](../.env.prod.example).
 | `npm run db:migrate:prod` | migrazioni dalla build |
 | `npm run db:export-traduzioni [-- file.csv]` | CSV dei valori di lookup senza traduzione inglese |
 | `npm run db:import-traduzioni -- file.csv` | importa il CSV compilato in `traduzioni_lookup` |
-| `npm test` | `vitest run` |
+| `npm run lint` | ESLint, con la configurazione condivisa `eslint.config.base.mjs` della root |
+| `npm test` | test unitari (`vitest run`, database simulato) |
+| `npm run test:integration` | test di integrazione su un MySQL vero (vedi sotto) |
 
-I test (vitest, database sempre simulato) coprono query builder semplice e AST (compresi liste geografiche, ordinamento stabile e AST troppo annidati), token di moderazione, servizio di notifica, cambi di stato delle segnalazioni (con il ripristino della segnatura precedente), validazione della creazione, rotte di moderazione, `TRUST_PROXY`, `toPages` del manifest, l'associazione portata→volume e le traduzioni (parsing di `lang`, normalizzazione, fallback, cache, CSV di export/import). Non ci sono ancora test per i controller di ricerca, i middleware o test di integrazione su MySQL.
+I **test unitari** (vitest, database sempre simulato) coprono query builder semplice e AST (compresi liste geografiche, ordinamento stabile e AST troppo annidati), controller di ricerca, middleware (admin, errori), `validation.ts`, cache delle opzioni dei filtri, token di moderazione, servizio di notifica, cambi di stato delle segnalazioni (con il ripristino della segnatura precedente), validazione della creazione, rotte di moderazione, `TRUST_PROXY`, `toPages` del manifest, l'associazione portata→volume e le traduzioni (parsing di `lang`, normalizzazione, fallback, cache, CSV di export/import).
+
+I **test di integrazione** (`test/integration/`) eseguono le query compilate su MySQL 8: il setup cancella tutte le tabelle del database indicato, carica il dump di prova `test/fixtures/catasto-fixture.sql` (pochi fuochi scelti per i casi limite) e applica le migrazioni con lo stesso runner della produzione. Il database si indica **solo** con variabili `TEST_DB_*`, mai con le `DB_*` del backend, e il nome deve contenere `test`:
+
+```bash
+# backend-catasto/.env.test (ignorato da git)
+TEST_DB_HOST=127.0.0.1
+TEST_DB_USER=catasto
+TEST_DB_PASSWORD=catasto
+TEST_DB_NAME=catasto_test
+
+npm run test:integration -w catasto-backend
+```
+
+In CI girano in un job dedicato con il servizio `mysql:8.0` di GitHub Actions.
 
 ---
 
 ## Limiti noti
 
-I problemi emersi dalla revisione del codice di settembre 2026 sono stati corretti; lo storico è in [revisione-codice.md](revisione-codice.md). Restano due comportamenti da conoscere:
+I problemi emersi dalla revisione del codice di settembre 2026 sono stati corretti; lo storico è in [revisione-codice.md](revisione-codice.md). Resta un comportamento da conoscere:
 
 | Area | Descrizione |
 |---|---|
-| Cache | Le opzioni dei filtri non scadono: dopo un reimport del dump serve riavviare il backend. |
 | Rate limit | I contatori sono in memoria e per processo: con più istanze del backend i limiti valgono per istanza. |

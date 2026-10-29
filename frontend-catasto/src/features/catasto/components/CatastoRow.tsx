@@ -40,19 +40,6 @@ const sectionTitle =
   "text-xs md:text-sm font-bold text-primary uppercase tracking-wider mb-2 md:mb-3 flex items-center gap-2 border-b border-border-base pb-1";
 const dashedSection = "pt-2 border-t border-dashed border-border-base";
 
-/**
- * Riga e card si espandono al click: senza questo handler restano
- * irraggiungibili da tastiera. Il controllo sul target evita che Invio su un
- * pulsante interno (visore, segnalazione) espanda anche la riga.
- */
-const toggleOnKey = (id: number, onRowClick: (id: number) => void) => (e: React.KeyboardEvent) => {
-  if (e.target !== e.currentTarget) return;
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    onRowClick(id);
-  }
-};
-
 /** Esegue `action` senza propagare il click alla riga, che altrimenti si espanderebbe. */
 const stop = (action: () => void) => (e: React.MouseEvent) => {
   e.stopPropagation();
@@ -65,6 +52,31 @@ const ExpandIcon = ({ expanded }: { expanded: boolean }) =>
   ) : (
     <ChevronRight className="h-5 w-5 text-text-accent opacity-50" aria-hidden="true" />
   );
+
+/** Id del dettaglio espanso, per aria-controls. */
+const detailsId = (id: number) => `fuoco-dettagli-${id}`;
+
+/**
+ * Unico controllo da tastiera per aprire e chiudere la scheda: prima era la
+ * riga stessa (tabIndex=0), che conteneva altri pulsanti, cioè interattivi
+ * annidati. Il clic sul resto della riga resta come scorciatoia col mouse.
+ */
+const ExpandButton = ({ row, expanded, onRowClick }: Pick<CatastoRowProps, "row" | "expanded" | "onRowClick">) => {
+  const t = useT(catastoRowMessages);
+  return (
+    <button
+      type="button"
+      onClick={stop(() => onRowClick(row.id))}
+      aria-expanded={expanded}
+      aria-controls={expanded ? detailsId(row.id) : undefined}
+      aria-label={t(expanded ? "collapseDetails" : "expandDetails", { nome: row.nome })}
+      title={t(expanded ? "collapseDetails" : "expandDetails", { nome: row.nome })}
+      className="inline-flex items-center justify-center min-h-11 min-w-11 rounded hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary transition-colors"
+    >
+      <ExpandIcon expanded={expanded} />
+    </button>
+  );
+};
 
 /** Etichetta che distingue campione e portata, uguale nei due riquadri. */
 const RefLabel = ({ children }: { children: string }) => (
@@ -408,10 +420,7 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
         <tr
           ref={ref}
           onClick={() => onRowClick(row.id)}
-          onKeyDown={toggleOnKey(row.id, onRowClick)}
-          tabIndex={0}
-          aria-expanded={expanded}
-          className={`cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2 border-b border-border-base ${
+          className={`cursor-pointer transition-colors border-b border-border-base ${
             expanded ? "bg-primary/10" : "bg-bg-table hover:bg-primary/5"
           }`}
         >
@@ -446,13 +455,13 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
             </div>
           </td>
 
-          <td className="px-6 py-4 text-right">
-            <ExpandIcon expanded={expanded} />
+          <td className="px-4 py-4 text-right">
+            <ExpandButton row={row} expanded={expanded} onRowClick={onRowClick} />
           </td>
         </tr>
 
         {expanded && (
-          <tr className="bg-primary/5">
+          <tr id={detailsId(row.id)} className="bg-primary/5">
             <td colSpan={5} className="px-6 py-6 border-b-2 border-text-accent/30">
               <ExpandedDetails row={row} loadingParenti={loadingParenti} parentiData={parentiData} onSegnala={onSegnala} />
             </td>
@@ -472,10 +481,7 @@ export const CatastoMobileCard = React.memo(
         <div
           ref={ref}
           onClick={() => onRowClick(row.id)}
-          onKeyDown={toggleOnKey(row.id, onRowClick)}
-          tabIndex={0}
-          aria-expanded={expanded}
-          className={`focus-visible:outline-2 focus-visible:outline-primary p-4 rounded-lg border transition-colors cursor-pointer shadow-sm ${
+          className={`p-4 rounded-lg border transition-colors cursor-pointer shadow-sm ${
             expanded ? "bg-primary/10 border-primary" : "bg-bg-table border-border-base hover:border-primary/50"
           }`}
         >
@@ -487,8 +493,8 @@ export const CatastoMobileCard = React.memo(
                 {row.mestiere || t("noOccupation")}
               </p>
             </div>
-            <div className="flex-shrink-0 mt-0.5">
-              <ExpandIcon expanded={expanded} />
+            <div className="flex-shrink-0 -mt-2 -mr-2">
+              <ExpandButton row={row} expanded={expanded} onRowClick={onRowClick} />
             </div>
           </div>
 
@@ -512,7 +518,11 @@ export const CatastoMobileCard = React.memo(
           </div>
 
           {expanded && (
-            <div className="mt-4 pt-4 border-t-2 border-text-accent/30 cursor-auto" onClick={(e) => e.stopPropagation()}>
+            <div
+              id={detailsId(row.id)}
+              className="mt-4 pt-4 border-t-2 border-text-accent/30 cursor-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <ExpandedDetails row={row} loadingParenti={loadingParenti} parentiData={parentiData} onSegnala={onSegnala} />
             </div>
           )}

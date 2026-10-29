@@ -4,7 +4,7 @@ Revisione di backend, frontend, pacchetto condiviso, CI e deploy sul commit `bb2
 
 **Stato della pipeline**: `npm ci`, `npm run build`, lint del frontend, `tsc --noEmit` di backend e frontend e `npm test` passano. Test: 59 nel backend, 14 nel frontend, tutti verdi.
 
-**Esito**: tutti i problemi elencati sono stati corretti nella stessa tornata di lavoro, ciascuno con i test relativi (ora 73 nel backend e 42 nel frontend). Il dettaglio sotto descrive il problema originale e, in fondo a ogni voce, la correzione. Restano aperti solo i punti indicati come tali in R-16 e in "Altre osservazioni".
+**Esito**: tutti i problemi elencati sono stati corretti nella stessa tornata di lavoro, ciascuno con i test relativi (ora 73 nel backend e 42 nel frontend). Il dettaglio sotto descrive il problema originale e, in fondo a ogni voce, la correzione. I punti rimasti aperti in R-16 e in "Altre osservazioni" sono stati chiusi a ottobre 2026 (issue #38): vedi [Aggiornamento di ottobre 2026](#aggiornamento-di-ottobre-2026).
 
 **SQL injection**: nessuna trovata. Colonne, join e ordinamenti arrivano da whitelist; tutti i valori sono parametrizzati; i parametri non scalari (`?x[]=`) sono rifiutati.
 
@@ -29,7 +29,7 @@ Revisione di backend, frontend, pacchetto condiviso, CI e deploy sul commit `bb2
 | Bassa | R-13 | Frontend | Valori assenti mostrati come "0 fiorini"; età 0 mostrata come "-" | corretto |
 | Bassa | R-14 | Frontend | Messaggi d'errore tecnici in inglese ("Failed to fetch") | corretto |
 | Bassa | R-15 | Segnature | Segnatura senza `id_fuoco` accettabile ma non pubblicata | corretto |
-| Bassa | R-16 | Accessibilità | Contrasto insufficiente e messaggi non annunciati | in parte |
+| Bassa | R-16 | Accessibilità | Contrasto insufficiente e messaggi non annunciati | corretto |
 
 ---
 
@@ -143,7 +143,7 @@ Lo schema zod ricorsivo non limita la profondità: il controllo sul limite di 5 
 - Le righe `<tr tabIndex=0>` contengono pulsanti (interattivi annidati).
 - Il titolo della pagina non cambia tra le route.
 
-**Correzione**: testo in `amber-800`/`amber-300` (AA in entrambi i temi) dentro una live region, Esc chiude l'indice su mobile, titolo della scheda per pagina. Restano aperti gli interattivi annidati nelle righe.
+**Correzione**: testo in `amber-800`/`amber-300` (AA in entrambi i temi) dentro una live region, Esc chiude l'indice su mobile, titolo della scheda per pagina. Interattivi annidati (ottobre 2026): righe e card non sono più focalizzabili; si aprono da un pulsante dedicato con `aria-expanded` e `aria-controls` verso il dettaglio, mentre il clic sul resto della riga resta come scorciatoia col mouse.
 
 ---
 
@@ -152,7 +152,7 @@ Lo schema zod ricorsivo non limita la profondità: il controllo sul limite di 5 
 - **Sicurezza**
   - I link Accetta/Respingi transitano per FormSubmit: chi accede alla casella della redazione può moderare per 14 giorni. È una scelta di progetto, ora documentata.
   - `docker.yml` avviato a mano può pubblicare `:latest` da un ramo qualsiasi senza passare dalla CI.
-- **Cache** (aperto): le opzioni dei filtri non scadono mai (`common.model.ts:58-68`); dopo un reimport del dump serve riavviare il backend.
+- **Cache** (chiuso a ottobre 2026): le opzioni dei filtri non scadevano mai (`common.model.ts:58-68`); dopo un reimport del dump serviva riavviare il backend.
 - **Codice inutilizzato**
   - `importQuery` in `saved-queries.ts`;
   - la prop `defaultCampo` di `SegnalazioneModal`;
@@ -167,3 +167,26 @@ Lo schema zod ricorsivo non limita la profondità: il controllo sul limite di 5 
   - controller di ricerca, middleware (auth admin, errori), `validation.ts`;
   - componenti e hook React;
   - test di integrazione su MySQL.
+
+---
+
+## Aggiornamento di ottobre 2026
+
+Chiusura dei punti aperti (issue #38).
+
+| Punto | Esito |
+|---|---|
+| Cache delle opzioni dei filtri | TTL configurabile `FILTERS_CACHE_TTL` (secondi, default 3600, `0` = senza scadenza) e rotta admin `POST /api/filters/cache/invalidate`, che svuota anche la cache delle traduzioni |
+| R-16, interattivi annidati | Pulsante dedicato per aprire e chiudere la scheda, `tabIndex` tolto da righe e card |
+| `importQuery` | Rimosso |
+| Prop `defaultCampo` di `SegnalazioneModal` | Rimossa |
+| Alias Vite `@` | Rimosso, insieme al path `@/*` del `tsconfig` e alla dipendenza inutilizzata `vite-plugin-tsconfig-paths` |
+| `/api/mestieri` | Mantenuto e documentato come API pubblica in `docs/backend.md` |
+| Route `/mappa` non collegata | Non toccata: fuori dal perimetro della issue |
+| `engines` | `node >= 20` in tutti i `package.json` |
+| Lint del backend | ESLint con la configurazione condivisa `eslint.config.base.mjs`; la CI esegue `npm run lint` su tutti i workspace |
+| `@eslint/js` e `globals` | Dichiarate nelle `devDependencies` |
+| `.dockerignore` dei workspace | Eliminati; le regole valide stanno nel `.dockerignore` della root, l'unico letto |
+| `docker.yml` avviato a mano | `:latest` solo dal `main`; da un altro ramo si pubblica solo il tag `:sha` |
+| Test mancanti | Unitari per controller di ricerca, `admin.middleware.ts`, `error.middleware.ts`, `validation.ts` e cache dei filtri; Testing Library per `CatastoRow`, `Pagination` e `useCatastoFilters`; test di integrazione su MySQL 8 (job `integration` della CI, dump di prova e migrazioni) |
+

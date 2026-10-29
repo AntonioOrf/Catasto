@@ -21,7 +21,6 @@ interface SegnalazioneModalProps {
   row: Fuoco | null;
   /** Tipo preselezionato: dal visore si segnala una segnatura, dalla tabella un dato. */
   defaultTipo?: TipoSegnalazione;
-  defaultCampo?: string;
 }
 
 const REPORTABLE = FIELD_REGISTRY.filter((f) => f.reportable && !f.editorial);
@@ -62,10 +61,9 @@ export default function SegnalazioneModal({
   onClose,
   row,
   defaultTipo = "dato_errato",
-  defaultCampo,
 }: SegnalazioneModalProps) {
   const [tipo, setTipo] = useState<TipoSegnalazione>(defaultTipo);
-  const [campo, setCampo] = useState(defaultCampo ?? REPORTABLE[0].key);
+  const [campo, setCampo] = useState(REPORTABLE[0].key);
   const [valoreProposto, setValoreProposto] = useState("");
   const [note, setNote] = useState("");
   const [email, setEmail] = useState("");
@@ -79,14 +77,14 @@ export default function SegnalazioneModal({
   useEffect(() => {
     if (!isOpen) return;
     setTipo(defaultTipo);
-    setCampo(defaultCampo ?? REPORTABLE[0].key);
+    setCampo(REPORTABLE[0].key);
     setValoreProposto("");
     setNote("");
     setWebsite("");
     setAltroFondo(false);
     mutation.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset sull'apertura, non a ogni render della mutation
-  }, [isOpen, defaultTipo, defaultCampo]);
+  }, [isOpen, defaultTipo]);
 
   const dialogRef = useRef<HTMLDivElement>(null);
   useModal(isOpen, onClose, dialogRef);
