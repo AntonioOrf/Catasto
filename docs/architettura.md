@@ -132,6 +132,8 @@ I tipi delle colonne del dump sono indicativi (dedotti dalle query); fanno fede 
 
 ### Glossario
 
+Questa tabella è la fonte delle definizioni mostrate nel portale (suggerimenti accanto alle etichette e pagina `/glossario`, dati in `frontend-catasto/src/i18n/glossary.ts`): una modifica qui va riportata lì, e viceversa.
+
 | Termine | Significato |
 |---|---|
 | **Fuoco** | Nucleo familiare censito: l'unità del catasto, intestata al capofamiglia |

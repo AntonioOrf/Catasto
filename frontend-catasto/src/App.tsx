@@ -7,10 +7,12 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 import { useDocumentTitle } from './hooks/useDocumentTitle';
 import { useT } from './i18n';
 import { appMessages } from './App.messages';
+import { TourProvider } from './features/tour/TourProvider';
 
 const InfoPage = lazy(() => import('./pages/InfoPage'));
 const MappaPage = lazy(() => import('./pages/MappaPage'));
 const ContattiPage = lazy(() => import('./pages/ContattiPage'));
+const GlossarioPage = lazy(() => import('./pages/GlossarioPage'));
 
 type TitleKey = Exclude<keyof (typeof appMessages)['it'], 'loadingPage'>;
 
@@ -34,6 +36,7 @@ export default function App() {
   return (
     <FilterProvider>
       <Router>
+        <TourProvider>
         <ErrorBoundary>
           <Suspense fallback={<PageFallback />}>
             <Routes>
@@ -41,9 +44,11 @@ export default function App() {
               <Route path="/informazioni" element={<Titled title="info"><InfoPage /></Titled>} />
               <Route path="/mappa" element={<Titled title="map"><MappaPage /></Titled>} />
               <Route path="/contatti" element={<Titled title="contacts"><ContattiPage /></Titled>} />
+              <Route path="/glossario" element={<Titled title="glossary"><GlossarioPage /></Titled>} />
             </Routes>
           </Suspense>
         </ErrorBoundary>
+        </TourProvider>
       </Router>
     </FilterProvider>
   );

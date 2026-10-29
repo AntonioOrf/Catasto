@@ -6,12 +6,14 @@ export const appMessages = defineMessages({
     info: "Informazioni",
     map: "Mappa",
     contacts: "Contatti",
+    glossary: "Glossario",
     loadingPage: "Caricamento pagina",
   },
   en: {
     info: "About",
     map: "Map",
     contacts: "Contact",
+    glossary: "Glossary",
     loadingPage: "Loading page",
   },
 });

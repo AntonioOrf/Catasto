@@ -1,4 +1,6 @@
-import { Menu, X, Scroll, Moon, Sun, ArrowLeft, Languages } from "lucide-react";
+import { Menu, X, Scroll, Moon, Sun, ArrowLeft, Languages, HelpCircle } from "lucide-react";
+import { useTour } from "../../features/tour/tour-context";
+import { tourMessages } from "../../features/tour/tour.messages";
 import { Link } from "react-router-dom";
 import useDarkMode from "../../hooks/useDarkMode";
 import { useLanguage, useT } from "../../i18n";
@@ -15,6 +17,8 @@ export default function Header({ isSidebarOpen = false, setIsSidebarOpen, showHo
   const [theme, setTheme] = useDarkMode();
   const { lang, setLang } = useLanguage();
   const t = useT(headerMessages);
+  const tTour = useT(tourMessages);
+  const tour = useTour();
 
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
 
@@ -59,6 +63,15 @@ export default function Header({ isSidebarOpen = false, setIsSidebarOpen, showHo
         </div>
         
         <div className="flex items-center h-full gap-1 sm:gap-3 lg:gap-4">
+          <button
+            onClick={tour.start}
+            className="flex items-center gap-1.5 p-2.5 sm:px-3 sm:py-2 rounded-full hover:bg-white/10 transition-colors text-sm font-semibold"
+            title={tTour("openAria")}
+            aria-label={tTour("openAria")}
+          >
+            <HelpCircle className="h-5 w-5" aria-hidden="true" />
+            <span className="hidden md:inline">{tTour("open")}</span>
+          </button>
           {/* Mostra la lingua di destinazione: chi non legge l'italiano deve riconoscere "EN". */}
           <button
             onClick={() => setLang(lang === "it" ? "en" : "it")}

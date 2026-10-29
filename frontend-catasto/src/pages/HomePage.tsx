@@ -21,6 +21,8 @@ import { homePageMessages } from "./HomePage.messages";
 import { CompareProvider } from "../features/compare/CompareProvider";
 import CompareBar from "../features/compare/components/CompareBar";
 import CompareView from "../features/compare/components/CompareView";
+import ExampleQueries from "../features/examples/ExampleQueries";
+import { useTour } from "../features/tour/tour-context";
 
 type ResultsView = "table" | "stats";
 
@@ -67,6 +69,14 @@ function HomeContent() {
   const t = useT(homePageMessages);
   // Le statistiche si calcolano solo con la scheda aperta.
   const [view, setView] = useState<ResultsView>("table");
+
+  // Alla prima visita il percorso guidato, ma non sopra un link condiviso
+  // (#q= o #confronta=), che va mostrato subito.
+  const tour = useTour();
+  useEffect(() => {
+    if (!window.location.hash) tour.startIfFirstVisit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo all'arrivo sulla pagina
+  }, []);
 
   // Le opzioni geografiche dipendono dal livello superiore selezionato, le
   // etichette di lookup dalla lingua: entrambe nella chiave, così tornare a
@@ -171,6 +181,7 @@ function HomeContent() {
         <main ref={mainContentRef} className="flex-1 overflow-y-auto relative w-full flex flex-col">
           <div className="p-3 sm:p-4 md:p-8 flex-1">
             <FilterPanel loading={fetching} onRefresh={retry} filterOptions={filterOptions} />
+            <ExampleQueries filterOptions={filterOptions} />
 
             <Tabs
               idPrefix="results"

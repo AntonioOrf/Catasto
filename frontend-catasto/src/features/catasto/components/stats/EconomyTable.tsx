@@ -1,6 +1,7 @@
 import { STATS_METRICS, type CatastoStats, type MetricSummary } from "@catasto/shared";
 import { useLanguage, useT } from "../../../../i18n";
 import { statsMessages } from "./StatsPanel.messages";
+import GlossaryTerm from "../../../glossary/GlossaryTerm";
 
 const COLUMNS = ["present", "missing", "sum", "mean", "median", "q1", "q3", "min", "max"] as const;
 const FIELD: Record<(typeof COLUMNS)[number], keyof MetricSummary> = {
@@ -41,7 +42,9 @@ export default function EconomyTable({ economia }: { economia: CatastoStats["eco
           <tbody>
             {STATS_METRICS.map((metric) => (
               <tr key={metric} className="border-b border-border-base/40">
-                <th scope="row" className="py-1.5 pr-3 font-semibold text-text-main whitespace-nowrap">{t(metric)}</th>
+                <th scope="row" className="py-1.5 pr-3 font-semibold text-text-main whitespace-nowrap">
+                  {t(metric)} <GlossaryTerm id={metric} />
+                </th>
                 {COLUMNS.map((c) => {
                   const text = fmt(economia[metric][FIELD[c]], c === "present" || c === "missing");
                   return (

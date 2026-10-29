@@ -5,6 +5,7 @@ import Pagination from "./Pagination";
 import ArchivioViewerModal from "./ArchivioViewerModal";
 import SegnalazioneModal from "../../segnalazioni/components/SegnalazioneModal";
 import ExportMenu from "./ExportMenu";
+import GlossaryTerm from "../../glossary/GlossaryTerm";
 import type { SearchParams } from "../lib/simple-filters";
 import { useFilters } from "../../../context/FilterContext";
 import type { Fuoco, Parenti, TipoSegnalazione } from "@catasto/shared";
@@ -130,21 +131,26 @@ export default function CatastoTable({
 
   // Il pulsante dentro l'intestazione rende l'ordinamento raggiungibile da
   // tastiera; aria-sort annuncia colonna e verso correnti.
-  const sortableHeader = (column: string, label: string) => (
+  // Il suggerimento del glossario sta accanto al pulsante di ordinamento,
+  // non dentro: due interattivi annidati non sono raggiungibili da tastiera.
+  const sortableHeader = (column: string, label: string, term?: string) => (
     <th
       key={column}
       className={thClasses}
       scope="col"
       aria-sort={sortBy === column ? (sortOrder === "ASC" ? "ascending" : "descending") : "none"}
     >
-      <button
-        type="button"
-        onClick={() => handleSort(column)}
-        className="flex items-center gap-1 min-h-11 w-full uppercase tracking-wider font-bold hover:text-primary transition-colors"
-      >
-        {label}
-        {renderSortIcon(column)}
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => handleSort(column)}
+          className="flex items-center gap-1 min-h-11 uppercase tracking-wider font-bold hover:text-primary transition-colors"
+        >
+          {label}
+          {renderSortIcon(column)}
+        </button>
+        {term && <GlossaryTerm id={term} />}
+      </div>
     </th>
   );
 
@@ -206,11 +212,13 @@ export default function CatastoTable({
             <table className="min-w-full divide-y divide-border-base" aria-busy={fetching}>
               <thead className="bg-bg-sidebar">
                 <tr>
-                  {sortableHeader("nome", t("colHead"))}
+                  {sortableHeader("nome", t("colHead"), "fuoco")}
                   {sortableHeader("localita", t("colPlace"))}
                   {sortableHeader("fortune", t("colSummary"))}
                   <th scope="col" className={thClasses}>
-                    {t("colRefs")}
+                    <span className="inline-flex items-center gap-1">
+                      {t("colRefs")} <GlossaryTerm id="campione" />
+                    </span>
                   </th>
                   <th scope="col" className="px-6 py-4 w-10">
                     <span className="sr-only">{t("expand")}</span>

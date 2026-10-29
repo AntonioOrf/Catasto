@@ -23,8 +23,9 @@ Applicazione **React 18 + TypeScript** costruita con **Vite 6**, stile **Tailwin
 
 | Percorso | Componente | Contenuto |
 |---|---|---|
-| `/` | `pages/HomePage.tsx` | Applicazione principale: indice laterale, ricerca semplice/avanzata, tabella dei fuochi, paginazione, visore, segnalazioni |
+| `/` | `pages/HomePage.tsx` | Applicazione principale: indice laterale, ricerca semplice/avanzata, esempi pronti, tabella e statistiche, paginazione, visore, segnalazioni, export, confronto |
 | `/informazioni` | `pages/InfoPage.tsx` | Descrizione del progetto e crediti (caricata in lazy) |
+| `/glossario` | `pages/GlossarioPage.tsx` | Termini del catasto con le definizioni, un'ancora per voce (lazy) |
 | `/contatti` | `pages/ContattiPage.tsx` | Indirizzi email e link al repository (lazy) |
 | `/mappa` | `pages/MappaPage.tsx` | Segnaposto "in fase di sviluppo", non collegato dal menu (lazy) |
 
@@ -176,6 +177,14 @@ Elenco virtualizzato (nome + mestiere) dei fuochi della ricerca corrente. Clicca
   - *Composizione familiare*: parentela, sesso, età, stato civile, particolarità di ogni membro;
   - azioni **Segnala un errore** e, se manca la portata, **contribuisci** con la segnatura.
 
+### Glossario e aiuto contestuale (`features/glossary`, `features/tour`, `features/examples`)
+
+- **Glossario come dato unico**: `src/i18n/glossary.ts` (termine, definizione breve e, se serve, estesa, in italiano e inglese). Le definizioni riprendono il glossario di `docs/architettura.md` e vanno riviste dagli autori prima di aggiungere voci: un termine senza definizione verificata non entra. `FIELD_TERMS` dice, per **ogni** campo di `FIELD_REGISTRY`, quale voce lo spiega (`null` = nessun termine tecnico o nessuna definizione verificata); un test fallisce se un campo nuovo non ha una decisione.
+- **Suggerimenti** (`GlossaryTerm`): pulsante "i" accanto alle etichette nella tabella (Capofamiglia → fuoco, Riferimenti → campione), nella scheda del fuoco (dati economici), nei filtri (volume, serie, quartiere, piviere, popolo, intervalli in fiorini), nel QueryBuilder (campo scelto) e nella tabella delle statistiche. Si apre al passaggio del mouse, al focus e al tocco; Esc lo chiude e restituisce il focus; la definizione è sempre collegata con `aria-describedby`; il riquadro (in un portal, così la tabella non lo taglia) contiene il link **Approfondisci** alla voce del glossario. Sta accanto ai controlli, mai dentro un altro pulsante o un `<label>`.
+- **Pagina `/glossario`**: tutte le voci in ordine alfabetico, ciascuna con l'ancora `#termine-<id>` (portata in vista e messa a fuoco all'arrivo) e un indice iniziale. Collegata dal footer.
+- **Percorso guidato** (`GuidedTour`): cinque passi (ricerca, scheda del fuoco, visore, segnalazione, confronto/export/statistiche) in una finestra modale. Si apre da sola alla prima visita della home, ma non sopra un link condiviso; chiuderla in qualunque modo (Salta, Esc, Ho capito) la segna come vista in `localStorage` (`catasto.tour.v1`); il pulsante **Guida** nell'header la riapre.
+- **Esempi pronti** nella home, visibili finché non c'è alcun filtro: "I fuochi più ricchi di San Giovanni", "Immigrati dal contado", "Imponibile di almeno 1000 fiorini", "Fuochi con un parente di 80 anni o più". Un clic carica la query nella ricerca avanzata (come un link `#q=`), con l'ordinamento dell'esempio. Le opzioni (quartiere, immigrazione) si cercano per etichetta fra quelle di `/api/filters`: un esempio la cui opzione non esiste non compare.
+
 ### Confronto tra fuochi (`features/compare`)
 
 - Casella **Confronta** su ogni riga e scheda: si scelgono da 2 a 5 fuochi, anche da pagine o ricerche diverse. Oltre il quinto le altre caselle si disattivano.
@@ -274,6 +283,11 @@ Test di componenti e hook con Testing Library, in jsdom (dichiarato in testa al 
 - `CatastoRow.test.tsx`: la riga non è focalizzabile, si apre dal pulsante con `aria-expanded`/`aria-controls`, il visore non espande la riga, i valori assenti non diventano 0;
 - `Pagination.test.tsx`: comandi disabilitati ai bordi e durante il caricamento, cambio pagina solo su Invio;
 - `useCatastoFilters.test.tsx`: cascata geografica, ordinamento, AST eseguibile, apertura da link `#q=`;
+- `glossary.test.ts`: una decisione nel glossario per ogni campo del registry, voci complete in IT/EN;
+- `GlossaryTerm.test.tsx`: descrizione sempre collegata, apertura al focus, Esc con focus restituito, tocco senza propagare il clic alla riga;
+- `GuidedTour.test.tsx`: apertura alla prima visita, percorso completo, Salta ed Esc ricordati, riapertura dal pulsante;
+- `GlossarioPage.test.tsx`: un'ancora per ogni voce e l'indice;
+- `example-queries.test.ts`: esempi risolti per etichetta (anche id raggruppati), esempi senza opzione nascosti;
 - `compare-selection.test.ts` e `compare-format.test.ts`: serializzazione e parsing del link `#confronta=`, id non validi, limite di cinque, `sessionStorage` alterato, differenze con dati assenti;
 - `Compare.test.tsx`: caselle e barra, apertura da due fuochi, colonne e differenze, link con id inesistenti, limite di cinque, Esc e Svuota;
 - `StatsPanel.test.tsx`: barre di "Altro" e "Non indicato", raggruppamento dei fuochi numerosi, tabella economica con valori non calcolabili, tabelle dei dati, errore con Riprova;

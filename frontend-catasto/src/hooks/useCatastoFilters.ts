@@ -79,6 +79,17 @@ export function useCatastoFilters() {
     [filters, sortBy, sortOrder, advancedMode, queryAst],
   );
 
+  /**
+   * Carica una query già pronta (esempi della home) come farebbe un link
+   * `#q=` condiviso: ricerca avanzata con quell'AST, più l'ordinamento.
+   */
+  const applyQuery = useCallback((next: QueryGroup, sort?: { sortBy: string; sortOrder: SortOrder }) => {
+    setAst(next);
+    setAdvancedMode(true);
+    setSortBy(sort?.sortBy ?? DEFAULT_SORT_BY);
+    setSortOrder(sort?.sortOrder ?? DEFAULT_SORT_ORDER);
+  }, []);
+
   const resetFilters = useCallback(() => {
     setFilters(EMPTY_SIMPLE_FILTERS);
     setSortBy(DEFAULT_SORT_BY);
@@ -104,6 +115,7 @@ export function useCatastoFilters() {
     searchParams,
 
     resetFilters,
+    applyQuery,
   };
 }
 

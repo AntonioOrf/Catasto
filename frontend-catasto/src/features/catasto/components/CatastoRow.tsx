@@ -25,6 +25,7 @@ import { useLanguage, useT } from "../../../i18n";
 import { catastoRowMessages } from "./CatastoRow.messages";
 import { COMPARE_MAX_FUOCHI } from "@catasto/shared";
 import { useOptionalCompare } from "../../compare/compare-context";
+import GlossaryTerm from "../../glossary/GlossaryTerm";
 import { compareMessages } from "../../compare/compare.messages";
 
 export interface CatastoRowProps {
@@ -303,9 +304,12 @@ const Location = ({ row }: { row: Fuoco }) => {
   );
 };
 
-const DetailItem = ({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) => (
+const DetailItem = ({ label, value, strong = false, term }: { label: string; value: string; strong?: boolean; term?: string }) => (
   <div>
-    <span className={smallLabel}>{label}</span>
+    <span className={`${smallLabel} flex items-center gap-1`}>
+      {label}
+      {term && <GlossaryTerm id={term} />}
+    </span>
     <span className={strong ? "font-bold text-primary text-sm md:text-lg" : "font-bold text-text-main"}>{value}</span>
   </div>
 );
@@ -362,11 +366,11 @@ const EconomicDetails = ({ row, onSegnala }: Pick<CatastoRowProps, "row" | "onSe
       </h3>
       <div className="bg-bg-main p-3 md:p-4 rounded border border-border-base shadow-sm space-y-3 md:space-y-4 text-xs md:text-sm">
         <div className="grid grid-cols-2 gap-3 md:gap-4">
-          <DetailItem label={t("credito")} value={fiorini(row.credito, lang)} />
-          <DetailItem label={t("creditoM")} value={fiorini(row.credito_m, lang)} />
-          <DetailItem label={t("fortune")} value={fiorini(row.fortune, lang)} />
-          <DetailItem label={t("deduzioni")} value={fiorini(row.deduzioni, lang)} />
-          <DetailItem label={t("imponibile")} value={fiorini(row.imponibile, lang)} strong />
+          <DetailItem label={t("credito")} value={fiorini(row.credito, lang)} term="credito" />
+          <DetailItem label={t("creditoM")} value={fiorini(row.credito_m, lang)} term="credito_m" />
+          <DetailItem label={t("fortune")} value={fiorini(row.fortune, lang)} term="fortune" />
+          <DetailItem label={t("deduzioni")} value={fiorini(row.deduzioni, lang)} term="deduzioni" />
+          <DetailItem label={t("imponibile")} value={fiorini(row.imponibile, lang)} strong term="imponibile" />
         </div>
         <div className={`${dashedSection} space-y-2`}>
           <DetailRow icon={PawPrint} label={t("bestiame")} value={row.bestiame} />

@@ -30,6 +30,7 @@ import type { SimpleFilterKey } from "../lib/simple-filters";
 import AdvancedSearchPanel from "./AdvancedSearchPanel";
 import { useT } from "../../../i18n";
 import { filterPanelMessages, type FilterPanelMessageKey } from "./FilterPanel.messages";
+import GlossaryTerm from "../../glossary/GlossaryTerm";
 
 type MsgKey = FilterPanelMessageKey;
 
@@ -47,18 +48,21 @@ interface SelectFilter {
   options: keyof FilterOptions;
   icon: LucideIcon;
   placeholder?: MsgKey;
+  /** Voce del glossario spiegata accanto all'etichetta. */
+  term?: string;
 }
 
 interface RangeFilter {
   label: MsgKey;
   min: SimpleFilterKey;
   max: SimpleFilterKey;
+  term: string;
 }
 
-const TEXT_FILTERS: { key: SimpleFilterKey; label: MsgKey; placeholder: MsgKey; icon: LucideIcon; narrow?: boolean }[] = [
+const TEXT_FILTERS: { key: SimpleFilterKey; label: MsgKey; placeholder: MsgKey; icon: LucideIcon; narrow?: boolean; term?: string }[] = [
   { key: "searchPersona", label: "searchPersona", placeholder: "searchPersonaPh", icon: Search },
   { key: "searchLocalita", label: "searchLocalita", placeholder: "searchLocalitaPh", icon: MapPin },
-  { key: "filterVolume", label: "volume", placeholder: "volumePh", icon: BookOpen, narrow: true },
+  { key: "filterVolume", label: "volume", placeholder: "volumePh", icon: BookOpen, narrow: true, term: "campione" },
 ];
 
 const ATTRIBUTE_FILTERS: SelectFilter[] = [
@@ -72,18 +76,18 @@ const ATTRIBUTE_FILTERS: SelectFilter[] = [
 
 /** In ordine gerarchico: cambiare un livello azzera i successivi (vedi GEO_CASCADE). */
 const GEO_FILTERS: SelectFilter[] = [
-  { key: "filterSerie", label: "serie", options: "serie", icon: Map, placeholder: "seriePh" },
-  { key: "filterQuartiere", label: "quartiere", options: "quartieri", icon: Navigation, placeholder: "quartierePh" },
-  { key: "filterPiviere", label: "piviere", options: "pivieri", icon: Navigation, placeholder: "piviereP" },
-  { key: "filterPopolo", label: "popolo", options: "popoli", icon: Users, placeholder: "popoloPh" },
+  { key: "filterSerie", label: "serie", options: "serie", icon: Map, placeholder: "seriePh", term: "serie" },
+  { key: "filterQuartiere", label: "quartiere", options: "quartieri", icon: Navigation, placeholder: "quartierePh", term: "quartiere" },
+  { key: "filterPiviere", label: "piviere", options: "pivieri", icon: Navigation, placeholder: "piviereP", term: "piviere" },
+  { key: "filterPopolo", label: "popolo", options: "popoli", icon: Users, placeholder: "popoloPh", term: "popolo" },
 ];
 
 const RANGE_FILTERS: RangeFilter[] = [
-  { label: "fortune", min: "filterFortuneMin", max: "filterFortuneMax" },
-  { label: "credito", min: "filterCreditoMin", max: "filterCreditoMax" },
-  { label: "creditoM", min: "filterCreditoMMin", max: "filterCreditoMMax" },
-  { label: "imponibile", min: "filterImponibileMin", max: "filterImponibileMax" },
-  { label: "deduzioni", min: "filterDeduzioniMin", max: "filterDeduzioniMax" },
+  { label: "fortune", min: "filterFortuneMin", max: "filterFortuneMax", term: "fortune" },
+  { label: "credito", min: "filterCreditoMin", max: "filterCreditoMax", term: "credito" },
+  { label: "creditoM", min: "filterCreditoMMin", max: "filterCreditoMMax", term: "credito_m" },
+  { label: "imponibile", min: "filterImponibileMin", max: "filterImponibileMax", term: "imponibile" },
+  { label: "deduzioni", min: "filterDeduzioniMin", max: "filterDeduzioniMax", term: "deduzioni" },
 ];
 
 const fieldId = (key: string) => `f-${key}`;
@@ -116,11 +120,25 @@ export default function FilterPanel({ loading, onRefresh, filterOptions }: Filte
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const t = useT(filterPanelMessages);
 
-  const renderSelect = ({ key, label, options, icon: Icon, placeholder = "select" }: SelectFilter, labelClassName: string) => (
-    <div key={key}>
-      <label htmlFor={fieldId(key)} className={labelClassName}>
-        {t(label)}
+  // Il suggerimento sta accanto all'etichetta, non dentro: un pulsante dentro
+  // un <label> attiverebbe anche il campo.
+  const labelWithTerm = (htmlFor: string, text: string, className: string, term?: string) =>
+    term ? (
+      <div className="flex items-center gap-1">
+        <label htmlFor={htmlFor} className={className}>
+          {text}
+        </label>
+        <GlossaryTerm id={term} className="mb-1" />
+      </div>
+    ) : (
+      <label htmlFor={htmlFor} className={className}>
+        {text}
       </label>
+    );
+
+  const renderSelect = ({ key, label, options, icon: Icon, placeholder = "select", term }: SelectFilter, labelClassName: string) => (
+    <div key={key}>
+      {labelWithTerm(fieldId(key), t(label), labelClassName, term)}
       <CustomAutocomplete
         id={fieldId(key)}
         value={filters[key]}
@@ -144,9 +162,9 @@ export default function FilterPanel({ loading, onRefresh, filterOptions }: Filte
             significherebbe mostrare controlli che non fanno nulla. */}
         {!advancedMode && (
           <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-end mb-4">
-            {TEXT_FILTERS.map(({ key, label, placeholder, icon: Icon, narrow }) => (
+            {TEXT_FILTERS.map(({ key, label, placeholder, icon: Icon, narrow, term }) => (
               <div key={key} className={`flex-1 w-full ${narrow ? "md:max-w-[150px]" : ""}`}>
-                <label htmlFor={fieldId(key)} className={labelClasses}>{t(label)}</label>
+                {labelWithTerm(fieldId(key), t(label), labelClasses, term)}
                 <div className="relative">
                   <Icon className="absolute left-3 top-3 md:top-3.5 h-4 w-4 md:h-5 md:w-5 text-text-accent" aria-hidden="true" />
                   <input
@@ -252,11 +270,9 @@ export default function FilterPanel({ loading, onRefresh, filterOptions }: Filte
                 <Calculator className="h-4 w-4" aria-hidden="true" /> {t("economicData")}
               </legend>
               <div className="clear-both grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                {RANGE_FILTERS.map(({ label, min, max }) => (
+                {RANGE_FILTERS.map(({ label, min, max, term }) => (
                   <div key={label}>
-                    <label htmlFor={fieldId(min)} className={smallLabelClasses}>
-                      {t(label)}
-                    </label>
+                    {labelWithTerm(fieldId(min), t(label), smallLabelClasses, term)}
                     <div className="flex items-center gap-2">
                       <CustomNumberInput
                         id={fieldId(min)}

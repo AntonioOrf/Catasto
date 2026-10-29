@@ -15,6 +15,9 @@ export default function Footer() {
           <Link to="/informazioni" className="hover:text-primary transition-colors">
             {t("info")}
           </Link>
+          <Link to="/glossario" className="hover:text-primary transition-colors">
+            {t("glossary")}
+          </Link>
           <Link to="/contatti" className="hover:text-primary transition-colors">
             {t("contacts")}
           </Link>

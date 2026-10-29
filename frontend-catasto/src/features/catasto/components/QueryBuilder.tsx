@@ -12,6 +12,8 @@ import {
 } from "@catasto/shared";
 import type { OptionsByKey } from "../lib/query-describe";
 import { fieldLabel, operatorLabel, useLanguage, useT } from "../../../i18n";
+import { FIELD_TERMS } from "../../../i18n/glossary";
+import GlossaryTerm from "../../glossary/GlossaryTerm";
 import { queryBuilderMessages } from "./QueryBuilder.messages";
 
 interface QueryBuilderProps {
@@ -277,6 +279,8 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
           </option>
         ))}
       </select>
+      {/* Il termine del campo scelto, se è un termine tecnico del catasto. */}
+      {FIELD_TERMS[field.key] && <GlossaryTerm id={FIELD_TERMS[field.key]!} />}
 
       <select
         aria-label={t("operator")}
