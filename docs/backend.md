@@ -123,6 +123,7 @@ Base URL: stessa origine del sito (`/api`, proxato da nginx) oppure `http://loca
 | GET | `/health` | pubblico | Stato del servizio e del database |
 | GET | `/api/catasto` | pubblico | Ricerca semplice, vista tabella (paginata) |
 | GET | `/api/catasto/fuochi?ids=` | pubblico | Fino a 50 fuochi per id, per la selezione e il confronto |
+| GET | `/api/catasto/suggest?q=` | pubblico (600/15 min) | Fino a 8 fuochi per «Trova e aggiungi» del Banco di lavoro |
 | GET | `/api/catasto/sidebar` | pubblico | Ricerca semplice, indice leggero per la sidebar |
 | POST | `/api/catasto/query` | pubblico | Ricerca avanzata con AST |
 | GET | `/api/catasto/stats` | pubblico, 150 req/15 min | Statistiche sulla ricerca semplice |
@@ -235,6 +236,16 @@ Stessi filtri. Risposta **senza wrapper**, pensata per un elenco lungo e leggero
 Carica in una sola richiesta i fuochi della selezione (barra della selezione, vista di confronto), presi anche da pagine o ricerche diverse. `ids` è una lista di id numerici separati da virgola, al massimo `FUOCHI_BY_IDS_MAX` (50, in `@catasto/shared`; il client divide una selezione più grande in blocchi); i duplicati contano una volta. Qualunque altra forma (vuoto, non numerico, array, troppi id) → `400`.
 
 Risposta: array di fuochi con gli stessi campi di `GET /api/catasto`, **nell'ordine degli id richiesti**; gli id inesistenti mancano senza errore (il client li confronta con quelli chiesti). Accetta `lang`.
+
+### `GET /api/catasto/suggest?q=…` — trova e aggiungi
+
+La casella «Trova e aggiungi» del Banco di lavoro: risponde mentre si scrive, separata dalla ricerca completa (non tocca la query del Banco). `q` si legge in tre modi (`utils/suggest-query.ts`):
+
+- `#10342` o `10342`: il **numero del fuoco**;
+- `vol. 79 c. 12` (anche `vol 79, c 12r`, `volume 79 carta 12v`, o solo `vol. 79`): la **carta del campione**; il volume si confronta come numero e una carta senza `r`/`v` trova recto e verso;
+- altrimenti **parole**: ognuna deve comparire (LIKE, con escape) in capofamiglia, mestiere, popolo, quartiere o piviere; il «di» si scarta come nella ricerca per persona, le iniziali isolate («s.») contano solo se non c'è altro, al massimo 6 parole. Si cerca nei testi del dump, in italiano.
+
+Risposta: `{ "data": [{ "id", "nome", "mestiere", "quartiere", "popolo", "imponibile", "volume", "foglio" }], "total": 23, "mode": "testo" }`, al massimo `SUGGEST_LIMIT` (8) fuochi in ordine di nome; `total` conta tutti quelli che corrispondono, `mode` è `id`, `carta` o `testo`. Il mestiere arriva tradotto con `lang`. `q` vuoto → nessun risultato; troppo lungo (oltre 200) o non testuale → `400`. Ha un limite proprio (600 richieste ogni 15 minuti) per non consumare quello della tabella.
 
 ### `GET /api/catasto/stats` — statistiche della ricerca
 

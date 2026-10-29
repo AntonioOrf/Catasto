@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { COMPARE_MAX_FUOCHI, COMPARE_MIN_FUOCHI, FUOCHI_BY_IDS_MAX, SELECTION_MAX_FUOCHI, type Fuoco } from "@catasto/shared";
+import { COMPARE_MAX_FUOCHI, COMPARE_MIN_FUOCHI, SELECTION_MAX_FUOCHI, type Fuoco } from "@catasto/shared";
 import { fetchFuochiByIds } from "../../api/catastoService";
+import { fetchFuochiByIdsChunked } from "../../api/fuochi-by-ids";
 import { userMessage } from "../../api/client";
 import { useLanguage, useT } from "../../i18n";
 import { CompareContext, type CompareState } from "./compare-context";
@@ -23,13 +24,6 @@ function clearCompareFromUrl() {
   const rest = params.toString();
   const { origin, pathname, search } = window.location;
   window.history.replaceState(null, "", `${origin}${pathname}${search}${rest ? `#${rest}` : ""}`);
-}
-
-/** L'endpoint accetta FUOCHI_BY_IDS_MAX id per richiesta: una selezione grande va a blocchi. */
-async function fetchInChunks(ids: readonly number[], signal?: AbortSignal): Promise<Fuoco[]> {
-  const chunks: number[][] = [];
-  for (let i = 0; i < ids.length; i += FUOCHI_BY_IDS_MAX) chunks.push(ids.slice(i, i + FUOCHI_BY_IDS_MAX));
-  return (await Promise.all(chunks.map((chunk) => fetchFuochiByIds(chunk, signal)))).flat();
 }
 
 /**
@@ -64,7 +58,7 @@ export function CompareProvider({ children }: { children: ReactNode }) {
   const missing = useMemo(() => ids.filter((id) => !snapshots[id]), [ids, snapshots]);
   const missingQuery = useQuery({
     queryKey: ["fuochiByIds", lang, missing],
-    queryFn: ({ signal }) => fetchInChunks(missing, signal),
+    queryFn: ({ signal }) => fetchFuochiByIdsChunked(missing, signal),
     enabled: missing.length > 0,
     staleTime: 10 * 60 * 1000,
   });
@@ -108,6 +102,7 @@ export function CompareProvider({ children }: { children: ReactNode }) {
     setIds((current) => toggleId(current, id));
   }, []);
   const remove = useCallback((id: number) => setIds((current) => current.filter((x) => x !== id)), []);
+  const add = useCallback((more: readonly number[]) => setIds((current) => normalizeIds([...current, ...more])), []);
   const replace = useCallback((next: number[]) => {
     setIds(normalizeIds(next));
     setRemovedCount(0);
@@ -134,13 +129,14 @@ export function CompareProvider({ children }: { children: ReactNode }) {
       isSelected: (id) => ids.includes(id),
       toggle,
       remove,
+      add,
       replace,
       clear,
       viewOpen,
       openView: () => setViewOpen(true),
       closeView: () => setViewOpen(false),
     }),
-    [ids, fuochi, incomplete, missingQuery.isLoading, viewQuery.isLoading, failed, t, lang, removedCount, canCompare, toggle, remove, replace, clear, viewOpen],
+    [ids, fuochi, incomplete, missingQuery.isLoading, viewQuery.isLoading, failed, t, lang, removedCount, canCompare, toggle, remove, add, replace, clear, viewOpen],
   );
 
   return <CompareContext.Provider value={value}>{children}</CompareContext.Provider>;

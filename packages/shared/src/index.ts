@@ -158,5 +158,30 @@ export const FUOCHI_BY_IDS_MAX = 50;
  */
 export const SELECTION_MAX_FUOCHI = 500;
 
+/** Suggerimenti di «Trova e aggiungi» nel Banco di lavoro (GET /api/catasto/suggest). */
+export const SUGGEST_LIMIT = 8;
+
+/** Come è stata letta la ricerca: numero del fuoco, carta del campione o parole. */
+export type SuggestMode = "id" | "carta" | "testo";
+
+/** Un fuoco suggerito: solo i campi che servono a riconoscerlo. */
+export interface SuggestItem {
+  id: number;
+  nome: string;
+  mestiere: string | null;
+  quartiere: string | null;
+  popolo: string | null;
+  imponibile: number | null;
+  volume: string | null;
+  foglio: string | null;
+}
+
+export interface SuggestResponse {
+  data: SuggestItem[];
+  /** Fuochi che corrispondono in tutto; `data` ne porta al massimo SUGGEST_LIMIT. */
+  total: number;
+  mode: SuggestMode;
+}
+
 /** Fasce dell'imponibile nelle statistiche: estremi inferiori, in fiorini. */
 export const IMPONIBILE_BANDS = [0, 1, 51, 201, 501, 1001] as const;
