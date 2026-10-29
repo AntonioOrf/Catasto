@@ -38,6 +38,9 @@ const App = ({ rows = [] as Fuoco[] }) => (
   </CompareProvider>
 );
 
+/** La barra parte ridotta: il conto la apre con nomi, raccolta e Deseleziona. */
+const openBar = (bar: HTMLElement) => fireEvent.click(within(bar).getByRole("button", { name: /selezionat/, expanded: false }));
+
 describe("confronto tra fuochi", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -53,6 +56,9 @@ describe("confronto tra fuochi", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "Seleziona RUCELLAI GIOVANNI" }));
     const bar = await screen.findByRole("region", { name: "Fuochi selezionati" });
     expect((within(bar).getByRole("button", { name: "Confronta affiancati" }) as HTMLButtonElement).disabled).toBe(true);
+    // Ridotta: niente nomi né Deseleziona finché non la si apre.
+    expect(within(bar).queryByRole("button", { name: "Deseleziona" })).toBeNull();
+    openBar(bar);
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Seleziona MEDICI COSIMO" }));
     await waitFor(() => expect(within(bar).getByText("MEDICI COSIMO")).toBeTruthy());
@@ -92,6 +98,7 @@ describe("confronto tra fuochi", () => {
     expect(box.disabled).toBe(false);
     fireEvent.click(box);
     await waitFor(() => expect(within(bar).getByText("6 fuochi selezionati")).toBeTruthy());
+    openBar(bar);
     // Tre nomi scritti, gli altri contati.
     expect(within(bar).getByText("e altri 3")).toBeTruthy();
     expect((within(bar).getByRole("button", { name: "Confronta affiancati" }) as HTMLButtonElement).disabled).toBe(true);
@@ -103,6 +110,7 @@ describe("confronto tra fuochi", () => {
     sessionStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify([1, 5]));
     renderWithProviders(<App />);
     const bar = await screen.findByRole("region", { name: "Fuochi selezionati" });
+    openBar(bar);
     fireEvent.click(within(bar).getByRole("button", { name: "Aggiungi a una raccolta" }));
     fireEvent.change(within(bar).getByLabelText("Nuova raccolta"), { target: { value: "Medici e Rucellai" } });
     fireEvent.click(within(bar).getByRole("button", { name: "Aggiungi" }));
@@ -123,6 +131,7 @@ describe("confronto tra fuochi", () => {
     await screen.findByRole("dialog");
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    openBar(bar);
     fireEvent.click(within(bar).getByRole("button", { name: "Deseleziona" }));
     await waitFor(() => expect(screen.queryByRole("region", { name: "Fuochi selezionati" })).toBeNull());
   });
@@ -134,6 +143,7 @@ describe("confronto tra fuochi", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "Seleziona RUCELLAI GIOVANNI" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "Seleziona MEDICI COSIMO" }));
     const bar = await screen.findByRole("region", { name: "Fuochi selezionati" });
+    openBar(bar);
     expect(within(bar).getByText("MEDICI COSIMO")).toBeTruthy();
     fireEvent.click(within(bar).getByRole("button", { name: "Confronta affiancati" }));
     const dialog = await screen.findByRole("dialog");
