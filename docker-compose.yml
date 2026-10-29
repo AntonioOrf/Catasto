@@ -48,6 +48,7 @@ services:
       - TRUST_PROXY=${TRUST_PROXY:-1}
       - CORS_ORIGIN=${CORS_ORIGIN:-}
       - FILTERS_CACHE_TTL=${FILTERS_CACHE_TTL:-}
+      - EXPORT_MAX_ROWS=${EXPORT_MAX_ROWS:-}
     depends_on:
       db:
         condition: service_healthy

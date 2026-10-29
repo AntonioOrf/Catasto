@@ -4,6 +4,8 @@ import CatastoRow, { CatastoMobileCard } from "./CatastoRow";
 import Pagination from "./Pagination";
 import ArchivioViewerModal from "./ArchivioViewerModal";
 import SegnalazioneModal from "../../segnalazioni/components/SegnalazioneModal";
+import ExportMenu from "./ExportMenu";
+import type { SearchParams } from "../lib/simple-filters";
 import { useFilters } from "../../../context/FilterContext";
 import type { Fuoco, Parenti, TipoSegnalazione } from "@catasto/shared";
 import type { RiferimentoArchivio } from "../lib/archivio";
@@ -14,6 +16,8 @@ import { catastoTableMessages } from "./CatastoTable.messages";
 interface CatastoTableProps {
   /** Tabella sopra il breakpoint lg, card sotto: se ne monta una sola. */
   isDesktop: boolean;
+  /** Ricerca che ha prodotto le righe a schermo: la usa l'export. */
+  search: SearchParams;
   data: Fuoco[];
   totalRecords: number;
   /** Primo caricamento, nessun dato da mostrare: scheletro. */
@@ -52,6 +56,7 @@ function viewerVolume(row: Fuoco, riferimento: RiferimentoArchivio) {
 
 export default function CatastoTable({
   isDesktop,
+  search,
   data,
   totalRecords,
   loading,
@@ -198,13 +203,16 @@ export default function CatastoTable({
         </h2>
         {/* Annunciato ai lettori di schermo: è l'unico riscontro che una
             ricerca è andata a buon fine senza guardare la tabella. */}
-        <span
-          role="status"
-          aria-live="polite"
-          className="bg-primary text-on-primary px-2 py-1 md:px-3 text-xs md:text-sm font-bold rounded-full tabular-nums"
-        >
-          {Number(totalRecords || 0).toLocaleString(locale)} {totalRecords === 1 ? t("result") : t("results")}
-        </span>
+        <div className="flex items-center gap-2 md:gap-3">
+          <span
+            role="status"
+            aria-live="polite"
+            className="bg-primary text-on-primary px-2 py-1 md:px-3 text-xs md:text-sm font-bold rounded-full tabular-nums"
+          >
+            {Number(totalRecords || 0).toLocaleString(locale)} {totalRecords === 1 ? t("result") : t("results")}
+          </span>
+          <ExportMenu search={search} totalRecords={totalRecords} />
+        </div>
       </div>
 
       <div className="bg-bg-main shadow-lg border border-border-base rounded-sm overflow-hidden">

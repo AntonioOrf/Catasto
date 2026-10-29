@@ -68,3 +68,16 @@ describe("notFoundHandler", () => {
     expect(res.json).toHaveBeenCalledWith({ error: "Risorsa non trovata" });
   });
 });
+
+describe("errorHandler con la risposta già iniziata", () => {
+  it("non prova a scrivere JSON e delega a Express", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = { headersSent: true, status: vi.fn(), json: vi.fn() };
+    const next = vi.fn();
+    const err = new Error("connessione persa");
+    errorHandler(err, {} as Request, res as unknown as Response, next);
+    expect(next).toHaveBeenCalledWith(err);
+    expect(res.status).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+});

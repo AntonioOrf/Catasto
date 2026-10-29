@@ -47,6 +47,7 @@ backend-catasto/
     │   └── segnalazione.controller.ts
     ├── services/
     │   ├── catasto.service.ts     # orchestrazione query + proxy/caching manifest IIIF
+    │   ├── export.service.ts      # export CSV/XLSX in streaming, tetto di righe, metadati
     │   ├── segnalazione.service.ts# creazione, anti-abuso, cambi di stato transazionali
     │   └── notifica.service.ts    # inoltro email via FormSubmit con link firmati
     ├── models/
@@ -60,7 +61,10 @@ backend-catasto/
     │   └── error.middleware.ts    # 404 + gestione errori (maschera i 5xx in produzione)
     ├── utils/
     │   ├── validation.ts          # paginazione, id numerici, liste di id, HttpError
-    │   ├── csv.ts, traduzioni-csv.ts # CSV di export/import delle traduzioni
+    │   ├── csv.ts, traduzioni-csv.ts # CSV (export dei risultati, export/import delle traduzioni)
+    │   ├── export-columns.ts      # colonne e celle dei file esportati
+    │   ├── export-writers.ts      # scrittura in streaming di CSV e XLSX
+    │   ├── describe-filters.ts    # descrizione leggibile della ricerca semplice
     │   ├── query-builder.ts       # ricerca semplice (query string) → SQL parametrico
     │   ├── query-ast-builder.ts   # ricerca avanzata (AST) → SQL parametrico
     │   └── moderazione-token.ts   # token HMAC per i link Accetta/Respingi
@@ -77,6 +81,7 @@ Il pacchetto **`packages/shared`** contiene ciò che frontend e backend devono v
 |---|---|
 | `fields.ts` | `FIELD_REGISTRY`: campi interrogabili, tipo, colonna SQL, operatori ammessi, join richiesti |
 | `query-ast.ts` | Tipi `QueryGroup` / `QueryCondition` e limiti (`AST_MAX_DEPTH`, `AST_MAX_CONDITIONS`, …) |
+| `labels.ts` | Etichette inglesi di campi e operatori, `describeQuery` (descrizione leggibile di una query, usata dall'anteprima e dagli export) |
 | `segnalazioni.ts` | Tipi e stati delle segnalazioni |
 | `segnatura.ts` | Parser della segnatura della portata (`ASFi, Catasto 81, c. 245r`) |
 
@@ -116,6 +121,8 @@ Base URL: stessa origine del sito (`/api`, proxato da nginx) oppure `http://loca
 | GET | `/api/catasto` | pubblico | Ricerca semplice, vista tabella (paginata) |
 | GET | `/api/catasto/sidebar` | pubblico | Ricerca semplice, indice leggero per la sidebar |
 | POST | `/api/catasto/query` | pubblico | Ricerca avanzata con AST |
+| GET | `/api/catasto/export` | pubblico, 20 req/15 min | Export CSV/XLSX della ricerca semplice, tutte le pagine |
+| POST | `/api/catasto/query/export` | pubblico, 20 req/15 min | Export CSV/XLSX della ricerca avanzata |
 | GET | `/api/catasto/manifest/:id` | pubblico, 30 req/15 min | Pagine del volume digitalizzato (IIIF) |
 | GET | `/api/filters` | pubblico | Opzioni per i filtri |
 | POST | `/api/filters/cache/invalidate` | admin | Svuota la cache delle opzioni dei filtri e delle traduzioni |
@@ -135,6 +142,7 @@ Tutti gli endpoint di lettura accettano `?lang=en` (anche `POST /api/catasto/que
 |---|---|---|
 | `apiLimiter` | tutto `/api` | 300 richieste / 15 min / IP |
 | manifest | `/api/catasto/manifest/:id` | 30 richieste / 15 min / IP |
+| `exportLimiter` | `GET /api/catasto/export`, `POST /api/catasto/query/export` | 20 richieste / 15 min / IP |
 | `createLimiter` | `POST /api/segnalazioni` | 5 / ora / IP, più 10 / ora per hash IP salvato nel DB |
 | `adminLimiter` | rotte admin e moderazione | 100 richieste **fallite** / 15 min / IP |
 
@@ -213,6 +221,40 @@ Stessi filtri. Risposta **senza wrapper**, pensata per un elenco lungo e leggero
 ```
 
 `view` è `"table"` (risposta come `GET /api/catasto`) o `"sidebar"` (risposta come `GET /sidebar`). Un AST non valido → `400 {"error":"Query non valida: …"}`. Il formato è descritto [più sotto](#ricerca-avanzata-formato-dellast).
+
+### `GET /api/catasto/export` — export della ricerca
+
+Restituisce **tutte** le righe della ricerca come file, nello stesso ordine della tabella. Accetta gli stessi filtri e lo stesso ordinamento di `GET /api/catasto` (la paginazione è ignorata), più:
+
+| Parametro | Valori | Default | Effetto |
+|---|---|---|---|
+| `format` | `csv`, `xlsx` | `csv` | Formato del file |
+| `parenti` | `true`/`false` (`1`/`0`) | `false` | CSV: restituisce il **file dei parenti** al posto di quello dei fuochi. XLSX: aggiunge il foglio "Parenti" |
+| `sep` | `comma`, `semicolon` (o `,`/`;`) | `comma` | Separatore del CSV. Il punto e virgola serve a Excel in italiano |
+| `lang` | `it`, `en` | `it` | Lingua di intestazioni, metadati ed etichette di lookup |
+
+`POST /api/catasto/query/export` fa lo stesso con l'AST della ricerca avanzata; le opzioni stanno nel body accanto ad `ast`, `sort_by` e `order` (`lang` resta nella query string):
+
+```json
+{ "ast": { "kind": "group", "op": "AND", "children": [ … ] }, "sort_by": "fortune", "order": "DESC", "format": "xlsx", "parenti": true }
+```
+
+**Contenuto.**
+
+- **Fuochi**: una riga per fuoco con id, nome, mestiere, rapporto di lavoro, bestiame, immigrazione, casa, particolarità, serie, quartiere, piviere, popolo, fortune, credito, credito ai monti, imponibile, deduzioni, volume, carta, segnatura della portata e codice d'archivio del volume (IIIF).
+- **Parenti** (formato lungo): id e nome del fuoco, parentela, sesso, età, stato civile, particolarità; una riga per parente.
+- I valori assenti sono **celle vuote**, mai `0`; gli zeri restano zeri. I numeri sono numeri (anche nell'XLSX), le etichette di lookup sono tradotte con `lang=en`.
+- **Metadati**: fonte (Klapisch-Zuber / ACRH), data dell'export, descrizione leggibile della query (la stessa dell'anteprima della ricerca avanzata), ordinamento, numero di fuochi. Nel CSV sono righe iniziali che cominciano con `#` (R: `comment.char = "#"`, pandas: `comment="#"`); nell'XLSX stanno nel foglio "Info".
+- **CSV**: UTF-8 **con BOM** (Excel riconosce gli accenti), RFC 4180, righe terminate da CRLF.
+- Nome del file in `Content-Disposition`: `catasto1427-fuochi-AAAA-MM-GG.csv`, `catasto1427-parenti-AAAA-MM-GG.csv` o `catasto1427-AAAA-MM-GG.xlsx`. L'header `X-Export-Total` riporta il numero di fuochi.
+
+**Streaming.** Le righe vengono lette dal DB e scritte man mano (stream di mysql2 con backpressure, `exceljs` in streaming per l'XLSX): l'export completo non viene mai tenuto in memoria. Lo stream di una query viene sempre letto fino in fondo, anche se il client chiude a metà, perché una connessione in pausa non tornerebbe più al pool.
+
+**Limiti.** Prima di scrivere qualunque byte il backend conta i fuochi: oltre `EXPORT_MAX_ROWS` (default 100.000, più dell'intero dataset) risponde `400 {"error":"La ricerca restituisce N fuochi: l'export è limitato a M. Restringi i filtri e riprova."}`, mai un file troncato. Filtri, AST o opzioni non validi sono anch'essi `400`. Un errore del DB a export già iniziato chiude la connessione: il client vede un download fallito.
+
+```bash
+curl -o fuochi.csv "https://catasto.example.org/api/catasto/export?quartiere=1,2&sort_by=fortune&order=DESC&sep=semicolon"
+```
 
 ### `GET /api/catasto/manifest/:id`
 
@@ -458,6 +500,7 @@ Il sito ha una versione inglese: il frontend aggiunge `?lang=en` a ogni richiest
 |---|---|
 | `GET /api/filters` | `bestiame`, `rapporto`, `immigrazione`, `mestieri`, `particolaritaParente`, `casa` (`mestieri`, `casa` e `particolaritaParente` riordinati per etichetta tradotta) |
 | `GET /api/catasto`, `POST /api/catasto/query` | `mestiere`, `bestiame`, `immigrazione`, `rapporto_mestiere`, `casa`, `particolarita_fuoco` |
+| `GET /api/catasto/export`, `POST /api/catasto/query/export` | come la tabella, più i campi dei parenti; anche intestazioni delle colonne e metadati |
 | `GET /api/catasto/sidebar` | `mestiere` |
 | `GET /api/parenti/:id` | `parentela_desc`, `sesso`, `stato_civile`, `particolarita` |
 | `GET /api/mestieri` | `Mestiere` (riordinato) |
@@ -525,6 +568,7 @@ docker compose exec backend node backend-catasto/dist/scripts/migrate.js
 | `FORMSUBMIT_ORIGIN` | primo `CORS_ORIGIN` | Origin inviata a FormSubmit e base dei link |
 | `MODERAZIONE_SECRET` | vuota = niente link | Chiave HMAC dei link Accetta/Respingi |
 | `PUBLIC_API_URL` | origin del sito | Base di `/api` nei link, se diversa dal sito |
+| `EXPORT_MAX_ROWS` | `100000` | Numero massimo di fuochi di un export; oltre, `400` con un messaggio |
 | `FILTERS_CACHE_TTL` | `3600` | Durata in secondi della cache delle opzioni dei filtri; `0` = senza scadenza. Per svuotarla subito: `POST /api/filters/cache/invalidate` |
 
 Esempio completo per la produzione: [`.env.prod.example`](../.env.prod.example).

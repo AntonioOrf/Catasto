@@ -1,15 +1,19 @@
 /**
- * CSV minimale (RFC 4180) per gli script di export/import delle traduzioni:
- * separatore virgola, campi fra doppi apici quando contengono virgole, apici
- * o a capo, apice raddoppiato come escape. Niente dipendenze esterne.
+ * CSV minimale (RFC 4180) per l'export dei risultati e per gli script delle
+ * traduzioni: separatore virgola (o punto e virgola, per Excel in italiano),
+ * campi fra doppi apici quando contengono separatore, apici o a capo, apice
+ * raddoppiato come escape. Niente dipendenze esterne.
  */
 
-export function formatCsvField(value: string): string {
-  return /[",\r\n]/.test(value) || value !== value.trim() ? `"${value.replace(/"/g, '""')}"` : value;
+export type CsvSeparator = "," | ";";
+
+export function formatCsvField(value: string, sep: CsvSeparator = ","): string {
+  const special = sep === "," ? /[",\r\n]/ : /[";\r\n]/;
+  return special.test(value) || value !== value.trim() ? `"${value.replace(/"/g, '""')}"` : value;
 }
 
-export function formatCsvRow(fields: string[]): string {
-  return fields.map(formatCsvField).join(",");
+export function formatCsvRow(fields: string[], sep: CsvSeparator = ","): string {
+  return fields.map((field) => formatCsvField(field, sep)).join(sep);
 }
 
 /** Righe del CSV come array di campi. Tollera BOM, CRLF e l'ultima riga senza a capo. */

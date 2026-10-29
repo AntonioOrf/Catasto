@@ -152,6 +152,7 @@ export default function HomePage() {
 
             <CatastoTable
               isDesktop={isDesktop}
+              search={search}
               data={data}
               totalRecords={totalRecords}
               loading={loading}

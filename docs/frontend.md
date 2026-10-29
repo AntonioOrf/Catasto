@@ -46,7 +46,7 @@ frontend-catasto/
     ├── providers/Providers.tsx# QueryClient (retry 1, niente refetch al focus)
     ├── context/FilterContext.tsx
     ├── api/
-    │   ├── client.ts          # apiRequest, base URL, messaggi d'errore per l'utente
+    │   ├── client.ts          # apiRequest, apiDownload, base URL, messaggi d'errore per l'utente
     │   └── catastoService.ts  # tutte le chiamate al backend
     ├── hooks/
     │   ├── useCatastoFilters.ts   # stato dei filtri, AST, ordinamento, link condivisi
@@ -59,11 +59,13 @@ frontend-catasto/
     ├── features/
     │   ├── catasto/
     │   │   ├── components/    # FilterPanel, AdvancedSearchPanel, QueryBuilder,
-    │   │   │                  # CatastoTable, CatastoRow, Pagination, ArchivioViewerModal
+    │   │   │                  # CatastoTable, CatastoRow, Pagination, ArchivioViewerModal,
+    │   │   │                  # ExportMenu
     │   │   └── lib/           # logica pura, testata
     │   │       ├── simple-filters.ts   # filtri semplici → parametri di query
     │   │       ├── query-ast-utils.ts  # pruneAst: toglie condizioni incomplete
-    │   │       ├── query-describe.ts   # AST → frase in italiano
+    │   │       ├── query-describe.ts   # AST → frase leggibile (describeQuery di @catasto/shared)
+    │   │       ├── download.ts         # salvataggio di un Blob come file
     │   │       ├── query-share.ts      # AST ⇄ link #q=…
     │   │       ├── saved-queries.ts    # query salvate in localStorage
     │   │       ├── archivio.ts         # volumi in due parti, ricerca della carta, URL IIIF
@@ -131,6 +133,7 @@ flowchart TD
 | `fetchFilterOptions(geo)` | `GET /api/filters?serie=&quartiere=&piviere=` | avvio e cambio di livello geografico |
 | `fetchManifest(id)` | `GET /api/catasto/manifest/:id` | apertura del visore |
 | `createSegnalazione(body)` | `POST /api/segnalazioni` | invio di una segnalazione |
+| `downloadExport(search, opzioni)` | `GET /api/catasto/export` o `POST /api/catasto/query/export` | pulsante **Esporta** |
 
 `api/client.ts` usa `VITE_API_URL`; se manca, in produzione chiama la stessa origine (`/api`, proxato da nginx), in sviluppo `http://localhost:3005`. Gli errori 4xx mostrano il messaggio del backend, gli altri un testo generico in italiano.
 
@@ -170,6 +173,12 @@ Elenco virtualizzato (nome + mestiere) dei fuochi della ricerca corrente. Clicca
   - *Dettagli economici*: credito, credito ai monti, fortune, deduzioni, imponibile in fiorini; bestiame, immigrazione, rapporto di mestiere, particolarità;
   - *Composizione familiare*: parentela, sesso, età, stato civile, particolarità di ogni membro;
   - azioni **Segnala un errore** e, se manca la portata, **contribuisci** con la segnatura.
+
+### Export (`ExportMenu`)
+
+- Pulsante **Esporta** accanto al numero di risultati: apre un pannello (Esc o clic fuori lo chiudono) con formato **CSV** o **Excel (XLSX)**, separatore del CSV (punto e virgola per Excel in italiano, predefinito in italiano; virgola per R, Python ed Excel in inglese) e **Includi i parenti**.
+- L'export contiene tutte le pagine della ricerca mostrata in tabella (la stessa `search`, semplice o avanzata), nello stesso ordine. CSV con i parenti = due file scaricati uno dopo l'altro (fuochi e parenti); XLSX = un file con i fogli Info, Fuochi e Parenti.
+- Il file arriva con `fetch` e viene salvato con un URL temporaneo (`lib/download.ts`): così un `400` (per esempio oltre il tetto di righe del server) diventa un messaggio nel pannello, non una pagina di errore. Lo stato ("Preparazione del file…", file scaricati) è in una live region.
 
 ### Visore delle carte (`ArchivioViewerModal`)
 
@@ -248,7 +257,10 @@ Test di componenti e hook con Testing Library, in jsdom (dichiarato in testa al 
 
 - `CatastoRow.test.tsx`: la riga non è focalizzabile, si apre dal pulsante con `aria-expanded`/`aria-controls`, il visore non espande la riga, i valori assenti non diventano 0;
 - `Pagination.test.tsx`: comandi disabilitati ai bordi e durante il caricamento, cambio pagina solo su Invio;
-- `useCatastoFilters.test.tsx`: cascata geografica, ordinamento, AST eseguibile, apertura da link `#q=`.
+- `useCatastoFilters.test.tsx`: cascata geografica, ordinamento, AST eseguibile, apertura da link `#q=`;
+- `ExportMenu.test.tsx`: apertura e chiusura con Esc, due file per CSV con i parenti, un file per XLSX, messaggio del server oltre il tetto.
+
+`api/client.test.ts` verifica il nome del file da `Content-Disposition` e gli errori di `apiDownload`.
 
 ---
 

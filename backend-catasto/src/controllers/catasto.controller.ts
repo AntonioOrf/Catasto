@@ -2,13 +2,42 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { CatastoService, type FuochiView } from "../services/catasto.service.js";
 import { paginationSchema, parseNumericId, splitPaginationQuery, ValidationError } from "../utils/validation.js";
-import { astSchema } from "../utils/query-ast-builder.js";
+import { astSchema, buildQueryFromAst } from "../utils/query-ast-builder.js";
+import { buildQuery } from "../utils/query-builder.js";
 import { parseLang } from "../models/traduzioni.model.js";
+import { describeQuery } from "@catasto/shared";
+import { ExportService, type ExportOptions } from "../services/export.service.js";
+import { describeSimpleFilters } from "../utils/describe-filters.js";
 
 const advancedQuerySchema = z.object({
   ast: astSchema,
   view: z.enum(["table", "sidebar"]).catch("table"),
 });
+
+/**
+ * Opzioni dell'export, uguali in query string (GET) e nel body (POST).
+ * `parenti` accetta booleani o "true"/"1"; `sep` anche per nome, perché il
+ * punto e virgola in una query string va codificato.
+ */
+const exportOptionsSchema = z.object({
+  format: z.enum(["csv", "xlsx"], { message: "Formato non valido: usa csv o xlsx" }).default("csv"),
+  parenti: z
+    .union([z.boolean(), z.enum(["true", "false", "1", "0"])])
+    .default(false)
+    .transform((v) => v === true || v === "true" || v === "1"),
+  sep: z
+    .enum([",", ";", "comma", "semicolon"], { message: "Separatore non valido: usa comma o semicolon" })
+    .default(",")
+    .transform((v) => (v === ";" || v === "semicolon" ? ";" : ",")),
+});
+
+const parseExportOptions = (input: unknown, lang: unknown): ExportOptions => {
+  const parsed = exportOptionsSchema.safeParse(input ?? {});
+  if (!parsed.success) throw new ValidationError(parsed.error.issues[0]?.message ?? "Opzioni di export non valide");
+  return { ...parsed.data, lang: parseLang(lang) };
+};
+
+const advancedExportSchema = z.object({ ast: astSchema });
 
 /** L'indice laterale carica blocchi grandi: il default di pagina è diverso dalla tabella. */
 const SIDEBAR_DEFAULT_LIMIT = "1000";
@@ -43,6 +72,45 @@ export const CatastoController = {
     const pagination = paginationSchema.parse(req.body ?? {});
     res.json(
       await CatastoService.queryFuochi(parsed.data.ast, pagination, parsed.data.view, parseLang(req.query.lang)),
+    );
+  },
+
+  /**
+   * GET /api/catasto/export: stessi filtri e ordinamento della tabella, tutte
+   * le pagine. Paginazione ignorata.
+   */
+  async exportSimple(req: Request, res: Response) {
+    const { lang, format, parenti, sep, ...query } = req.query;
+    const options = parseExportOptions({ format, parenti, sep }, lang);
+    const { pagination, filters } = splitPaginationQuery(query);
+    const compiled = buildQuery(filters);
+    await ExportService.exportFuochi(
+      res,
+      compiled,
+      pagination,
+      (filterOptions) => describeSimpleFilters(filters, filterOptions, options.lang),
+      options,
+    );
+  },
+
+  /** POST /api/catasto/query/export: stesso AST della ricerca avanzata. */
+  async exportAdvanced(req: Request, res: Response) {
+    const parsed = advancedExportSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError(
+        `Query non valida: ${parsed.error.issues[0]?.message ?? "formato non riconosciuto"}`,
+      );
+    }
+    const { format, parenti, sep } = req.body;
+    const options = parseExportOptions({ format, parenti, sep }, req.query.lang);
+    const pagination = paginationSchema.parse(req.body ?? {});
+    const ast = parsed.data.ast;
+    await ExportService.exportFuochi(
+      res,
+      buildQueryFromAst(ast),
+      pagination,
+      (filterOptions) => describeQuery(ast, filterOptions, options.lang),
+      options,
     );
   },
 

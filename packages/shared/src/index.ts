@@ -2,6 +2,7 @@ export * from "./fields.js";
 export * from "./query-ast.js";
 export * from "./segnalazioni.js";
 export * from "./segnatura.js";
+export * from "./labels.js";
 
 export interface Fuoco {
   id: number;

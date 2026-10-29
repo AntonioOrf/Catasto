@@ -345,7 +345,27 @@ stateDiagram-v2
 
 **Attore**: ricercatore con uno script · **Obiettivo**: scaricare tutti i fuochi che rispondono a un criterio per elaborarli altrove.
 
-**Vincoli**: 300 richieste ogni 15 minuti per IP, al massimo 2000 righe per pagina.
+**Via breve: l'export.** Un'unica richiesta restituisce tutte le righe della ricerca in CSV (UTF-8 con BOM) o XLSX, con la stessa query e lo stesso ordine della tabella:
+
+```bash
+# Tutti i fuochi con imponibile >= 500, ordinati per imponibile, in CSV
+curl -s -X POST "https://catasto.example.org/api/catasto/query/export" \
+  -H 'Content-Type: application/json' -o fuochi.csv \
+  -d '{"ast":{"kind":"group","op":"AND","children":[
+        {"kind":"condition","field":"imponibile","operator":"gte","value":500}]},
+       "sort_by":"imponibile","order":"DESC","format":"csv"}'
+# Gli stessi fuochi, i parenti in formato lungo (una riga per parente)
+#   ... "format":"csv","parenti":true}'  -o parenti.csv
+```
+
+```r
+# In R: le righe iniziali con # descrivono fonte e query
+fuochi <- read.csv("fuochi.csv", comment.char = "#", fileEncoding = "UTF-8-BOM")
+```
+
+Oltre `EXPORT_MAX_ROWS` (default 100.000, più dell'intero dataset) la risposta è un `400` con un messaggio; l'export ha un limite di 20 richieste ogni 15 minuti per IP. Dettagli in [Backend](backend.md#get-apicatastoexport--export-della-ricerca).
+
+**Via lunga: le pagine dell'API.** Vincoli: 300 richieste ogni 15 minuti per IP, al massimo 2000 righe per pagina.
 
 ```bash
 #!/usr/bin/env bash
@@ -370,7 +390,7 @@ done
 
 - Rispettare `RateLimit-Remaining` negli header; oltre la soglia si riceve `429`.
 - L'ordinamento è stabile (a parità di valore decide l'id del fuoco): le pagine non si sovrappongono e nessun fuoco viene saltato.
-- Per i parenti di ogni fuoco: `GET /api/parenti/:id`.
+- Per i parenti di ogni fuoco: `GET /api/parenti/:id`, oppure l'export con `parenti=true`.
 
 ---
 

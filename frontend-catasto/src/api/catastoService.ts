@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiDownload, apiRequest } from "./client";
 import { translate } from "../i18n/messages";
 import { clientMessages as messages } from "./client.messages";
 import type {
@@ -96,3 +96,38 @@ export const fetchManifestPages = (archiveId: string, signal?: AbortSignal) =>
     translate(messages, "manifestFailed"),
     { signal },
   );
+
+export type ExportFormat = "csv" | "xlsx";
+
+export interface ExportRequest {
+  format: ExportFormat;
+  /** CSV: il file dei parenti al posto di quello dei fuochi. XLSX: un foglio in più. */
+  parenti: boolean;
+  sep: "comma" | "semicolon";
+}
+
+/**
+ * Export della ricerca corrente, tutte le pagine nello stesso ordine della
+ * tabella: GET con i filtri semplici, POST con l'AST della ricerca avanzata.
+ */
+export const downloadExport = (search: SearchParams, request: ExportRequest) => {
+  const fallback = translate(messages, "exportFailed");
+  const fallbackName = `catasto1427.${request.format}`;
+  if (search.advancedMode) {
+    return apiDownload("/api/catasto/query/export", fallback, fallbackName, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ast: search.ast,
+        sort_by: search.sortBy,
+        order: search.sortOrder,
+        ...request,
+      }),
+    });
+  }
+  const params = buildParams(search);
+  params.append("format", request.format);
+  params.append("parenti", String(request.parenti));
+  params.append("sep", request.sep);
+  return apiDownload(`/api/catasto/export?${params}`, fallback, fallbackName);
+};

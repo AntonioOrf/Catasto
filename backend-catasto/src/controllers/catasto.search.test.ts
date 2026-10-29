@@ -68,3 +68,44 @@ describe("CatastoController: ricerca", () => {
     ).rejects.toThrow(ValidationError);
   });
 });
+
+const exportService = vi.hoisted(() => ({ exportFuochi: vi.fn() }));
+vi.mock("../services/export.service.js", () => ({ ExportService: exportService }));
+
+describe("CatastoController: export", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("separa le opzioni dell'export da filtri e ordinamento", async () => {
+    await CatastoController.exportSimple(
+      { query: { format: "xlsx", parenti: "1", sep: "semicolon", lang: "en", mestiere: "3", sort_by: "fortune", page: "4" } } as unknown as Request,
+      res(),
+    );
+    const [, compiled, pagination, , options] = exportService.exportFuochi.mock.calls[0];
+    expect(compiled.params).toEqual([3]);
+    expect(pagination.sort_by).toBe("fortune");
+    expect(options).toEqual({ format: "xlsx", parenti: true, sep: ";", lang: "en" });
+  });
+
+  it("default: CSV dei fuochi con la virgola", async () => {
+    await CatastoController.exportSimple({ query: {} } as unknown as Request, res());
+    expect(exportService.exportFuochi.mock.calls[0][4]).toEqual({ format: "csv", parenti: false, sep: ",", lang: "it" });
+  });
+
+  it.each([
+    ["formato sconosciuto", { format: "pdf" }],
+    ["parenti non booleano", { parenti: "forse" }],
+    ["separatore sconosciuto", { sep: "|" }],
+  ])("%s: 400", async (_caso, query) => {
+    await expect(CatastoController.exportSimple({ query } as unknown as Request, res())).rejects.toThrow(ValidationError);
+    expect(exportService.exportFuochi).not.toHaveBeenCalled();
+  });
+
+  it("la ricerca avanzata legge le opzioni dal body", async () => {
+    const ast = { kind: "group", op: "AND", children: [] };
+    await CatastoController.exportAdvanced(
+      { body: { ast, format: "csv", parenti: true, sort_by: "nome" }, query: {} } as unknown as Request,
+      res(),
+    );
+    expect(exportService.exportFuochi.mock.calls[0][4]).toMatchObject({ format: "csv", parenti: true });
+  });
+});

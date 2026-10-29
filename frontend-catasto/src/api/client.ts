@@ -17,6 +17,24 @@ export const userMessage = (error: unknown, fallback: string, lang: Lang = getLa
   return error.message || fallback;
 };
 
+/** Lingua nella query string: in italiano non serve dichiararla. */
+const withLang = (path: string, lang: Lang) =>
+  lang === "it" ? path : `${path}${path.includes("?") ? "&" : "?"}lang=${lang}`;
+
+/** Errore da una risposta non 2xx: il messaggio del backend per i 4xx, il fallback per il resto. */
+async function responseError(response: Response, fallbackError: string, lang: Lang): Promise<Error> {
+  let message = translate(messages, "withStatus", { message: fallbackError, status: response.status }, lang);
+  try {
+    const body = await response.json();
+    // Nei 5xx il backend in produzione risponde con un generico
+    // "Internal Server Error": meglio il nostro testo tradotto.
+    if (body?.error && response.status < 500) message = body.error;
+  } catch {
+    // il body non è JSON: teniamo il messaggio generico
+  }
+  return new Error(message);
+}
+
 /**
  * Unico punto di accesso all'API: su risposta non 2xx usa il messaggio
  * `error` del backend (i 4xx sono scritti per l'utente) o il fallback dato.
@@ -29,21 +47,9 @@ export async function apiRequest<T>(
   // Le etichette delle tabelle di lookup (mestieri, casa, ...) il backend le
   // traduce se chiesto; l'italiano è il default e non serve dichiararlo.
   const lang = getLang();
-  const url = lang === "it" ? path : `${path}${path.includes("?") ? "&" : "?"}lang=${lang}`;
-  const response = await fetch(`${API_URL}${url}`, init);
+  const response = await fetch(`${API_URL}${withLang(path, lang)}`, init);
 
-  if (!response.ok) {
-    let message = translate(messages, "withStatus", { message: fallbackError, status: response.status }, lang);
-    try {
-      const body = await response.json();
-      // Nei 5xx il backend in produzione risponde con un generico
-      // "Internal Server Error": meglio il nostro testo tradotto.
-      if (body?.error && response.status < 500) message = body.error;
-    } catch {
-      // il body non è JSON: teniamo il messaggio generico
-    }
-    throw new Error(message);
-  }
+  if (!response.ok) throw await responseError(response, fallbackError, lang);
 
   // Un 200 non JSON è quasi sempre l'index.html servito al posto dell'API
   // (es. deploy senza VITE_API_URL): il SyntaxError del parse non va mostrato.
@@ -54,4 +60,26 @@ export async function apiRequest<T>(
     if (error instanceof DOMException && error.name === "AbortError") throw error;
     throw new Error(translate(messages, "invalidResponse", { message: fallbackError }, lang));
   }
+}
+
+/** Nome del file da Content-Disposition (`attachment; filename="..."`). */
+export const filenameFromDisposition = (header: string | null, fallback: string): string =>
+  header?.match(/filename="?([^";]+)"?/)?.[1] ?? fallback;
+
+/**
+ * Download di un file generato dall'API (export): stessa gestione degli
+ * errori di `apiRequest`, ma il corpo resta binario. Un 400 (es. troppe
+ * righe) arriva come JSON e diventa un Error con il messaggio del backend.
+ */
+export async function apiDownload(
+  path: string,
+  fallbackError: string,
+  fallbackFilename: string,
+  init?: RequestInit,
+): Promise<{ blob: Blob; filename: string }> {
+  const lang = getLang();
+  const response = await fetch(`${API_URL}${withLang(path, lang)}`, init);
+  if (!response.ok) throw await responseError(response, fallbackError, lang);
+  const blob = await response.blob();
+  return { blob, filename: filenameFromDisposition(response.headers.get("content-disposition"), fallbackFilename) };
 }
