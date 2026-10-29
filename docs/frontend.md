@@ -147,7 +147,8 @@ flowchart TD
 
 ### Ricerca semplice (`FilterPanel`)
 
-- Sempre visibili: **Cerca Persona**, **Cerca Località**, **Volume**, pulsante **Aggiorna**.
+- In alto l'interruttore **Ricerca semplice | Ricerca avanzata** e, a destra, **Azzera filtri**.
+- Su una riga sola: **Cerca Persona**, **Cerca Località**, **Volume**, i pulsanti **Altri filtri** e **Aggiorna**.
 - Pannello **Altri filtri** (con contatore dei filtri attivi):
   - attributi a scelta con autocompletamento: Mestiere, Rapporto, Bestiame, Immigrazione, Particolarità parente, Casa;
   - geografia a cascata **Serie → Quartiere → Piviere → Popolo** (cambiare un livello azzera quelli sotto e restringe le opzioni);

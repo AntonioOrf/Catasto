@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, RefreshCw, type LucideIcon } from "lucide-react";
+import { Search, RefreshCw, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import type { FilterOptions } from "@catasto/shared";
 
 import CustomAutocomplete from "../../../components/common/CustomAutocomplete";
@@ -77,6 +77,13 @@ const labelClasses = "block text-sm md:text-base font-semibold text-accent-stron
 const smallLabelClasses = "block text-sm font-semibold text-accent-strong mb-1";
 const sectionTitleClasses = "text-accent-strong font-semibold text-base mb-3";
 const linkButtonClasses = "inline-flex items-center gap-1 text-sm md:text-base underline-offset-4 hover:underline min-h-11";
+/** Interruttore semplice/avanzata: due pulsanti affiancati, quello attivo pieno. */
+const segmentClasses = "min-h-11 px-3 md:px-4 text-sm md:text-base transition-colors";
+const segmentOnClasses = "bg-primary text-on-primary font-semibold";
+const segmentOffClasses = "text-text-accent hover:bg-item-hover";
+/** Altri filtri e Aggiorna: stessa altezza dei campi accanto. */
+const actionButtonClasses =
+  "w-full md:w-auto px-4 border rounded-ui transition-colors flex justify-center items-center gap-2 h-11 md:h-[54px] font-semibold whitespace-nowrap";
 /** Conteggio accanto ai link: testo tra parentesi, niente pillole. */
 const countClasses = "tabular-nums";
 
@@ -132,11 +139,45 @@ export default function FilterPanel({ loading, onRefresh, filterOptions }: Filte
       className="bg-bg-sidebar rounded-ui border border-border-base mb-6 transition-colors duration-300"
     >
       <div className="p-4 md:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div role="group" aria-label={t("mode")} className="inline-flex border border-border-base rounded-ui">
+            <button
+              type="button"
+              onClick={() => setAdvancedMode(false)}
+              className={`${segmentClasses} ${advancedMode ? segmentOffClasses : segmentOnClasses}`}
+              aria-pressed={!advancedMode}
+            >
+              {t("simpleSearch")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdvancedMode(true)}
+              className={`${segmentClasses} border-l border-border-base ${advancedMode ? segmentOnClasses : segmentOffClasses}`}
+              aria-pressed={advancedMode}
+              title={t("advancedTitle")}
+            >
+              {t("advancedSearch")}
+              {advancedMode && astConditionCount > 0 && <span className={countClasses}> ({astConditionCount})</span>}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={resetFilters}
+            disabled={activeFilterCount === 0 && astConditionCount === 0}
+            className={`${linkButtonClasses} text-text-accent disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline`}
+            title={t("resetTitle")}
+          >
+            {t("reset")}
+            {activeFilterCount > 0 && <span className={countClasses}>({activeFilterCount})</span>}
+          </button>
+        </div>
+
         {/* In modalità avanzata i filtri semplici non vengono applicati: la
             query è interamente descritta dall'AST. Mostrarli comunque
             significherebbe mostrare controlli che non fanno nulla. */}
         {!advancedMode && (
-          <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-end mb-4">
+          <div className="flex flex-col md:flex-row gap-4 items-end">
             {TEXT_FILTERS.map(({ key, label, placeholder, icon: Icon, narrow, term }) => (
               <div key={key} className={`flex-1 w-full ${narrow ? "md:max-w-[150px]" : ""}`}>
                 {labelWithTerm(fieldId(key), t(label), labelClasses, term)}
@@ -159,8 +200,22 @@ export default function FilterPanel({ loading, onRefresh, filterOptions }: Filte
 
             <button
               type="button"
+              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+              className={`${actionButtonClasses} border-primary text-primary hover:bg-item-hover`}
+              aria-expanded={isFiltersOpen}
+              aria-controls="altri-filtri"
+            >
+              <SlidersHorizontal aria-hidden="true" className="h-5 w-5" />
+              <span>
+                {isFiltersOpen ? t("hideMoreFilters") : t("moreFilters")}
+                {advancedFilterCount > 0 && <span className={countClasses}> ({advancedFilterCount})</span>}
+              </span>
+            </button>
+
+            <button
+              type="button"
               onClick={onRefresh}
-              className="w-full md:w-auto px-4 border border-primary bg-primary text-on-primary hover:bg-primary/90 rounded-ui transition-colors flex justify-center gap-2 h-11 md:h-[54px] items-center font-semibold"
+              className={`${actionButtonClasses} border-primary bg-primary text-on-primary hover:bg-primary/90`}
               title={t("refreshTitle")}
             >
               <RefreshCw
@@ -173,47 +228,10 @@ export default function FilterPanel({ loading, onRefresh, filterOptions }: Filte
           </div>
         )}
 
-        <div className="flex flex-wrap justify-end items-center gap-3 md:gap-4 mb-2">
-          <button
-            type="button"
-            onClick={resetFilters}
-            disabled={activeFilterCount === 0 && astConditionCount === 0}
-            className={`${linkButtonClasses} text-text-accent disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline`}
-            title={t("resetTitle")}
-          >
-            {t("reset")}
-            {activeFilterCount > 0 && <span className={countClasses}>({activeFilterCount})</span>}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setAdvancedMode(!advancedMode)}
-            className={`${linkButtonClasses} text-text-accent`}
-            aria-pressed={advancedMode}
-            title={t("advancedTitle")}
-          >
-            {advancedMode ? t("simpleSearch") : t("advancedSearch")}
-            {advancedMode && astConditionCount > 0 && <span className={countClasses}>({astConditionCount})</span>}
-          </button>
-
-          {!advancedMode && (
-            <button
-              type="button"
-              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              className={`${linkButtonClasses} text-primary`}
-              aria-expanded={isFiltersOpen}
-              aria-controls="altri-filtri"
-            >
-              {isFiltersOpen ? t("hideMoreFilters") : t("moreFilters")}
-              {advancedFilterCount > 0 && <span className={countClasses}>({advancedFilterCount})</span>}
-            </button>
-          )}
-        </div>
-
         {advancedMode && <AdvancedSearchPanel ast={ast} onChange={setAst} options={filterOptions} />}
 
         {isFiltersOpen && !advancedMode && (
-          <div id="altri-filtri" className="bg-bg-main border border-border-base rounded-ui p-3 md:p-4 mt-2">
+          <div id="altri-filtri" className="bg-bg-main border border-border-base rounded-ui p-3 md:p-4 mt-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
               {ATTRIBUTE_FILTERS.map((filter) => renderSelect(filter, smallLabelClasses))}
             </div>
