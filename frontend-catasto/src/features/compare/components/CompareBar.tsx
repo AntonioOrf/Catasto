@@ -62,10 +62,10 @@ export default function CompareBar() {
       </p>
       {ids.length > 0 && (
         <>
-          <div aria-hidden="true" className={expanded ? "h-28 md:h-16" : "h-10"} />
+          {/* Alta quanto la barra: sul telefono va su più righe. */}
+          <div aria-hidden="true" className={expanded ? "h-40 md:h-16" : "h-20 sm:h-10"} />
           <section aria-label={t("region")} className="fixed inset-x-0 bottom-0 z-40 bg-bg-sidebar border-t border-border-base px-3 md:px-6 py-0.5 text-sm">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
-              {/* Ridotta di partenza: il conto apre nomi e altre azioni. */}
               <button
                 type="button"
                 onClick={() => setExpanded((v) => !v)}
@@ -103,10 +103,10 @@ export default function CompareBar() {
                 })}
                 {ids.length > NAMES_SHOWN && <span className="text-text-accent"> {t("others", { n: ids.length - NAMES_SHOWN })}</span>}
               </p>
-              {(removed || status) && (
+              {/* Da ridotta occupa anche lo spazio tra il conto e le azioni. */}
+              {(!expanded || removed || status) && (
                 <span className={`text-xs text-text-accent ${expanded ? "basis-full order-last" : "min-w-0 flex-1"}`}>{[removed, status].filter(Boolean).join(" ")}</span>
               )}
-              {!expanded && !(removed || status) && <span className="flex-1" aria-hidden="true" />}
 
               {expanded && <AddToCollection ids={ids} onAdded={setStatus} />}
               <button type="button" onClick={exportSelected} disabled={busy} title={t("exportSelectedTitle")} className={linkClasses}>
