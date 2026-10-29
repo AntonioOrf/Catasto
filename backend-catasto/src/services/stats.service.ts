@@ -1,4 +1,5 @@
 import {
+  IMPONIBILE_BANDS,
   STATS_METRICS,
   type CatastoStats,
   type Distribution,
@@ -70,7 +71,7 @@ export function toMetricSummary(
 async function computeStats(filters: StatsFilters, traduttore: Traduttore): Promise<CatastoStats> {
   const t = (tabella: TabellaLookup) => (label: string) => traduttore.t(tabella, label) as string;
 
-  const [summary, quantili, mestieri, quartieri, serie, membri, eta, statoCivile] = await Promise.all([
+  const [summary, quantili, mestieri, quartieri, serie, membri, eta, statoCivile, fasceImp] = await Promise.all([
     StatsModel.summary(filters),
     Promise.all(STATS_METRICS.map((m) => StatsModel.quantileRows(filters, m))),
     StatsModel.mestieri(filters),
@@ -79,6 +80,7 @@ async function computeStats(filters: StatsFilters, traduttore: Traduttore): Prom
     StatsModel.membri(filters),
     StatsModel.eta(filters),
     StatsModel.statoCivile(filters),
+    StatsModel.fasceImponibile(filters),
   ]);
 
   const economia = Object.fromEntries(
@@ -99,6 +101,11 @@ async function computeStats(filters: StatsFilters, traduttore: Traduttore): Prom
     membri,
     eta: { fasce, assenti: eta.filter((r) => r.da === null).reduce((s, r) => s + r.n, 0) },
     statoCivile: toDistribution(statoCivile, Infinity, t("statocivile_parenti")),
+    fasceImponibile: {
+      // Tutte le fasce, anche quelle vuote: il grafico mostra sempre la stessa scala.
+      fasce: IMPONIBILE_BANDS.map((da) => ({ da, n: fasceImp.find((f) => f.da === da)?.n ?? 0 })),
+      assenti: fasceImp.filter((f) => f.da === null).reduce((s, f) => s + f.n, 0),
+    },
   };
 }
 

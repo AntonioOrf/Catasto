@@ -15,6 +15,7 @@ import {
  */
 
 const LOCALITA_LABEL: Record<Lingua, string> = { it: "Località contiene", en: "Place contains" };
+const IDS_LABEL: Record<Lingua, string> = { it: "fuochi scelti a mano: {n}", en: "hand-picked households: {n}" };
 
 const ENUM_PARAMS = [
   ["mestiere", "mestiere"],
@@ -72,8 +73,13 @@ export function simpleFiltersToAst(filters: Record<string, unknown>): QueryGroup
 export function describeSimpleFilters(filters: Record<string, unknown>, options: OptionsByKey, lang: Lingua): string {
   const ast = simpleFiltersToAst(filters);
   const localita = scalar(filters.q_localita);
-  if (!localita) return describeQuery(ast, options, lang);
+  const ids = scalar(filters.ids);
+  if (!localita && !ids) return describeQuery(ast, options, lang);
   const rest = ast.children.length > 0 ? describeQuery(ast, options, lang) : "";
-  const parts = [`${LOCALITA_LABEL[lang]} "${localita}"`, rest].filter(Boolean);
+  const parts = [
+    ids ? IDS_LABEL[lang].replace("{n}", String(ids.split(",").length)) : "",
+    localita ? `${LOCALITA_LABEL[lang]} "${localita}"` : "",
+    rest,
+  ].filter(Boolean);
   return parts.join(lang === "it" ? " e " : " and ");
 }

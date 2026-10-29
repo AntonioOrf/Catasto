@@ -1,6 +1,6 @@
 import "./env.js";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { STATS_METRICS, type ApiResponse, type Fuoco, type QueryGroup } from "@catasto/shared";
+import { IMPONIBILE_BANDS, STATS_METRICS, type ApiResponse, type Fuoco, type QueryGroup } from "@catasto/shared";
 import pool from "../../src/config/db.js";
 import { CatastoService } from "../../src/services/catasto.service.js";
 import { StatsService } from "../../src/services/stats.service.js";
@@ -97,6 +97,18 @@ describe("statistiche su MySQL", () => {
     expect(stats.eta.fasce).toContainEqual({ da: 80, sesso: "Maschio", n: 1 });
     expect(stats.eta.fasce.reduce((s, f) => s + f.n, 0) + stats.eta.assenti).toBe(20);
     expect(stats.statoCivile.voci[0]).toEqual({ label: "Sposato", n: 9 });
+  });
+
+  it("fasce dell'imponibile uguali al conteggio sui valori grezzi", async () => {
+    const stats = await StatsService.searchStats({});
+    const { data } = await allRows({});
+    const bands = stats.fasceImponibile.fasce.map((f) => f.da);
+    expect(bands).toEqual([...IMPONIBILE_BANDS]);
+    const fasciaDi = (v: number) => [...bands].reverse().find((da) => v >= da) ?? bands[0];
+    for (const { da, n } of stats.fasceImponibile.fasce) {
+      expect(n).toBe(data.filter((f) => f.imponibile !== null && fasciaDi(Number(f.imponibile)) === da).length);
+    }
+    expect(stats.fasceImponibile.assenti).toBe(data.filter((f) => f.imponibile === null).length);
   });
 
   it("la ricerca avanzata usa lo stesso compilatore", async () => {

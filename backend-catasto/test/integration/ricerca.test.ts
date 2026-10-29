@@ -60,6 +60,22 @@ describe("ricerca su MySQL", () => {
   });
 });
 
+describe("Banco di lavoro", () => {
+  it("la vista banco aggiunge bocche ed età media, coerenti con i parenti", async () => {
+    const banco = (await CatastoService.searchFuochi({}, pagination, "banco")) as ApiResponse<Fuoco[]>;
+    const [[parenti]]: any = await pool.query("SELECT COUNT(*) AS n FROM parenti");
+    expect(banco.data.reduce((s, f) => s + (f.bocche ?? 0), 0)).toBe(Number(parenti.n));
+    expect(banco.data.some((f) => f.bocche === 0 && f.eta_media === null)).toBe(true);
+    const table = await search({});
+    expect(table.data[0].bocche).toBeUndefined();
+  });
+
+  it("il filtro ids limita la ricerca ai fuochi scelti", async () => {
+    const r = await search({ ids: "5,1,999" });
+    expect(r.data.map((f) => f.id).sort()).toEqual([1, 5]);
+  });
+});
+
 describe("fuochi per id (confronto)", () => {
   it("restituisce i fuochi nell'ordine chiesto e omette gli inesistenti", async () => {
     const fuochi = await CatastoService.getFuochiByIds([5, 999, 1]);

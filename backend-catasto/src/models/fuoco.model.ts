@@ -131,6 +131,32 @@ export class FuocoModel {
     return rows;
   }
 
+  /**
+   * Bocche (parenti registrati) ed età media dei fuochi di una pagina, per il
+   * Banco di lavoro: una sola query raggruppata sugli id della pagina invece
+   * di una sottoquery per riga. Un fuoco senza parenti ha 0 bocche.
+   */
+  static async attachComposizione(rows: Fuoco[]): Promise<Fuoco[]> {
+    if (rows.length === 0) return rows;
+    const ids = rows.map((r) => Number(r.id));
+    const [stats]: any = await pool.query(
+      "SELECT ID_FUOCO AS id, COUNT(*) AS bocche, AVG(Eta) AS eta_media FROM parenti WHERE ID_FUOCO IN (?) GROUP BY ID_FUOCO",
+      [ids],
+    );
+    const byId = new Map<number, { bocche: number; eta_media: number | null }>(
+      (stats as { id: number; bocche: number; eta_media: string | number | null }[]).map((r) => [
+        Number(r.id),
+        { bocche: Number(r.bocche), eta_media: r.eta_media === null ? null : Number(r.eta_media) },
+      ]),
+    );
+    for (const row of rows) {
+      const c = byId.get(Number(row.id));
+      row.bocche = c?.bocche ?? 0;
+      row.eta_media = c?.eta_media ?? null;
+    }
+    return rows;
+  }
+
   static async getSidebar(q: FuocoQuery): Promise<SidebarItem[]> {
     const from = buildFrom(["m", ...q.usedTables]);
     const sql = `SELECT f.ID_Fuochi as id, f.Nome_Fuoco as nome, m.Mestiere as mestiere ${from} ${q.conditions} ${q.orderByClause} LIMIT ? OFFSET ?`;

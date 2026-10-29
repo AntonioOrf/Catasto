@@ -27,6 +27,13 @@ describe("describeSimpleFilters", () => {
     );
   });
 
+  it("i fuochi scelti a mano sono contati in testa", () => {
+    expect(describeSimpleFilters({ ids: "4,8,15" }, options, "it")).toBe("fuochi scelti a mano: 3");
+    expect(describeSimpleFilters({ ids: "4", q_localita: "Spirito" }, options, "en")).toBe(
+      'hand-picked households: 1 and Place contains "Spirito"',
+    );
+  });
+
   it("ignora parametri non scalari", () => {
     expect(simpleFiltersToAst({ mestiere: ["1", "2"] }).children).toEqual([]);
   });

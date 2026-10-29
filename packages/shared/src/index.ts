@@ -31,6 +31,9 @@ export interface Fuoco {
    * La UI non deve mostrare nulla quando manca.
    */
   segnatura_portata?: string | null;
+  /** Solo nella vista "banco": parenti registrati (bocche) ed età media. */
+  bocche?: number;
+  eta_media?: number | null;
   /**
    * Id d'archivio del volume della portata, quando la segnatura accettata
    * indica un volume del fondo Catasto digitalizzato: permette di aprire la
@@ -135,6 +138,8 @@ export interface CatastoStats {
   /** Parenti per fascia d'età di 5 anni (`da`, 90 = 90 e oltre) e sesso; età assente a parte. */
   eta: { fasce: { da: number; sesso: string | null; n: number }[]; assenti: number };
   statoCivile: Distribution;
+  /** Fuochi per fascia dell'imponibile (`da` = estremo inferiore, vedi IMPONIBILE_BANDS). */
+  fasceImponibile: { fasce: { da: number; n: number }[]; assenti: number };
 }
 
 /**
@@ -143,3 +148,15 @@ export interface CatastoStats {
  */
 export const COMPARE_MIN_FUOCHI = 2;
 export const COMPARE_MAX_FUOCHI = 5;
+
+/** Fuochi caricabili in una richiesta per id (nomi della selezione). */
+export const FUOCHI_BY_IDS_MAX = 50;
+
+/**
+ * Fuochi di una selezione o di una raccolta: tetto del parametro `ids` della
+ * ricerca e dell'export (GET /api/catasto?ids=…, /api/catasto/export?ids=…).
+ */
+export const SELECTION_MAX_FUOCHI = 500;
+
+/** Fasce dell'imponibile nelle statistiche: estremi inferiori, in fiorini. */
+export const IMPONIBILE_BANDS = [0, 1, 51, 201, 501, 1001] as const;

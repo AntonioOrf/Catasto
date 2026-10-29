@@ -13,7 +13,8 @@ import type {
   QueryGroup,
 } from "@catasto/shared";
 
-export type FuochiView = "table" | "sidebar";
+/** "banco": la vista tabella con bocche ed età media (Banco di lavoro). */
+export type FuochiView = "table" | "sidebar" | "banco";
 
 /** Campi di lookup della vista tabella e tabella del dump da cui vengono. */
 const FUOCO_LOOKUP_FIELDS: Partial<Record<keyof Fuoco, TabellaLookup>> = {
@@ -135,7 +136,7 @@ export class CatastoService {
 
     const [total, rows, traduttore] = await Promise.all([
       FuocoModel.count(filters.conditions, filters.params, filters.usedTables),
-      FuocoModel.findAll(query),
+      FuocoModel.findAll(query).then((r) => (view === "banco" ? FuocoModel.attachComposizione(r) : r)),
       TraduzioniModel.forLang(lang),
     ]);
     const data = traduttore.translateRows(rows, FUOCO_LOOKUP_FIELDS);

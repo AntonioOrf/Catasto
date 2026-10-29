@@ -1,5 +1,5 @@
 import pool from "../config/db.js";
-import type { StatsMetric } from "@catasto/shared";
+import { IMPONIBILE_BANDS, type StatsMetric } from "@catasto/shared";
 import { buildFrom } from "./fuoco.model.js";
 import { groupedLabel } from "./common.model.js";
 
@@ -105,6 +105,16 @@ export class StatsModel {
 
   static serie(q: StatsFilters) {
     return this.countBy(q, groupedLabel("tser.nome_serie"), ["tser"]);
+  }
+
+  /** Fuochi per fascia dell'imponibile (estremo inferiore della fascia); null = assente. */
+  static async fasceImponibile(q: StatsFilters): Promise<{ da: number | null; n: number }[]> {
+    // CASE dagli estremi più alti: la prima fascia il cui minimo è raggiunto.
+    const cases = [...IMPONIBILE_BANDS].reverse().map((da) => `WHEN f.Imponibile_Fuoco >= ${Number(da)} THEN ${Number(da)}`).join(" ");
+    const sql = `SELECT CASE WHEN f.Imponibile_Fuoco IS NULL THEN NULL ${cases} ELSE ${IMPONIBILE_BANDS[0]} END AS da, COUNT(*) AS n
+      ${buildFrom(q.usedTables)} ${q.conditions} GROUP BY da ORDER BY da`;
+    const [rows]: any = await pool.query(sql, q.params);
+    return rows.map((r: any) => ({ da: num(r.da), n: Number(r.n) }));
   }
 
   /** Sottoquery degli id dei fuochi della ricerca, per gli aggregati sui parenti. */

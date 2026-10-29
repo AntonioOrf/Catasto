@@ -46,6 +46,19 @@ describe("CatastoController: ricerca", () => {
     expect(view).toBe("sidebar");
   });
 
+  it("la ricerca semplice accetta la vista banco, ma non la passa come filtro", async () => {
+    await CatastoController.getAll({ query: { view: "banco", mestiere: "3" } } as unknown as Request, res());
+    const [filters, , view] = service.searchFuochi.mock.calls[0];
+    expect(filters).toEqual({ mestiere: "3" });
+    expect(view).toBe("banco");
+  });
+
+  it("la ricerca avanzata accetta la vista banco", async () => {
+    const ast = { kind: "group", op: "AND", children: [] };
+    await CatastoController.query({ body: { ast, view: "banco" }, query: {} } as unknown as Request, res());
+    expect(service.queryFuochi.mock.calls[0][2]).toBe("banco");
+  });
+
   it("una vista sconosciuta è la tabella", async () => {
     const ast = { kind: "group", op: "AND", children: [] };
     await CatastoController.query({ body: { ast, view: "boh" }, query: {} } as unknown as Request, res());
@@ -147,7 +160,7 @@ describe("CatastoController: fuochi per id", () => {
     ["non numerico", "1,a"],
     ["virgola finale", "1,2,"],
     ["array", ["1", "2"]],
-    ["oltre il massimo", "1,2,3,4,5,6"],
+    ["oltre il massimo", Array.from({ length: 51 }, (_, i) => i + 1).join(",")],
   ])("%s: 400", async (_caso, ids) => {
     await expect(CatastoController.getByIds({ query: { ids } } as unknown as Request, res())).rejects.toThrow(ValidationError);
     expect(getFuochiByIds).not.toHaveBeenCalled();

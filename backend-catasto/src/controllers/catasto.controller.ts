@@ -5,14 +5,14 @@ import { paginationSchema, parseNumericId, splitPaginationQuery, ValidationError
 import { astSchema, buildQueryFromAst } from "../utils/query-ast-builder.js";
 import { buildQuery } from "../utils/query-builder.js";
 import { parseLang } from "../models/traduzioni.model.js";
-import { COMPARE_MAX_FUOCHI, describeQuery } from "@catasto/shared";
+import { FUOCHI_BY_IDS_MAX, describeQuery } from "@catasto/shared";
 import { ExportService, type ExportOptions } from "../services/export.service.js";
 import { describeSimpleFilters } from "../utils/describe-filters.js";
 import { StatsService } from "../services/stats.service.js";
 
 const advancedQuerySchema = z.object({
   ast: astSchema,
-  view: z.enum(["table", "sidebar"]).catch("table"),
+  view: z.enum(["table", "sidebar", "banco"]).catch("table"),
 });
 
 /**
@@ -44,9 +44,10 @@ const advancedExportSchema = z.object({ ast: astSchema });
 /** L'indice laterale carica blocchi grandi: il default di pagina è diverso dalla tabella. */
 const SIDEBAR_DEFAULT_LIMIT = "1000";
 
-const search = (view: FuochiView) => async (req: Request, res: Response) => {
-  // `lang` sceglie la lingua delle etichette, non e' un filtro.
-  const { lang, ...query } = req.query;
+const search = (defaultView: FuochiView) => async (req: Request, res: Response) => {
+  // `lang` sceglie la lingua delle etichette e `view` la vista: non sono filtri.
+  const { lang, view: requested, ...query } = req.query;
+  const view: FuochiView = defaultView === "table" && requested === "banco" ? "banco" : defaultView;
   const { pagination, filters } = splitPaginationQuery(
     query,
     view === "sidebar" ? { limit: SIDEBAR_DEFAULT_LIMIT } : {},
@@ -137,7 +138,7 @@ export const CatastoController = {
 
   /**
    * GET /api/catasto/fuochi?ids=1,2,3: fuochi da pagine o ricerche diverse,
-   * in una richiesta (vista di confronto). Al massimo COMPARE_MAX_FUOCHI id
+   * in una richiesta (selezione e confronto). Al massimo FUOCHI_BY_IDS_MAX id
    * numerici, validati come gli altri parametri; i duplicati contano una volta.
    */
   async getByIds(req: Request, res: Response) {
@@ -146,8 +147,8 @@ export const CatastoController = {
       throw new ValidationError("Parametro ids non valido: servono id numerici separati da virgola");
     }
     const ids = [...new Set(raw.replace(/\s+/g, "").split(",").map(Number))];
-    if (ids.length > COMPARE_MAX_FUOCHI) {
-      throw new ValidationError(`Troppi fuochi: al massimo ${COMPARE_MAX_FUOCHI}`);
+    if (ids.length > FUOCHI_BY_IDS_MAX) {
+      throw new ValidationError(`Troppi fuochi: al massimo ${FUOCHI_BY_IDS_MAX}`);
     }
     res.json(await CatastoService.getFuochiByIds(ids, parseLang(req.query.lang)));
   },
