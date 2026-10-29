@@ -36,7 +36,7 @@ export default function GlossarioPage() {
               <li key={entry.id}>
                 <a
                   href={`#${glossaryAnchor(entry.id)}`}
-                  className="inline-flex items-center min-h-11 px-3 rounded-full border border-border-base bg-bg-sidebar text-sm text-accent-strong hover:bg-item-hover"
+                  className="inline-flex items-center min-h-11 px-3 rounded-ui border border-border-base bg-bg-sidebar text-sm text-accent-strong hover:bg-item-hover"
                 >
                   {entry.term[lang]}
                 </a>
@@ -51,7 +51,7 @@ export default function GlossarioPage() {
               key={entry.id}
               id={glossaryAnchor(entry.id)}
               tabIndex={-1}
-              className="scroll-mt-6 bg-bg-sidebar border border-border-base rounded-lg p-5 shadow-sm target:border-primary target:ring-2 target:ring-primary/30"
+              className="scroll-mt-6 bg-bg-sidebar border border-border-base rounded-ui p-5 target:border-primary target:ring-2 target:ring-primary/30"
             >
               <dt className="text-xl font-bold text-primary mb-1">{entry.term[lang]}</dt>
               <dd className="leading-relaxed">

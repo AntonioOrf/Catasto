@@ -42,11 +42,11 @@ export default function GuidedTour() {
         aria-labelledby="tour-title"
         aria-describedby="tour-body"
         tabIndex={-1}
-        className="bg-bg-sidebar border border-border-base shadow-2xl rounded-t-lg sm:rounded-lg w-full max-w-md p-5 font-serif text-text-main focus:outline-none"
+        className="bg-bg-sidebar border border-border-base rounded-t-ui sm:rounded-ui w-full max-w-md p-5 font-serif text-text-main focus:outline-none"
       >
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-xs uppercase tracking-wider text-text-accent">
+            <p className="text-xs small-caps text-text-accent">
               {t("title")} · {t("step", { n: step + 1, total: STEPS.length })}
             </p>
             <h2 id="tour-title" className="text-xl font-bold text-primary mt-1">
@@ -57,7 +57,7 @@ export default function GuidedTour() {
             type="button"
             onClick={finish}
             aria-label={t("skip")}
-            className="-mt-1 -mr-2 inline-flex items-center justify-center min-h-11 min-w-11 rounded hover:bg-item-hover"
+            className="-mt-1 -mr-2 inline-flex items-center justify-center min-h-11 min-w-11 rounded-ui hover:bg-item-hover"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -70,7 +70,7 @@ export default function GuidedTour() {
 
         <ol className="flex gap-1.5 mt-4" aria-hidden="true">
           {STEPS.map((_, i) => (
-            <li key={i} className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-primary" : "bg-border-base/40"}`} />
+            <li key={i} className={`h-1.5 flex-1 rounded-ui ${i <= step ? "bg-primary" : "bg-border-base/40"}`} />
           ))}
         </ol>
 
@@ -83,7 +83,7 @@ export default function GuidedTour() {
               <button
                 type="button"
                 onClick={() => setStep(step - 1)}
-                className="min-h-11 px-4 rounded border border-border-base bg-bg-main text-accent-strong text-sm font-bold hover:bg-item-hover"
+                className="min-h-11 px-4 rounded-ui border border-border-base bg-bg-main text-accent-strong text-sm font-bold hover:bg-item-hover"
               >
                 {t("back")}
               </button>
@@ -91,7 +91,7 @@ export default function GuidedTour() {
             <button
               type="button"
               onClick={() => (last ? finish() : setStep(step + 1))}
-              className="min-h-11 px-4 rounded bg-primary text-on-primary text-sm font-bold hover:bg-primary/90"
+              className="min-h-11 px-4 rounded-ui bg-primary text-on-primary text-sm font-bold hover:bg-primary/90"
             >
               {last ? t("done") : t("next")}
             </button>

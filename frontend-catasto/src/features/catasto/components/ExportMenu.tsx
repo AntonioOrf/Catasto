@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { Download, X } from "lucide-react";
+import { X } from "lucide-react";
 import { downloadExport, type ExportFormat } from "../../../api/catastoService";
 import { userMessage } from "../../../api/client";
 import type { SearchParams } from "../lib/simple-filters";
@@ -85,9 +85,9 @@ export default function ExportMenu({ search, totalRecords }: ExportMenuProps) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="inline-flex items-center gap-2 min-h-11 px-3 md:px-4 rounded border border-border-base bg-bg-main text-accent-strong text-xs md:text-sm font-bold uppercase tracking-wider hover:bg-item-hover transition-colors"
+        className="inline-flex items-center min-h-11 text-accent-strong underline underline-offset-4 decoration-accent-strong/40 hover:decoration-accent-strong"
       >
-        <Download className="h-4 w-4" aria-hidden="true" /> {t("button")}
+        {t("button")}
       </button>
 
       <div
@@ -96,7 +96,7 @@ export default function ExportMenu({ search, totalRecords }: ExportMenuProps) {
         hidden={!open}
         role="group"
         aria-labelledby={`${panelId}-title`}
-        className="fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-lg md:rounded md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:w-80 md:max-h-none md:overflow-visible z-40 md:mt-2 bg-bg-sidebar border border-border-base shadow-lg p-4 space-y-3 text-sm text-text-main font-serif"
+        className="fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-ui md:rounded-ui md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:w-80 md:max-h-none md:overflow-visible z-40 md:mt-2 bg-bg-sidebar border border-border-base p-4 space-y-3 text-sm text-text-main font-serif"
       >
         <div className="flex items-start justify-between gap-2">
           <h3 id={`${panelId}-title`} className="font-bold text-primary">
@@ -106,7 +106,7 @@ export default function ExportMenu({ search, totalRecords }: ExportMenuProps) {
             type="button"
             onClick={close}
             aria-label={t("close")}
-            className="-mt-2 -mr-2 inline-flex items-center justify-center min-h-11 min-w-11 rounded hover:bg-item-hover"
+            className="-mt-2 -mr-2 inline-flex items-center justify-center min-h-11 min-w-11 rounded-ui hover:bg-item-hover"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -114,7 +114,7 @@ export default function ExportMenu({ search, totalRecords }: ExportMenuProps) {
         <p className="text-xs text-text-accent">{t("scope", { n: totalRecords.toLocaleString(locale) })}</p>
 
         <fieldset className="space-y-2">
-          <legend className="text-xs font-semibold uppercase tracking-wider text-accent-strong mb-1">{t("format")}</legend>
+          <legend className="text-xs font-semibold small-caps text-accent-strong mb-1">{t("format")}</legend>
           {(["csv", "xlsx"] as const).map((value) => (
             <label key={value} className="flex items-start gap-2 cursor-pointer">
               <input
@@ -135,14 +135,14 @@ export default function ExportMenu({ search, totalRecords }: ExportMenuProps) {
 
         {format === "csv" && (
           <div>
-            <label htmlFor={`${panelId}-sep`} className="block text-xs font-semibold uppercase tracking-wider text-accent-strong mb-1">
+            <label htmlFor={`${panelId}-sep`} className="block text-xs font-semibold small-caps text-accent-strong mb-1">
               {t("separator")}
             </label>
             <select
               id={`${panelId}-sep`}
               value={sep}
               onChange={(e) => setSep(e.target.value as "comma" | "semicolon")}
-              className="w-full min-h-11 border border-border-base rounded px-2 bg-bg-main text-text-main"
+              className="w-full min-h-11 border border-border-base rounded-ui px-2 bg-bg-main text-text-main"
             >
               <option value="semicolon">{t("semicolon")}</option>
               <option value="comma">{t("comma")}</option>
@@ -162,9 +162,9 @@ export default function ExportMenu({ search, totalRecords }: ExportMenuProps) {
           type="button"
           onClick={handleDownload}
           disabled={busy || totalRecords === 0}
-          className="w-full inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded bg-primary text-on-primary font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-ui bg-primary text-on-primary font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          <Download className="h-4 w-4" aria-hidden="true" /> {t("download")}
+          {t("download")}
         </button>
 
         {/* Sempre montata: gli screen reader annunciano solo i cambi di una regione già presente. */}
@@ -172,7 +172,7 @@ export default function ExportMenu({ search, totalRecords }: ExportMenuProps) {
           {totalRecords === 0 ? t("empty") : busy ? t("preparing") : status.kind === "done" ? t("done", { files: status.files }) : ""}
         </p>
         {status.kind === "error" && (
-          <p role="alert" className="text-xs text-red-700 dark:text-red-300 bg-red-500/10 border border-red-500/40 rounded p-2">
+          <p role="alert" className="text-xs text-red-700 dark:text-red-300 bg-red-500/10 border border-red-500/40 rounded-ui p-2">
             {status.message}
           </p>
         )}

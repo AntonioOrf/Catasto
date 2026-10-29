@@ -132,7 +132,7 @@ export default function GlossaryTerm({ id, className = "" }: GlossaryTermProps) 
           setOpen(true);
         }}
         onMouseLeave={closeSoon}
-        className="inline-flex items-center justify-center h-6 w-6 -my-1 rounded-full text-text-accent hover:text-primary hover:bg-primary/10 transition-colors"
+        className="inline-flex items-center justify-center h-6 w-6 -my-1 rounded-ui text-text-accent hover:text-primary hover:bg-primary/10 transition-colors"
       >
         <Info className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
@@ -149,7 +149,7 @@ export default function GlossaryTerm({ id, className = "" }: GlossaryTermProps) 
             onMouseLeave={closeSoon}
             onClick={(e) => e.stopPropagation()}
             style={{ top: position.top, left: position.left, width: Math.min(POPOVER_WIDTH, window.innerWidth - 2 * MARGIN) }}
-            className="fixed z-[70] bg-bg-sidebar border border-border-base rounded shadow-lg p-3 text-left text-sm text-text-main font-serif normal-case tracking-normal"
+            className="fixed z-[70] bg-bg-sidebar border border-border-base rounded-ui p-3 text-left text-sm text-text-main font-serif normal-case tracking-normal"
           >
             <p className="font-bold text-primary mb-1">{term}</p>
             <p className="leading-snug">{entry.short[lang]}</p>

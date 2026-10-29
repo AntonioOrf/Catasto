@@ -32,14 +32,14 @@ export default function AgePyramid({ eta }: { eta: CatastoStats["eta"] }) {
   const colors = ["bg-chart-1", "bg-chart-2"];
 
   return (
-    <figure aria-labelledby={`${id}-title`} className="bg-bg-main border border-border-base rounded p-3 md:p-4 space-y-3">
+    <figure aria-labelledby={`${id}-title`} className="bg-bg-main border border-border-base rounded-ui p-3 md:p-4 space-y-3">
       <figcaption id={`${id}-title`} className="text-sm font-bold text-primary">
         {t("pyramid")}
       </figcaption>
       <ul className="flex flex-wrap gap-4 text-xs text-text-main" aria-label={t("pyramid")}>
         {sides.map((s, i) => (
           <li key={s} className="flex items-center gap-1.5">
-            <span className={`inline-block h-3 w-3 rounded-sm ${colors[i]}`} aria-hidden="true" /> {s}
+            <span className={`inline-block h-3 w-3 rounded-ui ${colors[i]}`} aria-hidden="true" /> {s}
           </li>
         ))}
       </ul>
@@ -56,11 +56,11 @@ export default function AgePyramid({ eta }: { eta: CatastoStats["eta"] }) {
             <div key={da} className="grid grid-cols-[1fr_3.25rem_1fr] gap-1 items-center h-4" title={`${bandLabel(da)}: ${left} ${fmt(l)}${right ? `, ${right} ${fmt(r)}` : ""}`}>
               <span className="flex justify-end items-center gap-1 min-w-0">
                 <span className="tabular-nums text-text-accent">{l > 0 ? fmt(l) : ""}</span>
-                <span className={`h-3 rounded-l-[4px] ${colors[0]}`} style={{ width: width(l) }} />
+                <span className={`h-3 rounded-l-ui ${colors[0]}`} style={{ width: width(l) }} />
               </span>
               <span className="text-center tabular-nums text-text-main">{bandLabel(da)}</span>
               <span className="flex items-center gap-1 min-w-0">
-                <span className={`h-3 rounded-r-[4px] ${colors[1]}`} style={{ width: width(r) }} />
+                <span className={`h-3 rounded-r-ui ${colors[1]}`} style={{ width: width(r) }} />
                 <span className="tabular-nums text-text-accent">{r > 0 ? fmt(r) : ""}</span>
               </span>
             </div>

@@ -157,7 +157,7 @@ export default function CompareView() {
         aria-modal="true"
         aria-labelledby="compare-title"
         tabIndex={-1}
-        className="bg-bg-sidebar md:border border-border-base shadow-2xl md:rounded-lg w-full max-w-6xl max-h-full md:max-h-[92vh] flex flex-col overflow-hidden focus:outline-none"
+        className="bg-bg-sidebar md:border border-border-base md:rounded-ui w-full max-w-6xl max-h-full md:max-h-[92vh] flex flex-col overflow-hidden focus:outline-none"
       >
         <div className="flex items-center justify-between gap-2 p-3 md:p-4 border-b border-border-base">
           <h2 id="compare-title" className="text-base md:text-lg font-serif font-bold text-accent-strong">
@@ -167,7 +167,7 @@ export default function CompareView() {
             <button
               type="button"
               onClick={share}
-              className="inline-flex items-center gap-1.5 min-h-11 px-3 rounded text-xs font-bold uppercase tracking-wider text-accent-strong hover:bg-item-hover"
+              className="inline-flex items-center gap-1.5 min-h-11 px-3 rounded-ui text-xs font-bold small-caps text-accent-strong hover:bg-item-hover"
             >
               {copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Link2 className="h-4 w-4" aria-hidden="true" />}
               {copied ? t("copied") : t("share")}
@@ -176,7 +176,7 @@ export default function CompareView() {
               type="button"
               onClick={closeView}
               aria-label={t("close")}
-              className="inline-flex items-center justify-center min-h-11 min-w-11 rounded hover:bg-item-hover"
+              className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-ui hover:bg-item-hover"
             >
               <X className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -188,7 +188,7 @@ export default function CompareView() {
 
         <div className="overflow-auto p-3 md:p-4 font-serif text-sm text-text-main">
           {error ? (
-            <p role="alert" className="p-4 bg-red-500/10 border border-red-500/40 rounded">{error}</p>
+            <p role="alert" className="p-4 bg-red-500/10 border border-red-500/40 rounded-ui">{error}</p>
           ) : loading && fuochi.length === 0 ? (
             <div className="py-12 flex justify-center">
               <Spinner label={t("loading")} />
@@ -198,7 +198,7 @@ export default function CompareView() {
               <caption className="sr-only">{t("title")}</caption>
               <thead>
                 <tr>
-                  <th scope="col" className="w-44 text-left text-xs uppercase tracking-wider text-text-accent p-2">{t("attribute")}</th>
+                  <th scope="col" className="w-44 text-left text-xs small-caps text-text-accent p-2">{t("attribute")}</th>
                   {fuochi.map((f) => (
                     <th key={f.id} scope="col" className="text-left p-2 align-bottom text-base font-bold text-primary">{f.nome}</th>
                   ))}
@@ -208,7 +208,7 @@ export default function CompareView() {
                 <tbody key={section.title} className="border-t-2 border-border-base">
                   {section.rows.map((row) => (
                     <tr key={row.key} className="border-b border-border-base/40 align-top">
-                      <th scope="row" className="text-left p-2 text-xs uppercase tracking-wider text-text-accent font-semibold">{row.label}</th>
+                      <th scope="row" className="text-left p-2 text-xs small-caps text-text-accent font-semibold">{row.label}</th>
                       {fuochi.map((f, i) => (
                         <td key={f.id} className="p-2">{row.cell(f, i)}</td>
                       ))}
@@ -220,13 +220,13 @@ export default function CompareView() {
           ) : (
             <ul className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1">
               {fuochi.map((f, i) => (
-                <li key={f.id} className="snap-start shrink-0 w-[85%] bg-bg-main border border-border-base rounded-lg p-3">
+                <li key={f.id} className="snap-start shrink-0 w-[85%] bg-bg-main border border-border-base rounded-ui p-3">
                   <h3 className="text-base font-bold text-primary mb-2">{f.nome}</h3>
                   {sections.map((section) => (
                     <dl key={section.title} className="border-t border-dashed border-border-base pt-2 mt-2 space-y-1.5">
                       {section.rows.map((row) => (
                         <div key={row.key}>
-                          <dt className="text-[11px] uppercase tracking-wider text-text-accent">{row.label}</dt>
+                          <dt className="text-[11px] small-caps text-text-accent">{row.label}</dt>
                           <dd>{row.cell(f, i)}</dd>
                         </div>
                       ))}
@@ -267,7 +267,7 @@ function SourceCell({ fuoco, t, onOpen }: { fuoco: Fuoco; t: T; onOpen: (f: Fuoc
       type="button"
       onClick={() => onOpen(fuoco)}
       aria-label={t("openCardAria", { nome: fuoco.nome })}
-      className="inline-flex items-center gap-1.5 min-h-11 px-2 rounded border border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary text-xs"
+      className="inline-flex items-center gap-1.5 min-h-11 px-2 rounded-ui border border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary text-xs"
     >
       <span className="font-mono">{rif}</span>
       <span className="font-bold">{t("openCard")}</span>

@@ -156,7 +156,7 @@ export default function CustomAutocomplete({
         aria-expanded={isOpen}
         onClick={() => (isOpen ? close(false) : open())}
         onKeyDown={handleTriggerKeyDown}
-        className={`block w-full text-left pl-8 py-2 border border-border-base bg-bg-card text-text-main focus:outline-none focus:ring-1 focus:ring-primary text-sm relative transition-colors min-h-11 ${hasValue ? "pr-16" : "pr-9"}`}
+        className={`block w-full text-left ${icon ? "pl-8" : "pl-3"} py-2 border border-border-base bg-bg-card text-text-main focus:outline-none focus:ring-1 focus:ring-primary text-sm relative transition-colors min-h-11 ${hasValue ? "pr-16" : "pr-9"}`}
       >
         {icon && (
           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-text-accent pointer-events-none" aria-hidden="true">
@@ -179,14 +179,14 @@ export default function CustomAutocomplete({
           onClick={() => onChange("")}
           aria-label={t("clearNamed", { label: selectedOption?.label ?? t("clearSelection") })}
           title={t("clear")}
-          className="absolute right-7 top-1/2 -translate-y-1/2 p-2 text-text-accent hover:text-primary rounded"
+          className="absolute right-7 top-1/2 -translate-y-1/2 p-2 text-text-accent hover:text-primary rounded-ui"
         >
           <X size={14} aria-hidden="true" />
         </button>
       )}
 
       {isOpen && (
-        <div className="absolute z-[100] w-full mt-1 bg-bg-card border border-border-base shadow-xl max-h-[300px] overflow-hidden flex flex-col rounded-sm">
+        <div className="absolute z-[100] w-full mt-1 bg-bg-card border border-border-base max-h-[300px] overflow-hidden flex flex-col rounded-ui">
           <div className="p-2 border-b border-border-base bg-bg-sidebar">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-text-accent" size={14} aria-hidden="true" />
@@ -220,7 +220,7 @@ export default function CustomAutocomplete({
                   onClick={() => handleSelect(option.id)}
                   onMouseMove={() => setActiveIndex(index)}
                   className={`cursor-pointer select-none relative py-2 pl-3 pr-9 text-sm border-t border-border-base/10 ${
-                    index === activeIndex ? "bg-primary text-on-primary" : ""
+ index === activeIndex ? "bg-primary text-on-primary" : ""
                   } ${selected ? "font-semibold" : ""}`}
                 >
                   <span className="block whitespace-normal leading-tight">{option.label}</span>

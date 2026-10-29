@@ -19,7 +19,7 @@ export default function StatsPanel({ search }: { search: SearchParams }) {
 
   if (unavailable) {
     return (
-      <div role="status" className="px-6 py-10 text-center bg-bg-sidebar border border-border-base rounded">
+      <div role="status" className="px-6 py-10 text-center bg-bg-sidebar border border-border-base rounded-ui">
         <p className="font-bold mb-1">{t("unavailableTitle")}</p>
         <p className="text-sm text-text-accent">{t("unavailableBody")}</p>
       </div>
@@ -27,10 +27,10 @@ export default function StatsPanel({ search }: { search: SearchParams }) {
   }
   if (error) {
     return (
-      <div role="alert" className="px-6 py-10 text-center bg-red-500/10 border border-red-500/40 rounded">
+      <div role="alert" className="px-6 py-10 text-center bg-red-500/10 border border-red-500/40 rounded-ui">
         <p className="font-bold mb-1">{t("error")}</p>
         <p className="text-sm text-text-accent mb-4">{error}</p>
-        <button type="button" onClick={retry} className="inline-flex items-center min-h-11 px-4 rounded bg-primary text-on-primary text-sm font-bold">
+        <button type="button" onClick={retry} className="inline-flex items-center min-h-11 px-4 rounded-ui bg-primary text-on-primary text-sm font-bold">
           {t("retry")}
         </button>
       </div>
@@ -65,8 +65,8 @@ export default function StatsPanel({ search }: { search: SearchParams }) {
 
       <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {tiles.map(([label, value]) => (
-          <div key={label} className="bg-bg-main border border-border-base rounded p-3">
-            <dt className="text-xs uppercase tracking-wider text-text-accent">{label}</dt>
+          <div key={label} className="bg-bg-main border border-border-base rounded-ui p-3">
+            <dt className="text-xs small-caps text-text-accent">{label}</dt>
             <dd className="text-2xl font-bold text-text-main tabular-nums">{value}</dd>
           </div>
         ))}

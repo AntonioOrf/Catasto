@@ -26,11 +26,11 @@ export default function CompareBar() {
           <div aria-hidden="true" className="h-28 md:h-20" />
           <section
             aria-label={t("region")}
-            className="fixed inset-x-0 bottom-0 z-40 bg-bg-sidebar border-t-2 border-primary shadow-[0_-4px_16px_rgba(0,0,0,0.15)] px-3 py-2 md:px-6 md:py-3"
+            className="fixed inset-x-0 bottom-0 z-40 bg-bg-sidebar border-t-2 border-primary px-3 py-2 md:px-6 md:py-3"
           >
             <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold uppercase tracking-wider text-accent-strong">
+                <p className="text-xs font-bold small-caps text-accent-strong">
                   {t("selected", { n: ids.length, max: COMPARE_MAX_FUOCHI })}
                 </p>
                 {removedCount > 0 && (
@@ -42,13 +42,13 @@ export default function CompareBar() {
                   {ids.map((id) => {
                     const nome = names.get(id) ?? `#${id}`;
                     return (
-                      <li key={id} className="shrink-0 inline-flex items-center gap-1 bg-bg-main border border-border-base rounded-full pl-3 pr-1 text-xs text-text-main">
+                      <li key={id} className="shrink-0 inline-flex items-center gap-1 bg-bg-main border border-border-base rounded-ui pl-3 pr-1 text-xs text-text-main">
                         <span className="max-w-40 truncate">{nome}</span>
                         <button
                           type="button"
                           onClick={() => remove(id)}
                           aria-label={t("remove", { nome })}
-                          className="inline-flex items-center justify-center min-h-8 min-w-8 rounded-full hover:bg-item-hover"
+                          className="inline-flex items-center justify-center min-h-8 min-w-8 rounded-ui hover:bg-item-hover"
                         >
                           <X className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
@@ -62,7 +62,7 @@ export default function CompareBar() {
                 <button
                   type="button"
                   onClick={clear}
-                  className="min-h-11 px-3 rounded border border-border-base bg-bg-main text-accent-strong text-sm font-bold hover:bg-item-hover"
+                  className="min-h-11 px-3 rounded-ui border border-border-base bg-bg-main text-accent-strong text-sm font-bold hover:bg-item-hover"
                 >
                   {t("clear")}
                 </button>
@@ -70,7 +70,7 @@ export default function CompareBar() {
                   type="button"
                   onClick={openView}
                   disabled={!enough}
-                  className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded bg-primary text-on-primary text-sm font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-ui bg-primary text-on-primary text-sm font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Columns3 className="h-4 w-4" aria-hidden="true" /> {t("compare")}
                 </button>

@@ -31,7 +31,7 @@ export default function BarChart({ title, data, note }: BarChartProps) {
     total > 0 ? (n / total).toLocaleString(locale, { style: "percent", maximumFractionDigits: 1 }) : "";
 
   return (
-    <figure aria-labelledby={`${id}-title`} className="bg-bg-main border border-border-base rounded p-3 md:p-4 space-y-3">
+    <figure aria-labelledby={`${id}-title`} className="bg-bg-main border border-border-base rounded-ui p-3 md:p-4 space-y-3">
       <figcaption id={`${id}-title`} className="text-sm font-bold text-primary">
         {title}
       </figcaption>
@@ -41,7 +41,7 @@ export default function BarChart({ title, data, note }: BarChartProps) {
             <span className={`truncate text-right ${d.muted ? "italic text-text-accent" : "text-text-main"}`}>{d.label}</span>
             <span className="flex items-center gap-2 min-w-0">
               <span
-                className={`h-3 rounded-r-[4px] shrink-0 ${d.muted ? "bg-[repeating-linear-gradient(45deg,var(--chart-1)_0_2px,transparent_2px_5px)] border border-chart-1/60" : "bg-chart-1"}`}
+                className={`h-3 rounded-r-ui shrink-0 ${d.muted ? "bg-[repeating-linear-gradient(45deg,var(--chart-1)_0_2px,transparent_2px_5px)] border border-chart-1/60" : "bg-chart-1"}`}
                 style={{ width: `${Math.max((d.n / max) * 75, d.n > 0 ? 0.5 : 0)}%` }}
               />
               <span className="tabular-nums text-text-main whitespace-nowrap">

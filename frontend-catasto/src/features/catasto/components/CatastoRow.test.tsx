@@ -59,14 +59,14 @@ describe("CatastoRow", () => {
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
     const details = document.getElementById(toggle.getAttribute("aria-controls")!);
     expect(details).not.toBeNull();
-    expect(details!.textContent).toContain("Dettagli Economici");
+    expect(details!.textContent).toContain("Dettagli economici, in fiorini");
   });
 
   it("il visore si apre senza espandere la riga", () => {
     const onRowClick = vi.fn();
     const onViewArchivio = vi.fn();
     renderRow(false, onRowClick, onViewArchivio);
-    fireEvent.click(screen.getByRole("button", { name: /Campione: visualizza il manoscritto/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Apri la carta del campione: volume 64, carta 12r" }));
     expect(onViewArchivio).toHaveBeenCalledWith(fuoco, "campione");
     expect(onRowClick).not.toHaveBeenCalled();
   });
@@ -92,5 +92,55 @@ describe("CatastoMobileCard", () => {
     expect(container.querySelector("[tabindex]")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Mostra la scheda di RUCELLAI GIOVANNI" }));
     expect(onRowClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("scheda del fuoco", () => {
+  const renderOpen = (row: Fuoco, onViewArchivio = vi.fn(), onSegnala = vi.fn()) =>
+    renderWithProviders(
+      <table>
+        <tbody>
+          <CatastoRow
+            row={row}
+            expanded
+            onRowClick={vi.fn()}
+            loadingParenti={false}
+            parentiData={[
+              { eta: 45, parentela_desc: "Capofamiglia", sesso: "M", stato_civile: "Sposato", particolarita: "" },
+              { eta: 0, parentela_desc: "Figlia", sesso: "F", stato_civile: "", particolarita: "" },
+            ]}
+            onViewArchivio={onViewArchivio}
+            onSegnala={onSegnala}
+          />
+        </tbody>
+      </table>,
+    );
+
+  it("il conto mostra le deduzioni col meno e l'imponibile del database come totale", () => {
+    renderOpen(fuoco);
+    const conto = screen.getByRole("heading", { name: "Dettagli economici, in fiorini" }).parentElement!;
+    expect(conto.textContent).toContain("− 400");
+    expect(conto.textContent).toMatch(/Imponibile totale.*800/);
+    expect(screen.getByRole("heading", { name: "Composizione familiare, 2 bocche" })).toBeTruthy();
+  });
+
+  it("i dati assenti si distinguono dallo zero", () => {
+    renderOpen({ ...fuoco, credito: null as unknown as number, deduzioni: 0 });
+    const conto = screen.getByRole("heading", { name: "Dettagli economici, in fiorini" }).parentElement!;
+    expect(conto.textContent).toContain("Non indicato");
+    expect(conto.textContent).not.toContain("− 0");
+    expect(screen.getAllByText("nessun dato").length).toBe(3);
+  });
+
+  it("le azioni aprono la carta e le segnalazioni come prima", () => {
+    const onViewArchivio = vi.fn();
+    const onSegnala = vi.fn();
+    renderOpen(fuoco, onViewArchivio, onSegnala);
+    fireEvent.click(screen.getByRole("button", { name: "Apri la carta 12r del campione" }));
+    expect(onViewArchivio).toHaveBeenCalledWith(fuoco, "campione");
+    fireEvent.click(screen.getByRole("button", { name: "Segnatura della portata non nota: contribuisci" }));
+    expect(onSegnala).toHaveBeenCalledWith(fuoco, "segnatura");
+    fireEvent.click(screen.getByRole("button", { name: "Segnala un errore" }));
+    expect(onSegnala).toHaveBeenCalledWith(fuoco, "dato_errato");
   });
 });

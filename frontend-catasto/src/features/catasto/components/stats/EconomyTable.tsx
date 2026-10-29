@@ -24,7 +24,7 @@ export default function EconomyTable({ economia }: { economia: CatastoStats["eco
     value === null ? null : value.toLocaleString(locale, { maximumFractionDigits: counts ? 0 : 2 });
 
   return (
-    <div className="bg-bg-main border border-border-base rounded p-3 md:p-4">
+    <div className="bg-bg-main border border-border-base rounded-ui p-3 md:p-4">
       <div className="overflow-x-auto">
         <table className="min-w-full text-xs md:text-sm text-left">
           <caption className="text-left mb-2">

@@ -56,7 +56,7 @@ function updateAt(node: QueryGroup, path: number[], updater: (n: QueryNode) => Q
 }
 
 const selectClasses =
-  "bg-bg-main border border-border-base text-text-main text-xs md:text-sm rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40";
+  "bg-bg-main border border-border-base text-text-main text-xs md:text-sm rounded-ui px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40";
 const inputClasses = `${selectClasses} min-w-0 flex-1`;
 
 export default function QueryBuilder({ value, onChange, options }: QueryBuilderProps) {
@@ -126,20 +126,20 @@ function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp,
       className={
         isRoot
           ? "space-y-2"
-          : "space-y-2 border border-border-base rounded px-2 md:px-3 py-2 bg-bg-sidebar/50"
+          : "space-y-2 border border-border-base rounded-ui px-2 md:px-3 py-2 bg-bg-sidebar/50"
       }
     >
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded overflow-hidden border border-border-base">
+        <div className="inline-flex rounded-ui overflow-hidden border border-border-base">
           {(["AND", "OR"] as const).map((op) => (
             <button
               key={op}
               type="button"
               onClick={() => onToggleOp(path, op)}
               aria-pressed={group.op === op}
-              className={`px-2 py-1 text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                group.op === op
-                  ? "bg-primary text-on-primary"
+              className={`px-2 py-1 text-[11px] font-bold small-caps transition-colors ${
+ group.op === op
+ ? "bg-primary text-on-primary"
                   : "bg-bg-main text-text-accent hover:bg-border-base"
               }`}
             >
@@ -148,7 +148,7 @@ function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp,
           ))}
         </div>
 
-        <label className="flex items-center gap-1 text-[11px] text-text-accent uppercase tracking-wider cursor-pointer">
+        <label className="flex items-center gap-1 text-[11px] text-text-accent small-caps cursor-pointer">
           <input
             type="checkbox"
             checked={group.not === true}
@@ -162,7 +162,7 @@ function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp,
           <button
             type="button"
             onClick={() => onAdd(path, newCondition())}
-            className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-primary hover:underline"
+            className="flex items-center gap-1 text-[11px] font-bold small-caps text-primary hover:underline"
           >
             <Plus className="h-3.5 w-3.5" /> {t("condition")}
           </button>
@@ -170,7 +170,7 @@ function GroupEditor({ group, path, depth, options, onUpdate, onAdd, onToggleOp,
             <button
               type="button"
               onClick={() => onAdd(path, newGroup())}
-              className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-text-accent hover:underline"
+              className="flex items-center gap-1 text-[11px] font-bold small-caps text-text-accent hover:underline"
             >
               <FolderPlus className="h-3.5 w-3.5" /> {t("group")}
             </button>
@@ -266,7 +266,7 @@ function ConditionEditor({ condition, options, onChange, onRemove }: ConditionEd
   const range = Array.isArray(condition.value) ? condition.value : ["", ""];
 
   return (
-    <div className="flex flex-wrap items-center gap-2 bg-bg-main border border-border-base rounded px-2 py-2">
+    <div className="flex flex-wrap items-center gap-2 bg-bg-main border border-border-base rounded-ui px-2 py-2">
       <select
         aria-label={t("field")}
         value={field.key}

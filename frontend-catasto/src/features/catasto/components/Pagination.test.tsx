@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import Pagination from "./Pagination";
+import { pageWindow } from "../lib/page-window";
 import { renderWithProviders } from "../../../test/render";
 
 const setup = (page: number, totalPages: number, loading = false) => {
@@ -37,5 +38,20 @@ describe("Pagination", () => {
     fireEvent.keyDown(input, { key: "Enter" });
     expect(handlePageChange).toHaveBeenCalledTimes(1);
     expect(input.value).toBe("2");
+  });
+});
+
+describe("pageWindow", () => {
+  it("prima, ultima e vicine alla pagina attiva, con i salti", () => {
+    expect(pageWindow(1, 1)).toEqual([1]);
+    expect(pageWindow(5, 120)).toEqual([1, "gap", 4, 5, 6, "gap", 120]);
+    expect(pageWindow(2, 4)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("la pagina attiva è segnata e le altre si raggiungono con un clic", () => {
+    const handlePageChange = setup(5, 120);
+    expect(screen.getByRole("button", { name: "Pagina 5" }).getAttribute("aria-current")).toBe("page");
+    fireEvent.click(screen.getByRole("button", { name: "Pagina 120" }));
+    expect(handlePageChange).toHaveBeenCalledWith(120);
   });
 });

@@ -54,8 +54,8 @@ export default function Tabs<K extends string>({ idPrefix, label, tabs, selected
             aria-controls={ids.panel}
             tabIndex={active ? 0 : -1}
             onClick={() => onSelect(key)}
-            className={`min-h-11 px-4 -mb-px border-b-2 text-sm font-bold uppercase tracking-wider transition-colors ${
-              active ? "border-primary text-primary" : "border-transparent text-text-accent hover:text-primary"
+            className={`min-h-11 px-4 -mb-px border-b-2 text-sm font-bold small-caps transition-colors ${
+ active ? "border-primary text-primary" : "border-transparent text-text-accent hover:text-primary"
             }`}
           >
             {tabLabel}

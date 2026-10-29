@@ -17,7 +17,7 @@ export default function ExampleQueries({ filterOptions }: { filterOptions: Filte
 
   return (
     <section aria-labelledby="examples-title" className="mb-6 -mt-2">
-      <h2 id="examples-title" className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-accent-strong mb-2">
+      <h2 id="examples-title" className="flex items-center gap-2 text-xs font-bold small-caps text-accent-strong mb-2">
         <Sparkles className="h-4 w-4" aria-hidden="true" /> {t("title")}
       </h2>
       <ul className="flex flex-wrap gap-2">
@@ -26,7 +26,7 @@ export default function ExampleQueries({ filterOptions }: { filterOptions: Filte
             <button
               type="button"
               onClick={() => applyQuery(example.ast, example.sort)}
-              className="inline-flex items-center min-h-11 px-4 rounded-full border border-border-base bg-bg-sidebar text-sm text-text-main hover:border-primary hover:text-primary transition-colors"
+              className="inline-flex items-center min-h-11 px-4 rounded-ui border border-border-base bg-bg-sidebar text-sm text-text-main hover:border-primary hover:text-primary transition-colors"
             >
               {t(example.id as keyof (typeof examplesMessages)["it"])}
             </button>

@@ -12,14 +12,14 @@ export default function ContattiPage() {
 
       <main className="flex-1 max-w-4xl mx-auto w-full p-6 md:p-10">
         <h2 className="text-3xl font-bold mb-6 text-primary">{t("title")}</h2>
-        <div className="bg-bg-sidebar border border-border-base rounded-lg p-8 shadow-lg">
+        <div className="bg-bg-sidebar border border-border-base rounded-ui p-8">
           <p className="mb-6 leading-relaxed text-lg">
             {t("intro")}
           </p>
           
           <div className="space-y-6">
             <div className="flex flex-col">
-              <span className="text-xs uppercase tracking-widest text-text-accent font-bold mb-1">{t("email")}</span>
+              <span className="text-xs small-caps text-text-accent font-bold mb-1">{t("email")}</span>
               <a href="mailto:antonio.orfitelli@edu.unifi.it" className="text-primary text-xl hover:underline">
                 antonio.orfitelli@edu.unifi.it
               </a>
@@ -29,7 +29,7 @@ export default function ContattiPage() {
             </div>
 
             <div className="flex flex-col">
-              <span className="text-xs uppercase tracking-widest text-text-accent font-bold mb-1">GitHub</span>
+              <span className="text-xs small-caps text-text-accent font-bold mb-1">GitHub</span>
               <a href="https://github.com/AntonioOrf/Catasto" target="_blank" rel="noopener noreferrer" className="text-primary text-xl hover:underline">
                 github.com/AntonioOrf/Catasto
               </a>

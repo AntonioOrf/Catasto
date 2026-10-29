@@ -175,6 +175,7 @@ function HomeContent() {
           targetScrolledId={targetScrolledId}
           handleSidebarClick={handleSidebarClick}
           loadMoreSidebar={loadMoreSidebar}
+          totalRecords={totalRecords}
           hasMore={hasMore}
         />
 

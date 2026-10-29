@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { BookOpen, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import CatastoRow, { CatastoMobileCard } from "./CatastoRow";
 import Pagination from "./Pagination";
 import ArchivioViewerModal from "./ArchivioViewerModal";
@@ -108,26 +108,18 @@ export default function CatastoTable({
     onSegnala: handleSegnala,
   });
 
-  // Gestione icone ordinamento con colori dinamici
+  // Le frecce restano: quella della colonna attiva è piena, le altre appena accennate.
   const renderSortIcon = (columnKey: string) => {
-    if (sortBy !== columnKey)
-      return (
-        <ArrowUpDown className="h-4 w-4 text-text-accent opacity-30 ml-1" />
-      );
-
-    return sortOrder === "ASC" ? (
-      <ArrowUp className="h-4 w-4 text-primary ml-1" />
-    ) : (
-      <ArrowDown className="h-4 w-4 text-primary ml-1" />
-    );
+    if (sortBy !== columnKey) return <ArrowUpDown className="h-3.5 w-3.5 opacity-35" aria-hidden="true" />;
+    const Icon = sortOrder === "ASC" ? ArrowUp : ArrowDown;
+    return <Icon className="h-4 w-4" strokeWidth={2.75} aria-hidden="true" />;
   };
 
   // Righe vecchie attenuate ma leggibili: segnalano l'attesa senza far
   // sparire la tabella a ogni cambio di pagina.
   const staleClasses = `transition-opacity motion-reduce:transition-none ${stale ? "opacity-50" : ""}`;
 
-  const thClasses =
-    "bg-bg-sidebar px-6 py-2 text-left text-xs font-bold text-text-accent uppercase tracking-wider";
+  const thClasses = "px-4 py-2 text-left text-base font-semibold text-accent-strong";
 
   // Il pulsante dentro l'intestazione rende l'ordinamento raggiungibile da
   // tastiera; aria-sort annuncia colonna e verso correnti.
@@ -144,7 +136,7 @@ export default function CatastoTable({
         <button
           type="button"
           onClick={() => handleSort(column)}
-          className="flex items-center gap-1 min-h-11 uppercase tracking-wider font-bold hover:text-primary transition-colors"
+          className="flex items-center gap-1.5 min-h-11 font-semibold hover:underline underline-offset-4"
         >
           {label}
           {renderSortIcon(column)}
@@ -155,14 +147,14 @@ export default function CatastoTable({
   );
 
   const errorState = (compact = false) => (
-    <div role="alert" className={`${compact ? "px-4 py-8" : "px-6 py-12"} text-center text-text-main bg-red-500/10 border border-red-500/40 rounded`}>
+    <div role="alert" className={`${compact ? "px-4 py-8" : "px-6 py-12"} text-center text-text-main bg-red-500/10 border border-red-500/40 rounded-ui`}>
       <p className="font-bold text-lg mb-1">{t("loadError")}</p>
       <p className="text-sm text-text-accent mb-4">{error}</p>
       {onRetry && (
         <button
           type="button"
           onClick={onRetry}
-          className="inline-flex items-center min-h-11 px-4 rounded bg-primary text-on-primary text-sm font-bold hover:bg-primary/90 transition-colors"
+          className="inline-flex items-center min-h-11 px-4 rounded-ui bg-primary text-on-primary text-sm font-bold hover:bg-primary/90 transition-colors"
         >
           {t("retry")}
         </button>
@@ -178,7 +170,7 @@ export default function CatastoTable({
         <button
           type="button"
           onClick={resetFilters}
-          className="inline-flex items-center min-h-11 px-4 rounded border border-border-base bg-bg-main text-accent-strong text-sm font-bold hover:bg-item-hover transition-colors"
+          className="inline-flex items-center min-h-11 px-4 rounded-ui border border-border-base bg-bg-main text-accent-strong text-sm font-bold hover:bg-item-hover transition-colors"
         >
           {t("resetFilters")}
         </button>
@@ -188,30 +180,27 @@ export default function CatastoTable({
 
   return (
     <div className="space-y-4 pb-12">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-border-base pb-2 gap-2">
-        <h2 className="text-lg md:text-xl font-bold text-primary flex items-center gap-2 font-serif">
-          <BookOpen className="h-5 w-5 md:h-6 md:w-6" /> {t("heading")}
-        </h2>
+      <div className="flex flex-wrap items-baseline justify-between border-b border-border-base pb-1.5 gap-x-4 gap-y-1">
+        <h2 className="text-xl md:text-2xl font-bold text-accent-strong font-serif">{t("heading")}</h2>
         {/* Annunciato ai lettori di schermo: è l'unico riscontro che una
             ricerca è andata a buon fine senza guardare la tabella. */}
-        <div className="flex items-center gap-2 md:gap-3">
-          <span
-            role="status"
-            aria-live="polite"
-            className="bg-primary text-on-primary px-2 py-1 md:px-3 text-xs md:text-sm font-bold rounded-full tabular-nums"
-          >
+        <div className="flex items-baseline gap-4">
+          <span role="status" aria-live="polite" className="italic text-text-accent tabular-nums">
             {Number(totalRecords || 0).toLocaleString(locale)} {totalRecords === 1 ? t("result") : t("results")}
           </span>
           <ExportMenu search={search} totalRecords={totalRecords} />
         </div>
       </div>
 
-      <div className="bg-bg-main shadow-lg border border-border-base rounded-sm overflow-hidden">
+      <div className="bg-bg-main border border-border-base rounded-ui overflow-hidden">
         {isDesktop ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border-base" aria-busy={fetching}>
-              <thead className="bg-bg-sidebar">
-                <tr>
+            <table className="min-w-full" aria-busy={fetching}>
+              <thead>
+                <tr className="border-b border-border-base">
+                  <th scope="col" className="pl-3 pr-0 py-2 w-10">
+                    <span className="sr-only">{t("colSelect")}</span>
+                  </th>
                   {sortableHeader("nome", t("colHead"), "fuoco")}
                   {sortableHeader("localita", t("colPlace"))}
                   {sortableHeader("fortune", t("colSummary"))}
@@ -220,24 +209,24 @@ export default function CatastoTable({
                       {t("colRefs")} <GlossaryTerm id="campione" />
                     </span>
                   </th>
-                  <th scope="col" className="px-6 py-4 w-10">
+                  <th scope="col" className="px-3 py-2 w-10">
                     <span className="sr-only">{t("expand")}</span>
                   </th>
                 </tr>
               </thead>
 
-              <tbody className={`bg-bg-main divide-y divide-border-base ${staleClasses}`}>
+              <tbody className={`bg-bg-main ${staleClasses}`}>
                 {error ? (
                   <tr>
-                    <td colSpan={5} className="p-4">
+                    <td colSpan={6} className="p-4">
                       {errorState()}
                     </td>
                   </tr>
                 ) : loading ? (
                   Array.from({ length: 5 }, (_, i) => (
                     <tr key={i} className="animate-pulse motion-reduce:animate-none">
-                      <td className="px-6 py-4" colSpan={5}>
-                        <div className="h-8 bg-border-base/50 rounded flex items-center px-4">
+                      <td className="px-6 py-4" colSpan={6}>
+                        <div className="h-8 bg-border-base/50 rounded-ui flex items-center px-4">
                           {i === 0 && <span className="text-text-accent font-serif text-sm">{t("loading")}</span>}
                         </div>
                       </td>
@@ -247,7 +236,7 @@ export default function CatastoTable({
                   data.map((row) => <CatastoRow key={row.id} ref={registerRow(row.id)} {...rowProps(row)} />)
                 ) : (
                   <tr>
-                    <td colSpan={5}>{emptyState()}</td>
+                    <td colSpan={6}>{emptyState()}</td>
                   </tr>
                 )}
               </tbody>
@@ -260,9 +249,9 @@ export default function CatastoTable({
             ) : loading ? (
               Array.from({ length: 5 }, (_, i) => (
                 <div key={i} className="animate-pulse motion-reduce:animate-none p-4 space-y-3 bg-bg-main">
-                  <div className="h-5 bg-border-base/50 rounded w-1/3"></div>
-                  <div className="h-4 bg-border-base/50 rounded w-1/2"></div>
-                  <div className="h-4 bg-border-base/50 rounded w-1/4"></div>
+                  <div className="h-5 bg-border-base/50 rounded-ui w-1/3"></div>
+                  <div className="h-4 bg-border-base/50 rounded-ui w-1/2"></div>
+                  <div className="h-4 bg-border-base/50 rounded-ui w-1/4"></div>
                 </div>
               ))
             ) : data.length > 0 ? (

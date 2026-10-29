@@ -114,9 +114,9 @@ export default function SegnalazioneModal({
     });
   };
 
-  const labelClasses = "block text-[11px] uppercase tracking-wider text-text-accent mb-1";
+  const labelClasses = "block text-[11px] small-caps text-text-accent mb-1";
   const inputClasses =
-    "w-full bg-bg-main border border-border-base text-text-main text-sm rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/40";
+    "w-full bg-bg-main border border-border-base text-text-main text-sm rounded-ui px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/40";
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-bg-main/95 backdrop-blur-sm p-0 sm:p-4">
@@ -126,7 +126,7 @@ export default function SegnalazioneModal({
         aria-modal="true"
         aria-labelledby="segnalazione-title"
         tabIndex={-1}
-        className="bg-bg-sidebar border-0 sm:border border-border-base shadow-2xl sm:rounded-lg w-full max-w-lg max-h-full sm:max-h-[90vh] flex flex-col overflow-hidden focus:outline-none"
+        className="bg-bg-sidebar border-0 sm:border border-border-base sm:rounded-ui w-full max-w-lg max-h-full sm:max-h-[90vh] flex flex-col overflow-hidden focus:outline-none"
       >
         <div className="flex items-start justify-between p-4 border-b border-border-base">
           <div>
@@ -143,7 +143,7 @@ export default function SegnalazioneModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-text-main hover:text-red-500 p-2.5 -m-2 rounded transition-colors"
+            className="text-text-main hover:text-red-500 p-2.5 -m-2 rounded-ui transition-colors"
             title={t("close")}
             aria-label={t("close")}
           >
@@ -159,7 +159,7 @@ export default function SegnalazioneModal({
             <button
               type="button"
               onClick={onClose}
-              className="mt-2 bg-primary text-on-primary px-4 py-2 rounded text-sm font-bold hover:bg-primary/90 transition-colors"
+              className="mt-2 bg-primary text-on-primary px-4 py-2 rounded-ui text-sm font-bold hover:bg-primary/90 transition-colors"
             >
               {t("close")}
             </button>
@@ -182,7 +182,7 @@ export default function SegnalazioneModal({
                       onChange={() => setTipo(tipoOption)}
                       className="sr-only peer"
                     />
-                    <span className="flex h-full items-center justify-center text-center rounded border border-border-base bg-bg-main px-2 py-2 text-xs font-semibold text-text-main transition-colors hover:bg-item-hover peer-checked:bg-primary peer-checked:border-primary peer-checked:text-on-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/60">
+                    <span className="flex h-full items-center justify-center text-center rounded-ui border border-border-base bg-bg-main px-2 py-2 text-xs font-semibold text-text-main transition-colors hover:bg-item-hover peer-checked:bg-primary peer-checked:border-primary peer-checked:text-on-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/60">
                       {t(TIPO_MESSAGE_KEY[tipoOption])}
                     </span>
                   </label>
@@ -212,7 +212,7 @@ export default function SegnalazioneModal({
                 </div>
                 <div>
                   <span className={labelClasses}>{t("currentValue")}</span>
-                  <p className="text-sm text-text-main bg-bg-main border border-dashed border-border-base rounded px-3 py-2">
+                  <p className="text-sm text-text-main bg-bg-main border border-dashed border-border-base rounded-ui px-3 py-2">
                     {valoreAttuale || <span className="italic text-text-accent">{t("empty")}</span>}
                   </p>
                 </div>
@@ -225,7 +225,7 @@ export default function SegnalazioneModal({
               </label>
               <div className="flex items-stretch">
                 {tipo === "segnatura" && !altroFondo && (
-                  <span className="flex items-center whitespace-nowrap rounded-l border border-r-0 border-border-base bg-bg-sidebar px-3 text-sm text-text-accent">
+                  <span className="flex items-center whitespace-nowrap rounded-l-ui border border-r-0 border-border-base bg-bg-sidebar px-3 text-sm text-text-accent">
                     {SEGNATURA_PREFISSO}
                   </span>
                 )}
@@ -317,7 +317,7 @@ export default function SegnalazioneModal({
               <button
                 type="submit"
                 disabled={mutation.isPending}
-                className="flex items-center gap-2 min-h-11 bg-primary text-on-primary px-4 rounded text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 min-h-11 bg-primary text-on-primary px-4 rounded-ui text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 <Send className="h-4 w-4" aria-hidden="true" />
                 {mutation.isPending ? t("sending") : t("send")}
