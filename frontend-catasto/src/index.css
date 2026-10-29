@@ -69,6 +69,10 @@ body {
      item-selected resta per le superfici: nel tema scuro è troppo scuro
      per stare sul fondo come testo (1.7:1). */
   --accent-strong: #1a3d7f;
+  /* Serie dei grafici (statistiche). Coppia validata per daltonismo e
+     contrasto sul fondo, in ciascun tema: chart-1 è la serie singola. */
+  --chart-1: #2a5bb8;
+  --chart-2: #c0571b;
 
   background-color: var(--color-bg-main);
   color: var(--color-text-main);
@@ -111,6 +115,8 @@ body {
   --accent: #a3b3d9;
   --on-primary: #10172b;
   --accent-strong: #a9bfee;
+  --chart-1: #5f86d6;
+  --chart-2: #d27a3a;
 }
 
 /* Le opzioni dei <select> non ereditano in modo affidabile lo sfondo del
@@ -141,6 +147,8 @@ select option {
   --color-accent: var(--accent);
   --color-on-primary: var(--on-primary);
   --color-accent-strong: var(--accent-strong);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
 
   --color-item-hover: var(--color-item-hover);
   --color-item-selected: var(--color-item-selected);

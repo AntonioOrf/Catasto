@@ -7,7 +7,7 @@ import { parseIdList } from "../utils/query-builder.js";
  * Giovanni"): le partizioni omonime diventano una sola voce, con gli id
  * raggruppati da GROUP_CONCAT e separati da virgola.
  */
-const groupedLabel = (column: string) =>
+export const groupedLabel = (column: string) =>
   `TRIM(REGEXP_REPLACE(${column}, ' \\\\([IVX]+\\\\)$', ''))`;
 
 const STATIC_FILTER_QUERIES = {

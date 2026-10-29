@@ -24,7 +24,19 @@ const exportLimiter = rateLimit({
   message: { error: "Troppi export in poco tempo. Riprova tra qualche minuto." },
 });
 
+// Una decina di query aggregate per richiesta (con cache breve): limite
+// separato, più largo dell'export perché il pannello segue i filtri.
+const statsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 150,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Troppe richieste di statistiche. Riprova tra qualche minuto." },
+});
+
 router.get("/", asyncHandler(CatastoController.getAll));
+router.get("/stats", statsLimiter, asyncHandler(CatastoController.stats));
+router.post("/query/stats", statsLimiter, asyncHandler(CatastoController.queryStats));
 router.get("/export", exportLimiter, asyncHandler(CatastoController.exportSimple));
 router.post("/query/export", exportLimiter, asyncHandler(CatastoController.exportAdvanced));
 router.post("/query", asyncHandler(CatastoController.query));

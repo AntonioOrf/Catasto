@@ -12,6 +12,7 @@ export const clientMessages = defineMessages({
     filtersFailed: "Impossibile caricare le opzioni dei filtri",
     manifestFailed: "Impossibile scaricare le informazioni del volume dall'Archivio di Stato",
     exportFailed: "L'export non è riuscito",
+    statsFailed: "Impossibile calcolare le statistiche",
   },
   en: {
     serverUnreachable: "The server is not responding. Check your connection and try again.",
@@ -24,5 +25,6 @@ export const clientMessages = defineMessages({
     filtersFailed: "Could not load the filter options",
     manifestFailed: "Could not download the volume information from the State Archives",
     exportFailed: "The export failed",
+    statsFailed: "Could not compute the statistics",
   },
 });

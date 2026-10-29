@@ -8,6 +8,7 @@ import { parseLang } from "../models/traduzioni.model.js";
 import { describeQuery } from "@catasto/shared";
 import { ExportService, type ExportOptions } from "../services/export.service.js";
 import { describeSimpleFilters } from "../utils/describe-filters.js";
+import { StatsService } from "../services/stats.service.js";
 
 const advancedQuerySchema = z.object({
   ast: astSchema,
@@ -37,6 +38,7 @@ const parseExportOptions = (input: unknown, lang: unknown): ExportOptions => {
   return { ...parsed.data, lang: parseLang(lang) };
 };
 
+/** Body con il solo AST: export e statistiche della ricerca avanzata. */
 const advancedExportSchema = z.object({ ast: astSchema });
 
 /** L'indice laterale carica blocchi grandi: il default di pagina è diverso dalla tabella. */
@@ -112,6 +114,25 @@ export const CatastoController = {
       (filterOptions) => describeQuery(ast, filterOptions, options.lang),
       options,
     );
+  },
+
+  /** GET /api/catasto/stats: aggregati sugli stessi filtri della tabella. */
+  async stats(req: Request, res: Response) {
+    const { lang, ...query } = req.query;
+    // Paginazione e ordinamento non cambiano gli aggregati.
+    const { filters } = splitPaginationQuery(query);
+    res.json(await StatsService.searchStats(filters, parseLang(lang)));
+  },
+
+  /** POST /api/catasto/query/stats: aggregati sull'AST della ricerca avanzata. */
+  async queryStats(req: Request, res: Response) {
+    const parsed = advancedExportSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError(
+        `Query non valida: ${parsed.error.issues[0]?.message ?? "formato non riconosciuto"}`,
+      );
+    }
+    res.json(await StatsService.queryStats(parsed.data.ast, parseLang(req.query.lang)));
   },
 
   async getParenti(req: Request, res: Response) {

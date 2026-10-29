@@ -3,6 +3,7 @@ import { translate } from "../i18n/messages";
 import { clientMessages as messages } from "./client.messages";
 import type {
   ApiResponse,
+  CatastoStats,
   FilterOptions,
   Fuoco,
   IiifPage,
@@ -112,7 +113,8 @@ export interface ExportRequest {
  */
 export const downloadExport = (search: SearchParams, request: ExportRequest) => {
   const fallback = translate(messages, "exportFailed");
-  const fallbackName = `catasto1427.${request.format}`;
+  const fallbackName =
+    request.format === "xlsx" ? "catasto1427.xlsx" : `catasto1427-${request.parenti ? "parenti" : "fuochi"}.csv`;
   if (search.advancedMode) {
     return apiDownload("/api/catasto/query/export", fallback, fallbackName, {
       method: "POST",
@@ -130,4 +132,20 @@ export const downloadExport = (search: SearchParams, request: ExportRequest) => 
   params.append("parenti", String(request.parenti));
   params.append("sep", request.sep);
   return apiDownload(`/api/catasto/export?${params}`, fallback, fallbackName);
+};
+
+/** Statistiche sulla ricerca corrente: stessi filtri o stesso AST della tabella. */
+export const fetchStats = (search: SearchParams, signal?: AbortSignal) => {
+  const fallback = translate(messages, "statsFailed");
+  if (search.advancedMode) {
+    return apiRequest<CatastoStats>("/api/catasto/query/stats", fallback, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ast: search.ast }),
+      signal,
+    });
+  }
+  const params = buildParams({ ...search, sortBy: undefined, sortOrder: undefined });
+  const query = params.toString() ? `?${params}` : "";
+  return apiRequest<CatastoStats>(`/api/catasto/stats${query}`, fallback, { signal });
 };

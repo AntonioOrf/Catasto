@@ -109,3 +109,22 @@ describe("CatastoController: export", () => {
     expect(exportService.exportFuochi.mock.calls[0][4]).toMatchObject({ format: "csv", parenti: true });
   });
 });
+
+const statsService = vi.hoisted(() => ({ searchStats: vi.fn(), queryStats: vi.fn() }));
+vi.mock("../services/stats.service.js", () => ({ StatsService: statsService }));
+
+describe("CatastoController: statistiche", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("ignora paginazione e ordinamento, passa filtri e lingua", async () => {
+    await CatastoController.stats({ query: { page: "3", sort_by: "fortune", mestiere: "2", lang: "en" } } as unknown as Request, res());
+    expect(statsService.searchStats).toHaveBeenCalledWith({ mestiere: "2" }, "en");
+  });
+
+  it("la ricerca avanzata valida l'AST prima di interrogare il DB", async () => {
+    await expect(
+      CatastoController.queryStats({ body: { ast: { kind: "group", op: "NAND", children: [] } }, query: {} } as unknown as Request, res()),
+    ).rejects.toThrow(ValidationError);
+    expect(statsService.queryStats).not.toHaveBeenCalled();
+  });
+});

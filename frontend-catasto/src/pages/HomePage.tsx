@@ -13,7 +13,13 @@ import { TABLE_PAGE_SIZE, useCatastoData } from "../hooks/useCatastoData";
 import { useCatastoSidebar } from "../hooks/useCatastoSidebar";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { DESKTOP_QUERY, useIsDesktop } from "../hooks/useMediaQuery";
-import { useLanguage } from "../i18n";
+import { useLanguage, useT } from "../i18n";
+import Tabs from "../components/common/Tabs";
+import { tabIds } from "../components/common/tab-ids";
+import StatsPanel from "../features/catasto/components/stats/StatsPanel";
+import { homePageMessages } from "./HomePage.messages";
+
+type ResultsView = "table" | "stats";
 
 /** Attesa dopo l'ultimo tasto: scrivere "Rossi" non deve lanciare cinque ricerche. */
 const SEARCH_DEBOUNCE_MS = 350;
@@ -46,6 +52,9 @@ export default function HomePage() {
   const search = useDebouncedValue(searchParams, SEARCH_DEBOUNCE_MS);
 
   const { lang } = useLanguage();
+  const t = useT(homePageMessages);
+  // Le statistiche si calcolano solo con la scheda aperta.
+  const [view, setView] = useState<ResultsView>("table");
 
   // Le opzioni geografiche dipendono dal livello superiore selezionato, le
   // etichette di lookup dalla lingua: entrambe nella chiave, così tornare a
@@ -113,6 +122,7 @@ export default function HomePage() {
   const handleSidebarClick = useCallback(
     (idFuoco: number) => {
       if (!isDesktop) setIsSidebarOpen(false);
+      setView("table");
 
       const index = sidebarData.findIndex((item) => item.id === idFuoco);
       if (index === -1) return;
@@ -150,25 +160,52 @@ export default function HomePage() {
           <div className="p-3 sm:p-4 md:p-8 flex-1">
             <FilterPanel loading={fetching} onRefresh={retry} filterOptions={filterOptions} />
 
-            <CatastoTable
-              isDesktop={isDesktop}
-              search={search}
-              data={data}
-              totalRecords={totalRecords}
-              loading={loading}
-              fetching={fetching}
-              stale={stale}
-              error={error}
-              tableRowsRef={tableRowsRef}
-              handleRowClick={handleRowClick}
-              expandedId={expandedId}
-              loadingParenti={loadingParenti}
-              parentiData={parentiData}
-              page={page}
-              totalPages={totalPages}
-              handlePageChange={handlePageChange}
-              onRetry={retry}
+            <Tabs
+              idPrefix="results"
+              label={t("views")}
+              tabs={[
+                { key: "table", label: t("table") },
+                { key: "stats", label: t("stats") },
+              ]}
+              selected={view}
+              onSelect={setView}
             />
+
+            <div
+              role="tabpanel"
+              id={tabIds("results", "table").panel}
+              aria-labelledby={tabIds("results", "table").tab}
+              hidden={view !== "table"}
+            >
+              <CatastoTable
+                isDesktop={isDesktop}
+                search={search}
+                data={data}
+                totalRecords={totalRecords}
+                loading={loading}
+                fetching={fetching}
+                stale={stale}
+                error={error}
+                tableRowsRef={tableRowsRef}
+                handleRowClick={handleRowClick}
+                expandedId={expandedId}
+                loadingParenti={loadingParenti}
+                parentiData={parentiData}
+                page={page}
+                totalPages={totalPages}
+                handlePageChange={handlePageChange}
+                onRetry={retry}
+              />
+            </div>
+
+            <div
+              role="tabpanel"
+              id={tabIds("results", "stats").panel}
+              aria-labelledby={tabIds("results", "stats").tab}
+              hidden={view !== "stats"}
+            >
+              {view === "stats" && <StatsPanel search={search} />}
+            </div>
           </div>
           <Footer />
         </main>

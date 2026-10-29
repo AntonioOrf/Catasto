@@ -96,7 +96,7 @@ export default function ExportMenu({ search, totalRecords }: ExportMenuProps) {
         hidden={!open}
         role="group"
         aria-labelledby={`${panelId}-title`}
-        className="fixed inset-x-4 md:absolute md:inset-x-auto md:right-0 md:w-80 z-30 mt-2 bg-bg-sidebar border border-border-base rounded shadow-lg p-4 space-y-3 text-sm text-text-main font-serif"
+        className="fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-lg md:rounded md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:w-80 md:max-h-none md:overflow-visible z-40 md:mt-2 bg-bg-sidebar border border-border-base shadow-lg p-4 space-y-3 text-sm text-text-main font-serif"
       >
         <div className="flex items-start justify-between gap-2">
           <h3 id={`${panelId}-title`} className="font-bold text-primary">

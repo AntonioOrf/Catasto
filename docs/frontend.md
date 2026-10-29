@@ -133,6 +133,7 @@ flowchart TD
 | `fetchFilterOptions(geo)` | `GET /api/filters?serie=&quartiere=&piviere=` | avvio e cambio di livello geografico |
 | `fetchManifest(id)` | `GET /api/catasto/manifest/:id` | apertura del visore |
 | `createSegnalazione(body)` | `POST /api/segnalazioni` | invio di una segnalazione |
+| `fetchStats(search)` | `GET /api/catasto/stats` o `POST /api/catasto/query/stats` | scheda **Statistiche** aperta |
 | `downloadExport(search, opzioni)` | `GET /api/catasto/export` o `POST /api/catasto/query/export` | pulsante **Esporta** |
 
 `api/client.ts` usa `VITE_API_URL`; se manca, in produzione chiama la stessa origine (`/api`, proxato da nginx), in sviluppo `http://localhost:3005`. Gli errori 4xx mostrano il messaggio del backend, gli altri un testo generico in italiano.
@@ -173,6 +174,12 @@ Elenco virtualizzato (nome + mestiere) dei fuochi della ricerca corrente. Clicca
   - *Dettagli economici*: credito, credito ai monti, fortune, deduzioni, imponibile in fiorini; bestiame, immigrazione, rapporto di mestiere, particolarità;
   - *Composizione familiare*: parentela, sesso, età, stato civile, particolarità di ogni membro;
   - azioni **Segnala un errore** e, se manca la portata, **contribuisci** con la segnatura.
+
+### Statistiche (`StatsPanel`)
+
+- Schede **Tabella** / **Statistiche** sopra i risultati (pattern ARIA tabs, `components/common/Tabs.tsx`: frecce, Home, Fine). Le statistiche si caricano solo con la scheda aperta (`useCatastoStats`, chiave `["catastoStats", lang, ricerca senza ordinamento]`, 60 s) e seguono i filtri come la tabella. Un clic nell'indice laterale riporta alla tabella.
+- Contenuto: fuochi, parenti e membri medi per fuoco; tabella delle misure economiche (presenti, assenti, somma, media, mediana, quartili, minimo, massimo) con una spiegazione delle misure per chi studia; barre per mestiere, quartiere, serie, numero di membri e stato civile; piramide delle età per sesso.
+- Grafici in HTML, senza librerie: una serie = un colore (`--chart-1`), la piramide usa `--chart-1` e `--chart-2` con legenda e intestazioni dei due lati. La coppia di colori è validata (lightness, croma, separazione per daltonismo e contrasto) sia sul tema chiaro sia sullo scuro. Ogni barra ha accanto valore e quota; "Altro" e "Non indicato" hanno una trama a righe, non solo un colore; ogni grafico ha la sua **tabella dei dati** in un `<details>`. Le misure non calcolabili mostrano "—" con un testo per i lettori di schermo.
 
 ### Export (`ExportMenu`)
 
@@ -258,6 +265,8 @@ Test di componenti e hook con Testing Library, in jsdom (dichiarato in testa al 
 - `CatastoRow.test.tsx`: la riga non è focalizzabile, si apre dal pulsante con `aria-expanded`/`aria-controls`, il visore non espande la riga, i valori assenti non diventano 0;
 - `Pagination.test.tsx`: comandi disabilitati ai bordi e durante il caricamento, cambio pagina solo su Invio;
 - `useCatastoFilters.test.tsx`: cascata geografica, ordinamento, AST eseguibile, apertura da link `#q=`;
+- `StatsPanel.test.tsx`: barre di "Altro" e "Non indicato", raggruppamento dei fuochi numerosi, tabella economica con valori non calcolabili, tabelle dei dati, errore con Riprova;
+- `Tabs.test.tsx`: una sola scheda tabulabile, frecce, Home e Fine;
 - `ExportMenu.test.tsx`: apertura e chiusura con Esc, due file per CSV con i parenti, un file per XLSX, messaggio del server oltre il tetto.
 
 `api/client.test.ts` verifica il nome del file da `Content-Disposition` e gli errori di `apiDownload`.

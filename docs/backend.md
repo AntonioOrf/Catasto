@@ -48,12 +48,14 @@ backend-catasto/
     ├── services/
     │   ├── catasto.service.ts     # orchestrazione query + proxy/caching manifest IIIF
     │   ├── export.service.ts      # export CSV/XLSX in streaming, tetto di righe, metadati
+    │   ├── stats.service.ts       # statistiche della ricerca (con cache breve)
     │   ├── segnalazione.service.ts# creazione, anti-abuso, cambi di stato transazionali
     │   └── notifica.service.ts    # inoltro email via FormSubmit con link firmati
     ├── models/
     │   ├── fuoco.model.ts         # SELECT sui fuochi, join, segnatura della portata
     │   ├── common.model.ts        # lookup, filtri (cache con TTL), parenti, mestieri
     │   ├── traduzioni.model.ts    # lingua (`lang`), traduzioni delle etichette (con cache)
+    │   ├── stats.model.ts         # aggregati SQL: somme, quantili con window function, distribuzioni
     │   └── segnalazione.model.ts
     ├── middlewares/
     │   ├── admin.middleware.ts    # Bearer ADMIN_TOKEN, confronto timing-safe, adminLimiter
@@ -81,6 +83,7 @@ Il pacchetto **`packages/shared`** contiene ciò che frontend e backend devono v
 |---|---|
 | `fields.ts` | `FIELD_REGISTRY`: campi interrogabili, tipo, colonna SQL, operatori ammessi, join richiesti |
 | `query-ast.ts` | Tipi `QueryGroup` / `QueryCondition` e limiti (`AST_MAX_DEPTH`, `AST_MAX_CONDITIONS`, …) |
+| `index.ts` | Tipi delle risposte (`Fuoco`, `FilterOptions`, `CatastoStats`, …) |
 | `labels.ts` | Etichette inglesi di campi e operatori, `describeQuery` (descrizione leggibile di una query, usata dall'anteprima e dagli export) |
 | `segnalazioni.ts` | Tipi e stati delle segnalazioni |
 | `segnatura.ts` | Parser della segnatura della portata (`ASFi, Catasto 81, c. 245r`) |
@@ -121,6 +124,8 @@ Base URL: stessa origine del sito (`/api`, proxato da nginx) oppure `http://loca
 | GET | `/api/catasto` | pubblico | Ricerca semplice, vista tabella (paginata) |
 | GET | `/api/catasto/sidebar` | pubblico | Ricerca semplice, indice leggero per la sidebar |
 | POST | `/api/catasto/query` | pubblico | Ricerca avanzata con AST |
+| GET | `/api/catasto/stats` | pubblico, 150 req/15 min | Statistiche sulla ricerca semplice |
+| POST | `/api/catasto/query/stats` | pubblico, 150 req/15 min | Statistiche sulla ricerca avanzata |
 | GET | `/api/catasto/export` | pubblico, 20 req/15 min | Export CSV/XLSX della ricerca semplice, tutte le pagine |
 | POST | `/api/catasto/query/export` | pubblico, 20 req/15 min | Export CSV/XLSX della ricerca avanzata |
 | GET | `/api/catasto/manifest/:id` | pubblico, 30 req/15 min | Pagine del volume digitalizzato (IIIF) |
@@ -142,6 +147,7 @@ Tutti gli endpoint di lettura accettano `?lang=en` (anche `POST /api/catasto/que
 |---|---|---|
 | `apiLimiter` | tutto `/api` | 300 richieste / 15 min / IP |
 | manifest | `/api/catasto/manifest/:id` | 30 richieste / 15 min / IP |
+| `statsLimiter` | `GET /api/catasto/stats`, `POST /api/catasto/query/stats` | 150 richieste / 15 min / IP |
 | `exportLimiter` | `GET /api/catasto/export`, `POST /api/catasto/query/export` | 20 richieste / 15 min / IP |
 | `createLimiter` | `POST /api/segnalazioni` | 5 / ora / IP, più 10 / ora per hash IP salvato nel DB |
 | `adminLimiter` | rotte admin e moderazione | 100 richieste **fallite** / 15 min / IP |
@@ -221,6 +227,35 @@ Stessi filtri. Risposta **senza wrapper**, pensata per un elenco lungo e leggero
 ```
 
 `view` è `"table"` (risposta come `GET /api/catasto`) o `"sidebar"` (risposta come `GET /sidebar`). Un AST non valido → `400 {"error":"Query non valida: …"}`. Il formato è descritto [più sotto](#ricerca-avanzata-formato-dellast).
+
+### `GET /api/catasto/stats` — statistiche della ricerca
+
+Aggregati sugli **stessi fuochi della tabella**: accetta gli stessi filtri di `GET /api/catasto` (paginazione e ordinamento sono ignorati) e `lang`. `POST /api/catasto/query/stats` fa lo stesso con `{ "ast": … }` nel body. Il compilatore delle condizioni è lo stesso della ricerca, quindi `fuochi` coincide sempre con `pagination.total` della tabella.
+
+```json
+{
+  "fuochi": 10,
+  "parenti": 20,
+  "economia": {
+    "fortune": { "presenti": 9, "assenti": 1, "somma": 16630, "media": 1847.78, "mediana": 450,
+                 "q1": 120, "q3": 1000, "min": 0, "max": 9000 },
+    "credito": { … }, "credito_m": { … }, "imponibile": { … }, "deduzioni": { … }
+  },
+  "mestieri":  { "voci": [{ "label": "Lanaiolo", "n": 3 }], "altro": 0, "assenti": 3 },
+  "quartieri": { "voci": [{ "label": "San Giovanni", "n": 5 }], "altro": 0, "assenti": 3 },
+  "serie":     { "voci": [ … ], "altro": 0, "assenti": 1 },
+  "membri": [{ "membri": 0, "fuochi": 1 }, { "membri": 1, "fuochi": 4 }],
+  "eta": { "fasce": [{ "da": 0, "sesso": "Femmina", "n": 2 }], "assenti": 1 },
+  "statoCivile": { "voci": [ … ], "altro": 0, "assenti": 3 }
+}
+```
+
+- **Valori assenti**: per ogni misura economica `assenti` conta i fuochi senza valore; somma, media, minimo, massimo e quantili usano solo i presenti (coerente con R-13: assente non è 0). Senza valori presenti le misure sono `null`.
+- **Mediana e quartili**: definizione "tipo 7" (interpolazione lineare, come R, numpy ed Excel `QUARTILE.INC`), calcolati in MySQL 8 con `ROW_NUMBER()` e `COUNT(*) OVER ()`: per ogni misura il DB restituisce al più sei righe, mai l'intera colonna.
+- **Distribuzioni**: `mestieri` riporta le prime 10 voci, le altre sommate in `altro`; `quartieri` e `serie` uniscono le partizioni omonime come i filtri; `assenti` = etichetta non indicata.
+- **Composizione**: `membri` = numero di fuochi per numero di parenti registrati (0 compreso); `eta` = parenti per fascia di 5 anni (`da`; 90 = 90 e oltre) e sesso, con le età assenti a parte; `statoCivile` = parenti per stato civile.
+- **Lingua**: con `lang=en` sono tradotte le etichette di mestieri, sesso e stato civile (luoghi esclusi, come nel resto dell'API).
+- **Cache**: 60 secondi, chiave = SQL compilato + parametri + lingua (due ricerche equivalenti condividono il risultato), al massimo 200 voci; richieste contemporanee per la stessa chiave condividono il calcolo. Sull'intero dataset (61.000 fuochi, 270.000 parenti, MySQL 8 locale) una richiesta a freddo richiede circa un secondo.
 
 ### `GET /api/catasto/export` — export della ricerca
 

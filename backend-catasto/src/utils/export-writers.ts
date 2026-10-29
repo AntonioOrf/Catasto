@@ -1,4 +1,3 @@
-import { once } from "node:events";
 import type { Readable, Writable } from "node:stream";
 import ExcelJS from "exceljs";
 import { formatCsvRow, type CsvSeparator } from "./csv.js";
@@ -28,10 +27,18 @@ const isGone = (out: Writable) => out.destroyed || out.writableEnded;
 
 async function write(out: Writable, chunk: string): Promise<void> {
   if (isGone(out)) return;
-  if (!out.write(chunk)) {
-    // 'close' oltre a 'drain': un client che chiude non emette più 'drain'.
-    await Promise.race([once(out, "drain"), once(out, "close")]);
-  }
+  if (out.write(chunk)) return;
+  // 'close' oltre a 'drain': un client che chiude non emette più 'drain'.
+  // Entrambi i listener vanno tolti, qualunque arrivi per primo.
+  await new Promise<void>((resolve) => {
+    const done = () => {
+      out.off("drain", done);
+      out.off("close", done);
+      resolve();
+    };
+    out.on("drain", done);
+    out.on("close", done);
+  });
 }
 
 /** Consuma tutte le righe; il primo errore di `onRow` viene rilanciato alla fine. */
