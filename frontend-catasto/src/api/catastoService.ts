@@ -9,6 +9,7 @@ import type {
   IiifPage,
   Parenti,
   SidebarItem,
+  SuggestResponse,
 } from "@catasto/shared";
 import { buildParams, type SearchParams } from "../features/catasto/lib/simple-filters";
 
@@ -155,3 +156,7 @@ export const fetchStats = (search: SearchParams, signal?: AbortSignal) => {
 /** Fuochi per id (selezione e confronto), nell'ordine dato; gli inesistenti mancano. Al massimo FUOCHI_BY_IDS_MAX. */
 export const fetchFuochiByIds = (ids: readonly number[], signal?: AbortSignal) =>
   apiRequest<Fuoco[]>(`/api/catasto/fuochi?ids=${ids.join(",")}`, translate(messages, "compareFailed"), { signal });
+
+/** Fuochi per «Trova e aggiungi» del Banco: numero, carta del campione o parole. */
+export const fetchSuggest = (q: string, signal?: AbortSignal) =>
+  apiRequest<SuggestResponse>(`/api/catasto/suggest?q=${encodeURIComponent(q)}`, translate(messages, "suggestFailed"), { signal });

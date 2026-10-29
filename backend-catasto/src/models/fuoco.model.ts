@@ -1,6 +1,6 @@
 import type { Readable } from "node:stream";
 import pool from "../config/db.js";
-import { Fuoco, SidebarItem, volumeCatastoPortata } from "@catasto/shared";
+import { Fuoco, SidebarItem, SuggestItem, volumeCatastoPortata } from "@catasto/shared";
 
 /**
  * Join opzionali, in ordine di dipendenza: `requires` indica il join che deve
@@ -162,5 +162,28 @@ export class FuocoModel {
     const sql = `SELECT f.ID_Fuochi as id, f.Nome_Fuoco as nome, m.Mestiere as mestiere ${from} ${q.conditions} ${q.orderByClause} LIMIT ? OFFSET ?`;
     const [rows]: any = await pool.query(sql, [...q.params, q.limit, q.offset]);
     return rows as SidebarItem[];
+  }
+
+  /**
+   * Suggerimenti di «Trova e aggiungi»: pochi campi, al massimo `limit`
+   * righe, in ordine di nome. Il conteggio usa gli stessi join del WHERE.
+   */
+  static async suggest(
+    q: Pick<FuocoQuery, "conditions" | "params" | "usedTables">,
+    limit: number,
+  ): Promise<{ rows: SuggestItem[]; total: number }> {
+    const from = buildFrom(["m", "tq", "tp", ...q.usedTables]);
+    const sql = `
+      SELECT f.ID_Fuochi as id, f.Nome_Fuoco as nome, m.Mestiere as mestiere,
+        tq.nome_quartiere as quartiere, tp.nome_popolo as popolo,
+        f.Imponibile_Fuoco as imponibile, f.Volume_Fuoco as volume, f.Foglio_Fuoco as foglio
+      ${from} ${q.conditions} ORDER BY f.Nome_Fuoco, f.ID_Fuochi LIMIT ?`;
+    const [[rows], total]: any = await Promise.all([
+      pool.query(sql, [...q.params, limit]),
+      this.count(q.conditions, q.params, q.usedTables),
+    ]);
+    // DECIMAL arriva come stringa da mysql2: qui torna numero, come dichiara il tipo.
+    const data = (rows as SuggestItem[]).map((r) => ({ ...r, imponibile: r.imponibile === null ? null : Number(r.imponibile) }));
+    return { rows: data, total: Number(total) };
   }
 }

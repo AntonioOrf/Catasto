@@ -70,6 +70,22 @@ describe("Banco di lavoro", () => {
     expect(table.data[0].bocche).toBeUndefined();
   });
 
+  it("trova e aggiungi: parole in nome e mestiere, numero, carta", async () => {
+    const strozzi = await CatastoService.suggestFuochi("strozzi");
+    expect(strozzi).toMatchObject({ mode: "testo", total: 1 });
+    expect(strozzi.data[0]).toMatchObject({ id: 2, nome: "STROZZI PALLA", mestiere: "Lanaiolo", volume: "64", foglio: "13r" });
+
+    // «giovanni» è nel nome di Rucellai e nel quartiere di Strozzi
+    const lanaioli = await CatastoService.suggestFuochi("lanaiolo giovanni");
+    expect(lanaioli.data.map((f) => f.id)).toEqual([1, 2]);
+    expect((await CatastoService.suggestFuochi("lanaiolo rucellai")).data.map((f) => f.id)).toEqual([1]);
+
+    expect((await CatastoService.suggestFuochi("#5")).data.map((f) => f.nome)).toEqual(["MEDICI COSIMO"]);
+    expect((await CatastoService.suggestFuochi("vol. 64 c. 12")).data.map((f) => f.id)).toEqual([1]);
+    expect((await CatastoService.suggestFuochi("vol. 81")).total).toBe(4);
+    expect(await CatastoService.suggestFuochi("nessuno così")).toMatchObject({ data: [], total: 0 });
+  });
+
   it("il filtro ids limita la ricerca ai fuochi scelti", async () => {
     const r = await search({ ids: "5,1,999" });
     expect(r.data.map((f) => f.id).sort()).toEqual([1, 5]);
