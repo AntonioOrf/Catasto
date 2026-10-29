@@ -12,8 +12,9 @@ import type {
 } from "@catasto/shared";
 import { buildParams, type SearchParams } from "../features/catasto/lib/simple-filters";
 
-type View = "table" | "sidebar";
-type ViewResult<V extends View> = V extends "table" ? ApiResponse<Fuoco[]> : SidebarItem[];
+/** "banco": la tabella con bocche ed età media, per il Banco di lavoro. */
+type View = "table" | "sidebar" | "banco";
+type ViewResult<V extends View> = V extends "sidebar" ? SidebarItem[] : ApiResponse<Fuoco[]>;
 
 /**
  * Ricerca avanzata: l'AST viaggia nel body, non in query string. Stessa forma
@@ -51,6 +52,7 @@ const fetchSimple = <V extends View>(
   const params = buildParams(search);
   params.append("page", String(page));
   params.append("limit", String(limit));
+  if (view === "banco") params.append("view", "banco");
   const path = view === "sidebar" ? "/api/catasto/sidebar" : "/api/catasto";
   const fallback =
     translate(messages, view === "sidebar" ? "sidebarFailed" : "tableFailed");
@@ -68,7 +70,7 @@ export const fetchFuochi = <V extends View>(
   limit: number,
   signal?: AbortSignal,
 ) =>
-  search.advancedMode
+  search.advancedMode && !search.ids
     ? fetchAdvanced(search, view, page, limit, signal)
     : fetchSimple(search, view, page, limit, signal);
 
@@ -115,7 +117,7 @@ export const downloadExport = (search: SearchParams, request: ExportRequest) => 
   const fallback = translate(messages, "exportFailed");
   const fallbackName =
     request.format === "xlsx" ? "catasto1427.xlsx" : `catasto1427-${request.parenti ? "parenti" : "fuochi"}.csv`;
-  if (search.advancedMode) {
+  if (search.advancedMode && !search.ids) {
     return apiDownload("/api/catasto/query/export", fallback, fallbackName, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -137,7 +139,7 @@ export const downloadExport = (search: SearchParams, request: ExportRequest) => 
 /** Statistiche sulla ricerca corrente: stessi filtri o stesso AST della tabella. */
 export const fetchStats = (search: SearchParams, signal?: AbortSignal) => {
   const fallback = translate(messages, "statsFailed");
-  if (search.advancedMode) {
+  if (search.advancedMode && !search.ids) {
     return apiRequest<CatastoStats>("/api/catasto/query/stats", fallback, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -150,6 +152,6 @@ export const fetchStats = (search: SearchParams, signal?: AbortSignal) => {
   return apiRequest<CatastoStats>(`/api/catasto/stats${query}`, fallback, { signal });
 };
 
-/** Fuochi per id (vista di confronto), nell'ordine dato; gli inesistenti mancano. */
+/** Fuochi per id (selezione e confronto), nell'ordine dato; gli inesistenti mancano. Al massimo FUOCHI_BY_IDS_MAX. */
 export const fetchFuochiByIds = (ids: readonly number[], signal?: AbortSignal) =>
   apiRequest<Fuoco[]>(`/api/catasto/fuochi?ids=${ids.join(",")}`, translate(messages, "compareFailed"), { signal });

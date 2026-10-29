@@ -9,11 +9,16 @@ export interface CompareState {
   error: string | null;
   /** Id tolti perché inesistenti (link condiviso con id non validi). */
   removedCount: number;
+  /** Selezione al limite (SELECTION_MAX_FUOCHI): le altre caselle si disattivano. */
   full: boolean;
+  /** Il confronto affiancato vuole da COMPARE_MIN_FUOCHI a COMPARE_MAX_FUOCHI fuochi. */
+  canCompare: boolean;
   isSelected: (id: number) => boolean;
   /** Aggiunge o toglie il fuoco; la riga della tabella resta come copia dei dati. */
   toggle: (row: Fuoco) => void;
   remove: (id: number) => void;
+  /** Sostituisce la selezione, per esempio con i fuochi di una raccolta. */
+  replace: (ids: number[]) => void;
   clear: () => void;
   viewOpen: boolean;
   openView: () => void;
@@ -22,7 +27,7 @@ export interface CompareState {
 
 export const CompareContext = createContext<CompareState | null>(null);
 
-/** Stato del confronto, o null fuori dalla home (le righe funzionano anche senza). */
+/** Stato della selezione, o null fuori dal provider (le righe funzionano anche senza). */
 export const useOptionalCompare = (): CompareState | null => useContext(CompareContext);
 
 export function useCompare(): CompareState {

@@ -1,6 +1,6 @@
 import React, { forwardRef } from "react";
 import { BookOpen, ChevronDown, ChevronRight } from "lucide-react";
-import { COMPARE_MAX_FUOCHI, type Fuoco, type Parenti, type TipoSegnalazione } from "@catasto/shared";
+import { SELECTION_MAX_FUOCHI, type Fuoco, type Parenti, type TipoSegnalazione } from "@catasto/shared";
 import type { RiferimentoArchivio } from "../lib/archivio";
 import { parseSegnaturaPortata } from "../lib/segnatura";
 import { cifra, eta, nonIndicato, piviereEPopolo } from "../lib/formato";
@@ -77,7 +77,7 @@ export const CompareCheckbox = ({ row, withLabel = false }: { row: Fuoco; withLa
   return (
     <label
       onClick={(e) => e.stopPropagation()}
-      title={disabled ? t("full", { max: COMPARE_MAX_FUOCHI }) : undefined}
+      title={disabled ? t("full", { max: SELECTION_MAX_FUOCHI }) : undefined}
       className={`inline-flex items-center justify-center gap-1.5 min-h-8 min-w-8 text-sm ${
         disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
       } ${checked ? "text-primary" : "text-text-accent"}`}
@@ -363,15 +363,16 @@ const ExpandedDetails = ({ row, loadingParenti, parentiData, onSegnala, onViewAr
 const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
   ({ row, expanded, onRowClick, loadingParenti, parentiData, onViewArchivio, onSegnala }, ref) => {
     const t = useT(catastoRowMessages);
-    // Riga aperta: fondo appena tinto e un filetto a sinistra, sulla riga e sul dettaglio.
-    const filetto = `border-l-[3px] ${expanded ? "border-l-primary" : "border-l-transparent"}`;
+    const selected = useOptionalCompare()?.isSelected(row.id) ?? false;
+    // Riga aperta o selezionata: fondo appena tinto e un filetto a sinistra, sulla riga e sul dettaglio.
+    const filetto = `border-l-[3px] ${expanded || selected ? "border-l-primary" : "border-l-transparent"}`;
     return (
       <>
         <tr
           ref={ref}
           onClick={() => onRowClick(row.id)}
           className={`cursor-pointer transition-colors border-b border-border-base/40 align-top ${
-            expanded ? "bg-item-selected-open" : "bg-bg-table hover:bg-primary/5"
+            expanded ? "bg-item-selected-open" : selected ? "bg-primary/5" : "bg-bg-table hover:bg-primary/5"
           }`}
         >
           <td className={`pl-3 pr-0 py-4 w-10 ${filetto}`}>
@@ -418,12 +419,17 @@ export const CatastoMobileCard = React.memo(
   forwardRef<HTMLDivElement, CatastoRowProps>(
     ({ row, expanded, onRowClick, loadingParenti, parentiData, onViewArchivio, onSegnala }, ref) => {
       const t = useT(catastoRowMessages);
+      const selected = useOptionalCompare()?.isSelected(row.id) ?? false;
       return (
         <div
           ref={ref}
           onClick={() => onRowClick(row.id)}
           className={`p-3 rounded-ui border border-border-base border-l-[3px] transition-colors cursor-pointer ${
-            expanded ? "bg-item-selected-open border-l-primary" : "bg-bg-table border-l-border-base hover:bg-primary/5"
+            expanded
+              ? "bg-item-selected-open border-l-primary"
+              : selected
+                ? "bg-primary/5 border-l-primary"
+                : "bg-bg-table border-l-border-base hover:bg-primary/5"
           }`}
         >
           <div className="flex justify-between items-start gap-2">

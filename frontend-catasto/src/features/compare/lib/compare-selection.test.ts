@@ -23,7 +23,7 @@ describe("link del confronto", () => {
 
   it("id non validi, duplicati e oltre il massimo vengono scartati senza errori", () => {
     expect(parseIdsParam("12,abc,-3,12,0,7.5, 99 ,,")).toEqual([12, 99]);
-    expect(parseIdsParam("1,2,3,4,5,6,7")).toEqual([1, 2, 3, 4, 5]);
+    expect(parseIdsParam(Array.from({ length: 600 }, (_, i) => i + 1).join(","))).toHaveLength(500);
     expect(parseIdsParam("")).toEqual([]);
     expect(serializeIds([3, 3, 4])).toBe("3,4");
   });
@@ -44,7 +44,8 @@ describe("selezione", () => {
   it("aggiunge e toglie; oltre cinque non cambia", () => {
     expect(toggleId([1, 2], 3)).toEqual([1, 2, 3]);
     expect(toggleId([1, 2, 3], 2)).toEqual([1, 3]);
-    expect(toggleId([1, 2, 3, 4, 5], 6)).toEqual([1, 2, 3, 4, 5]);
+    const full = Array.from({ length: 500 }, (_, i) => i + 1);
+    expect(toggleId(full, 501)).toEqual(full);
   });
 
   it("resta in sessionStorage e tollera valori alterati", () => {

@@ -1,10 +1,11 @@
-import { COMPARE_MAX_FUOCHI, type Fuoco } from "@catasto/shared";
+import { SELECTION_MAX_FUOCHI, type Fuoco } from "@catasto/shared";
 
 /**
- * Selezione dei fuochi da confrontare: una lista di id, al massimo
- * COMPARE_MAX_FUOCHI, nell'ordine in cui sono stati scelti (il primo è il
- * termine di paragone delle differenze). Vive in sessionStorage per la durata
- * della scheda del browser e si condivide con un link `#confronta=12,345`.
+ * Selezione dei fuochi scelti con le caselle: una lista di id, al massimo
+ * SELECTION_MAX_FUOCHI, nell'ordine in cui sono stati scelti (nel confronto
+ * il primo è il termine di paragone delle differenze). Vale in Consultazione
+ * e nel Banco di lavoro, vive in sessionStorage per la durata della scheda
+ * del browser e si condivide con un link `#confronta=12,345`.
  */
 
 export const COMPARE_STORAGE_KEY = "catasto.compare.v1";
@@ -16,7 +17,7 @@ export function normalizeIds(values: readonly unknown[]): number[] {
   for (const value of values) {
     const n = typeof value === "number" ? value : typeof value === "string" && /^\d{1,10}$/.test(value.trim()) ? Number(value) : NaN;
     if (Number.isSafeInteger(n) && n > 0 && !ids.includes(n)) ids.push(n);
-    if (ids.length === COMPARE_MAX_FUOCHI) break;
+    if (ids.length === SELECTION_MAX_FUOCHI) break;
   }
   return ids;
 }
@@ -29,7 +30,7 @@ export const serializeIds = (ids: readonly number[]): string => normalizeIds(ids
 /** Aggiunge o toglie un id; oltre il massimo la selezione non cambia. */
 export function toggleId(ids: readonly number[], id: number): number[] {
   if (ids.includes(id)) return ids.filter((x) => x !== id);
-  return ids.length >= COMPARE_MAX_FUOCHI ? [...ids] : [...ids, id];
+  return ids.length >= SELECTION_MAX_FUOCHI ? [...ids] : [...ids, id];
 }
 
 /** Id del confronto nel fragment (`#confronta=…`), o null se non c'è. */

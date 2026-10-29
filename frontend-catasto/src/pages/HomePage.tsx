@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import type { FilterOptions } from "@catasto/shared";
 import { fetchFilterOptions } from "../api/catastoService";
+import { EMPTY_FILTER_OPTIONS } from "../features/catasto/lib/filter-options";
 import Header from "../components/layout/Header";
 import Sidebar from "../components/layout/Sidebar";
 import FilterPanel from "../features/catasto/components/FilterPanel";
@@ -18,9 +18,7 @@ import Tabs from "../components/common/Tabs";
 import { tabIds } from "../components/common/tab-ids";
 import StatsPanel from "../features/catasto/components/stats/StatsPanel";
 import { homePageMessages } from "./HomePage.messages";
-import { CompareProvider } from "../features/compare/CompareProvider";
 import CompareBar from "../features/compare/components/CompareBar";
-import CompareView from "../features/compare/components/CompareView";
 import ExampleQueries from "../features/examples/ExampleQueries";
 import { useTour } from "../features/tour/tour-context";
 
@@ -29,29 +27,8 @@ type ResultsView = "table" | "stats";
 /** Attesa dopo l'ultimo tasto: scrivere "Rossi" non deve lanciare cinque ricerche. */
 const SEARCH_DEBOUNCE_MS = 350;
 
-const EMPTY_FILTER_OPTIONS: FilterOptions = {
-  bestiame: [],
-  rapporto: [],
-  immigrazione: [],
-  mestieri: [],
-  serie: [],
-  quartieri: [],
-  pivieri: [],
-  popoli: [],
-  particolaritaParente: [],
-  casa: [],
-};
 
-/** La selezione del confronto attraversa tabella, barra e vista: un provider per tutta la home. */
 export default function HomePage() {
-  return (
-    <CompareProvider>
-      <HomeContent />
-    </CompareProvider>
-  );
-}
-
-function HomeContent() {
   const isDesktop = useIsDesktop();
   // Aperta di default solo dove c'è spazio per affiancarla alla tabella.
   const [isSidebarOpen, setIsSidebarOpen] = useState(
@@ -235,7 +212,6 @@ function HomeContent() {
           <CompareBar />
         </main>
       </div>
-      <CompareView />
     </div>
   );
 }

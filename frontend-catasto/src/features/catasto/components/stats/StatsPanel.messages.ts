@@ -56,6 +56,7 @@ export const statsMessages = defineMessages({
     count: "Numero",
     share: "Quota",
     empty: "Nessun fuoco corrisponde alla ricerca.",
+    activeRow: "contiene la riga attiva",
   },
   en: {
     heading: "Search statistics",
@@ -108,6 +109,7 @@ export const statsMessages = defineMessages({
     other: "Other",
     notStated: "Not stated",
     showTable: "Data table",
+    activeRow: "contains the active row",
     category: "Item",
     count: "Count",
     share: "Share",

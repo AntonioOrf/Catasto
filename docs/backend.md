@@ -122,7 +122,7 @@ Base URL: stessa origine del sito (`/api`, proxato da nginx) oppure `http://loca
 |---|---|---|---|
 | GET | `/health` | pubblico | Stato del servizio e del database |
 | GET | `/api/catasto` | pubblico | Ricerca semplice, vista tabella (paginata) |
-| GET | `/api/catasto/fuochi?ids=` | pubblico | Fino a 5 fuochi per id, per il confronto |
+| GET | `/api/catasto/fuochi?ids=` | pubblico | Fino a 50 fuochi per id, per la selezione e il confronto |
 | GET | `/api/catasto/sidebar` | pubblico | Ricerca semplice, indice leggero per la sidebar |
 | POST | `/api/catasto/query` | pubblico | Ricerca avanzata con AST |
 | GET | `/api/catasto/stats` | pubblico, 150 req/15 min | Statistiche sulla ricerca semplice |
@@ -179,6 +179,7 @@ Tutti i filtri sono parametri di query **scalari** (`?x[]=` → 400), lunghi al 
 | `fortune_min` / `fortune_max` (e `credito_*`, `creditoM_*`, `imponibile_*`, `deduzioni_*`) | Intervalli in fiorini (`>=` / `<=`) |
 | `serie`, `quartiere`, `piviere`, `popolo` | Lista di id separati da virgola (max 100): `?quartiere=3,7` |
 | `particolarita_parente` | Il fuoco ha almeno un parente con quella particolarità |
+| `ids` | Fuochi scelti a mano: lista di id separati da virgola, al massimo `SELECTION_MAX_FUOCHI` (500). Serve all'export della selezione e alle raccolte del Banco di lavoro |
 
 Esempio:
 
@@ -227,11 +228,11 @@ Stessi filtri. Risposta **senza wrapper**, pensata per un elenco lungo e leggero
 }
 ```
 
-`view` è `"table"` (risposta come `GET /api/catasto`) o `"sidebar"` (risposta come `GET /sidebar`). Un AST non valido → `400 {"error":"Query non valida: …"}`. Il formato è descritto [più sotto](#ricerca-avanzata-formato-dellast).
+`view` è `"table"` (risposta come `GET /api/catasto`), `"banco"` (come `"table"`, più `bocche` ed `eta_media` per ogni fuoco) o `"sidebar"` (risposta come `GET /sidebar`). Anche `GET /api/catasto` accetta `view=banco`: le bocche (parenti registrati, 0 se nessuno) e l'età media arrivano da una sola query raggruppata sui parenti dei fuochi della pagina. Un AST non valido → `400 {"error":"Query non valida: …"}`. Il formato è descritto [più sotto](#ricerca-avanzata-formato-dellast).
 
 ### `GET /api/catasto/fuochi?ids=12,345,678` — fuochi per id
 
-Carica in una sola richiesta i fuochi della vista di confronto, presi anche da pagine o ricerche diverse. `ids` è una lista di id numerici separati da virgola, al massimo `COMPARE_MAX_FUOCHI` (5, in `@catasto/shared`); i duplicati contano una volta. Qualunque altra forma (vuoto, non numerico, array, troppi id) → `400`.
+Carica in una sola richiesta i fuochi della selezione (barra della selezione, vista di confronto), presi anche da pagine o ricerche diverse. `ids` è una lista di id numerici separati da virgola, al massimo `FUOCHI_BY_IDS_MAX` (50, in `@catasto/shared`; il client divide una selezione più grande in blocchi); i duplicati contano una volta. Qualunque altra forma (vuoto, non numerico, array, troppi id) → `400`.
 
 Risposta: array di fuochi con gli stessi campi di `GET /api/catasto`, **nell'ordine degli id richiesti**; gli id inesistenti mancano senza errore (il client li confronta con quelli chiesti). Accetta `lang`.
 
@@ -253,7 +254,8 @@ Aggregati sugli **stessi fuochi della tabella**: accetta gli stessi filtri di `G
   "serie":     { "voci": [ … ], "altro": 0, "assenti": 1 },
   "membri": [{ "membri": 0, "fuochi": 1 }, { "membri": 1, "fuochi": 4 }],
   "eta": { "fasce": [{ "da": 0, "sesso": "Femmina", "n": 2 }], "assenti": 1 },
-  "statoCivile": { "voci": [ … ], "altro": 0, "assenti": 3 }
+  "statoCivile": { "voci": [ … ], "altro": 0, "assenti": 3 },
+  "fasceImponibile": { "fasce": [{ "da": 0, "n": 1 }, { "da": 1, "n": 2 }, …], "assenti": 0 }
 }
 ```
 
@@ -261,6 +263,7 @@ Aggregati sugli **stessi fuochi della tabella**: accetta gli stessi filtri di `G
 - **Mediana e quartili**: definizione "tipo 7" (interpolazione lineare, come R, numpy ed Excel `QUARTILE.INC`), calcolati in MySQL 8 con `ROW_NUMBER()` e `COUNT(*) OVER ()`: per ogni misura il DB restituisce al più sei righe, mai l'intera colonna.
 - **Distribuzioni**: `mestieri` riporta le prime 10 voci, le altre sommate in `altro`; `quartieri` e `serie` uniscono le partizioni omonime come i filtri; `assenti` = etichetta non indicata.
 - **Composizione**: `membri` = numero di fuochi per numero di parenti registrati (0 compreso); `eta` = parenti per fascia di 5 anni (`da`; 90 = 90 e oltre) e sesso, con le età assenti a parte; `statoCivile` = parenti per stato civile.
+- **Fasce dell'imponibile**: fuochi per fascia (`da` = estremo inferiore, fasce `IMPONIBILE_BANDS` di `@catasto/shared`: 0, 1–50, 51–200, 201–500, 501–1.000, oltre), sempre tutte anche se vuote, con gli imponibili assenti a parte. Servono al grafico del Banco di lavoro.
 - **Lingua**: con `lang=en` sono tradotte le etichette di mestieri, sesso e stato civile (luoghi esclusi, come nel resto dell'API).
 - **Cache**: 60 secondi, chiave = SQL compilato + parametri + lingua (due ricerche equivalenti condividono il risultato), al massimo 200 voci; richieste contemporanee per la stessa chiave condividono il calcolo. Sull'intero dataset (61.000 fuochi, 270.000 parenti, MySQL 8 locale) una richiesta a freddo richiede circa un secondo.
 

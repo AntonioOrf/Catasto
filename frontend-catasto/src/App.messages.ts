@@ -7,6 +7,7 @@ export const appMessages = defineMessages({
     map: "Mappa",
     contacts: "Contatti",
     glossary: "Glossario",
+    banco: "Banco di lavoro",
     loadingPage: "Caricamento pagina",
   },
   en: {
@@ -14,6 +15,7 @@ export const appMessages = defineMessages({
     map: "Map",
     contacts: "Contact",
     glossary: "Glossary",
+    banco: "Workbench",
     loadingPage: "Loading page",
   },
 });

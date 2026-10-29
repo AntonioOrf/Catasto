@@ -71,6 +71,11 @@ export interface SearchParams extends SimpleFilters {
   advancedMode: boolean;
   /** AST già ripulito dalle condizioni incomplete. */
   ast: QueryGroup;
+  /**
+   * Fuochi scelti a mano (raccolta del Banco, export della selezione), id
+   * separati da virgola: si combina con i filtri semplici, non con l'AST.
+   */
+  ids?: string;
 }
 
 export const countFilled = (filters: SimpleFilters, keys: readonly SimpleFilterKey[]) =>
@@ -84,6 +89,7 @@ export const buildParams = (search: Partial<SearchParams>): URLSearchParams => {
     if (value) params.append(SIMPLE_FILTER_PARAMS[key], value);
   }
 
+  if (search.ids) params.append("ids", search.ids);
   if (search.sortBy) params.append("sort_by", search.sortBy);
   if (search.sortOrder) params.append("order", search.sortOrder);
 

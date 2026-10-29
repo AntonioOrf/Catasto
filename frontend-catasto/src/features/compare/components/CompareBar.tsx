@@ -1,80 +1,114 @@
-import { COMPARE_MAX_FUOCHI, COMPARE_MIN_FUOCHI } from "@catasto/shared";
-import { Columns3, X } from "lucide-react";
-import { useT } from "../../../i18n";
+import { useState } from "react";
+import { COMPARE_MAX_FUOCHI, COMPARE_MIN_FUOCHI, emptyGroup } from "@catasto/shared";
+import { downloadExport } from "../../../api/catastoService";
+import { userMessage } from "../../../api/client";
+import { useLanguage, useT } from "../../../i18n";
+import { saveBlob } from "../../catasto/lib/download";
+import { EMPTY_SIMPLE_FILTERS } from "../../catasto/lib/simple-filters";
 import { useCompare } from "../compare-context";
 import { compareMessages } from "../compare.messages";
+import AddToCollection from "./AddToCollection";
+
+/** Nomi scritti per intero nella barra; gli altri si contano. */
+const NAMES_SHOWN = 3;
+
+const linkClasses = "min-h-11 inline-flex items-center text-primary underline underline-offset-4 decoration-primary/40 hover:decoration-primary disabled:opacity-50";
 
 /**
- * Barra fissa in basso con i fuochi scelti per il confronto: resta visibile
- * cambiando pagina o ricerca. Compare solo con almeno un fuoco selezionato;
- * lo spaziatore evita che copra il fondo della pagina.
+ * Barra della selezione, fissa in basso su una riga sola: chi è scelto e le
+ * azioni (raccolta, export, deseleziona, confronto). La scelta resta
+ * un'azione secondaria: niente pulsanti grandi né posti vuoti, solo un filo
+ * in alto. Compare con almeno un fuoco selezionato; lo spaziatore evita che
+ * copra il fondo della pagina.
  */
 export default function CompareBar() {
   const t = useT(compareMessages);
-  const { ids, fuochi, removedCount, remove, clear, openView } = useCompare();
+  const { lang } = useLanguage();
+  const { ids, fuochi, removedCount, remove, clear, openView, canCompare } = useCompare();
+  const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
   const names = new Map(fuochi.map((f) => [Number(f.id), f.nome]));
-  const enough = ids.length >= COMPARE_MIN_FUOCHI;
+  const shown = ids.slice(0, NAMES_SHOWN);
+
+  const exportSelected = async () => {
+    setBusy(true);
+    setStatus(t("exporting"));
+    try {
+      const { blob, filename } = await downloadExport(
+        { ...EMPTY_SIMPLE_FILTERS, sortBy: "nome", sortOrder: "ASC", advancedMode: false, ast: emptyGroup("AND"), ids: ids.join(",") },
+        { format: "csv", parenti: false, sep: lang === "it" ? "semicolon" : "comma" },
+      );
+      saveBlob(blob, filename);
+      setStatus(t("exported", { file: filename }));
+    } catch (error) {
+      setStatus(userMessage(error, t("exportFailed"), lang));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removed = removedCount === 1 ? t("missingOne") : removedCount > 1 ? t("missing", { n: removedCount }) : "";
 
   return (
     <>
-      {/* Sempre montata: annuncia i fuochi tolti da un link anche a barra chiusa. */}
+      {/* Sempre montata: annuncia esiti e fuochi tolti anche a barra chiusa. */}
       <p role="status" aria-live="polite" className="sr-only">
-        {removedCount === 1 ? t("missingOne") : removedCount > 1 ? t("missing", { n: removedCount }) : ""}
+        {[removed, status].filter(Boolean).join(" ")}
       </p>
       {ids.length > 0 && (
         <>
-          <div aria-hidden="true" className="h-28 md:h-20" />
-          <section
-            aria-label={t("region")}
-            className="fixed inset-x-0 bottom-0 z-40 bg-bg-sidebar border-t-2 border-primary px-3 py-2 md:px-6 md:py-3"
-          >
-            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold small-caps text-accent-strong">
-                  {t("selected", { n: ids.length, max: COMPARE_MAX_FUOCHI })}
-                </p>
-                {removedCount > 0 && (
-                  <p className="text-xs text-text-accent">
-                    {removedCount === 1 ? t("missingOne") : t("missing", { n: removedCount })}
-                  </p>
-                )}
-                <ul className="flex gap-2 overflow-x-auto py-1">
-                  {ids.map((id) => {
-                    const nome = names.get(id) ?? `#${id}`;
-                    return (
-                      <li key={id} className="shrink-0 inline-flex items-center gap-1 bg-bg-main border border-border-base rounded-ui pl-3 pr-1 text-xs text-text-main">
-                        <span className="max-w-40 truncate">{nome}</span>
-                        <button
-                          type="button"
-                          onClick={() => remove(id)}
-                          aria-label={t("remove", { nome })}
-                          className="inline-flex items-center justify-center min-h-8 min-w-8 rounded-ui hover:bg-item-hover"
-                        >
-                          <X className="h-3.5 w-3.5" aria-hidden="true" />
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-                {!enough && <p className="text-xs text-text-accent">{t("needMore", { min: COMPARE_MIN_FUOCHI })}</p>}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={clear}
-                  className="min-h-11 px-3 rounded-ui border border-border-base bg-bg-main text-accent-strong text-sm font-bold hover:bg-item-hover"
-                >
-                  {t("clear")}
-                </button>
-                <button
-                  type="button"
-                  onClick={openView}
-                  disabled={!enough}
-                  className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-ui bg-primary text-on-primary text-sm font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Columns3 className="h-4 w-4" aria-hidden="true" /> {t("compare")}
-                </button>
-              </div>
+          <div aria-hidden="true" className="h-28 md:h-16" />
+          <section aria-label={t("region")} className="fixed inset-x-0 bottom-0 z-40 bg-bg-sidebar border-t border-border-base px-3 md:px-6 py-1.5 text-sm">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
+              <p className="min-w-0 flex-1 basis-full md:basis-auto">
+                <strong className="font-semibold text-accent-strong">
+                  {ids.length === 1 ? t("selectedOne") : t("selected", { n: ids.length })}
+                </strong>
+                {": "}
+                {shown.map((id, i) => {
+                  const nome = names.get(id) ?? `#${id}`;
+                  return (
+                    <span key={id} className="whitespace-nowrap">
+                      {i > 0 && ", "}
+                      <span>{nome}</span>
+                      <button
+                        type="button"
+                        onClick={() => remove(id)}
+                        aria-label={t("remove", { nome })}
+                        title={t("remove", { nome })}
+                        className="ml-0.5 inline-flex items-center min-h-8 px-0.5 text-text-accent hover:text-primary"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+                {ids.length > NAMES_SHOWN && <span className="text-text-accent"> {t("others", { n: ids.length - NAMES_SHOWN })}</span>}
+                {(removed || status) && <span className="block text-xs text-text-accent">{[removed, status].filter(Boolean).join(" ")}</span>}
+              </p>
+
+              <AddToCollection ids={ids} onAdded={setStatus} />
+              <button type="button" onClick={exportSelected} disabled={busy} title={t("exportSelectedTitle")} className={linkClasses}>
+                {t("exportSelected")}
+              </button>
+              <button type="button" onClick={clear} className={linkClasses.replace("text-primary", "text-text-accent")}>
+                {t("clear")}
+              </button>
+              <button
+                type="button"
+                onClick={openView}
+                disabled={!canCompare}
+                title={canCompare ? undefined : t("compareRange", { min: COMPARE_MIN_FUOCHI, max: COMPARE_MAX_FUOCHI })}
+                aria-describedby={canCompare ? undefined : "compare-range-hint"}
+                className="min-h-9 px-3 rounded-ui bg-primary text-on-primary font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t("compare")}
+              </button>
+              {!canCompare && (
+                <span id="compare-range-hint" className="sr-only">
+                  {t("compareRange", { min: COMPARE_MIN_FUOCHI, max: COMPARE_MAX_FUOCHI })}
+                </span>
+              )}
             </div>
           </section>
         </>

@@ -27,6 +27,7 @@ const stats: CatastoStats = {
   membri: [{ membri: 0, fuochi: 1 }, { membri: 1, fuochi: 9 }],
   eta: { fasce: [{ da: 0, sesso: "Maschio", n: 3 }, { da: 90, sesso: "Femmina", n: 1 }, { da: 30, sesso: null, n: 2 }], assenti: 1 },
   statoCivile: empty,
+  fasceImponibile: { fasce: [0, 1, 51, 201, 501, 1001].map((da) => ({ da, n: 1 })), assenti: 4 },
 };
 const search: SearchParams = { ...EMPTY_SIMPLE_FILTERS, sortBy: "nome", sortOrder: "ASC", advancedMode: false, ast: emptyGroup() };
 const t = (key: keyof (typeof statsMessages)["it"], vars?: Record<string, string | number>) => translate(statsMessages, key, vars, "it");

@@ -13,6 +13,8 @@ interface BarChartProps {
   title: string;
   data: BarDatum[];
   note?: string;
+  /** Voce che contiene la riga attiva del Banco: barra nel secondo colore e detta a parole. */
+  highlight?: string | null;
 }
 
 /**
@@ -20,13 +22,13 @@ interface BarChartProps {
  * barra ha accanto etichetta, valore e quota, così nessuna informazione sta
  * nel solo colore. Sotto, la stessa informazione come tabella.
  */
-export default function BarChart({ title, data, note }: BarChartProps) {
+export default function BarChart({ title, data, note, highlight }: BarChartProps) {
   const t = useT(statsMessages);
   const { locale } = useLanguage();
   const id = useId();
   const total = data.reduce((s, d) => s + d.n, 0);
   const max = Math.max(1, ...data.map((d) => d.n));
-  const fmt = (n: number) => n.toLocaleString(locale);
+  const fmt = (n: number) => new Intl.NumberFormat(locale, { useGrouping: "always" } as Intl.NumberFormatOptions).format(n);
   const pct = (n: number) =>
     total > 0 ? (n / total).toLocaleString(locale, { style: "percent", maximumFractionDigits: 1 }) : "";
 
@@ -36,20 +38,32 @@ export default function BarChart({ title, data, note }: BarChartProps) {
         {title}
       </figcaption>
       <ul className="space-y-1.5">
-        {data.map((d) => (
-          <li key={d.label} className="grid grid-cols-[minmax(0,10rem)_1fr] gap-2 items-center text-xs" title={`${d.label}: ${fmt(d.n)} (${pct(d.n)})`}>
-            <span className={`truncate text-right ${d.muted ? "italic text-text-accent" : "text-text-main"}`}>{d.label}</span>
+        {data.map((d) => {
+          const active = highlight === d.label;
+          return (
+          <li key={d.label} className="grid grid-cols-[minmax(0,8rem)_1fr] gap-2 items-center text-xs" title={`${d.label}: ${fmt(d.n)} (${pct(d.n)})`}>
+            <span className={`truncate text-right ${d.muted ? "italic text-text-accent" : "text-text-main"} ${active ? "font-semibold" : ""}`}>
+              {d.label}
+              {active && <span className="sr-only"> ({t("activeRow")})</span>}
+            </span>
             <span className="flex items-center gap-2 min-w-0">
               <span
-                className={`h-3 rounded-r-ui shrink-0 ${d.muted ? "bg-[repeating-linear-gradient(45deg,var(--chart-1)_0_2px,transparent_2px_5px)] border border-chart-1/60" : "bg-chart-1"}`}
-                style={{ width: `${Math.max((d.n / max) * 75, d.n > 0 ? 0.5 : 0)}%` }}
+                className={`h-3 rounded-r-ui shrink-0 ${
+                  active
+                    ? "bg-chart-2"
+                    : d.muted
+                      ? "bg-[repeating-linear-gradient(45deg,var(--chart-1)_0_2px,transparent_2px_5px)] border border-chart-1/60"
+                      : "bg-chart-1"
+                }`}
+                style={{ width: `${Math.max((d.n / max) * 55, d.n > 0 ? 0.5 : 0)}%` }}
               />
               <span className="tabular-nums text-text-main whitespace-nowrap">
                 {fmt(d.n)} <span className="text-text-accent">({pct(d.n)})</span>
               </span>
             </span>
           </li>
-        ))}
+          );
+        })}
       </ul>
       {note && <p className="text-xs text-text-accent">{note}</p>}
       <details className="text-xs">
