@@ -17,6 +17,8 @@ export interface CompareState {
   /** Aggiunge o toglie il fuoco; la riga della tabella resta come copia dei dati. */
   toggle: (row: Fuoco) => void;
   remove: (id: number) => void;
+  /** Aggiunge fuochi in coda, senza doppioni e fino al limite; i dati si chiedono al server. */
+  add: (ids: readonly number[]) => void;
   /** Sostituisce la selezione, per esempio con i fuochi di una raccolta. */
   replace: (ids: number[]) => void;
   clear: () => void;

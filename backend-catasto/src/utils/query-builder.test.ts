@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOrderBy, buildQuery, nameTerms } from "./query-builder.js";
+import { buildOrderBy, buildQuery, namePattern, nameTerms } from "./query-builder.js";
 import { ValidationError } from "./validation.js";
 
 describe("buildQuery", () => {
@@ -11,15 +11,29 @@ describe("buildQuery", () => {
 
   it("parameterizes text filters instead of interpolating them into the SQL", () => {
     const { conditions, params } = buildQuery({ q_persona: "Rossi" });
-    expect(conditions).toContain("f.Nome_Fuoco LIKE ? ESCAPE '!'");
+    expect(conditions).toContain("LIKE ? ESCAPE '!'");
     expect(conditions).not.toContain("Rossi");
-    expect(params).toEqual(["%Rossi%"]);
+    expect(params).toEqual(["% Rossi%"]);
   });
 
-  it("cerca nome e patronimico anche con le particelle", () => {
+  it("cerca nome e patronimico nell'ordine scritto, senza il di", () => {
     const { conditions, params } = buildQuery({ q_persona: "Nuto di Nardo" });
-    expect(conditions.match(/f\.Nome_Fuoco LIKE/g)).toHaveLength(2);
-    expect(params).toEqual(["%Nuto%", "%Nardo%"]);
+    expect(conditions).toContain("CONCAT(' ', REPLACE(f.Nome_Fuoco, '''', ' ')) LIKE ? ESCAPE '!'");
+    expect(params).toEqual(["% Nuto% Nardo%"]);
+  });
+
+  it("il pattern esclude le parole in altro ordine o a metà di una parola", () => {
+    // Stessa semantica del LIKE di MySQL (case-insensitive) sul nome preceduto da uno spazio.
+    const matches = (nome: string, search: string) =>
+      new RegExp(`^${namePattern(search).replace(/%/g, ".*")}$`, "i").test(` ${nome.replace(/'/g, " ")}`);
+    expect(matches("NUTO NARDO", "nuto nardo")).toBe(true);
+    expect(matches("NUTO NARDO", "nut nar")).toBe(true);
+    expect(matches("BERNARDO NUTO", "nuto nardo")).toBe(false);
+    expect(matches("NUTO BERNARDO", "nuto nardo")).toBe(false);
+    expect(matches("NUTO NARDO", "nardo nuto")).toBe(false);
+    expect(matches("BERNARDO NUTO", "nardo nuto")).toBe(false);
+    expect(matches("GIOVANNI D'ANTONIO", "giovanni antonio")).toBe(true);
+    expect(matches("GIOVANNI D'ANTONIO", "giovanni d'antonio")).toBe(true);
   });
 
   it("scarta solo il di e tiene le parole intere", () => {

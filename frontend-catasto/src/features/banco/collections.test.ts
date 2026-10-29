@@ -4,10 +4,13 @@ import {
   COLLECTIONS_STORAGE_KEY,
   addToCollection,
   buildCollectionUrl,
+  createCollection,
   deleteCollection,
   loadCollections,
   readCollectionFromHash,
   removeFromCollection,
+  renameCollection,
+  setCollectionIds,
 } from "./collections";
 
 beforeEach(() => localStorage.clear());
@@ -28,6 +31,29 @@ describe("raccolte", () => {
     expect(all.map((r) => r.nome)).toEqual(["A", "B"]);
     expect(removeFromCollection(all[0].id, 1)[0].ids).toEqual([3]);
     expect(deleteCollection(all[1].id).map((r) => r.nome)).toEqual(["A"]);
+  });
+
+  it("si rinominano, ma non con un nome vuoto o già usato", () => {
+    addToCollection("Lanaioli", [1]);
+    const [b] = addToCollection("Speziali", [2]);
+    expect(renameCollection(b.id, "  Speziali di Oltrarno ")).toEqual({ ok: true });
+    expect(loadCollections().map((r) => r.nome)).toEqual(["Speziali di Oltrarno", "Lanaioli"]);
+    expect(renameCollection(b.id, "   ")).toEqual({ ok: false, reason: "empty" });
+    expect(renameCollection(b.id, "lanaioli")).toEqual({ ok: false, reason: "taken" });
+    expect(renameCollection(b.id, "SPEZIALI DI OLTRARNO")).toEqual({ ok: true });
+    expect(loadCollections()[0]).toMatchObject({ nome: "SPEZIALI DI OLTRARNO", ids: [2] });
+  });
+
+  it("si creano vuote e si riempiono al loro posto, nell'ordine dato", () => {
+    const nuova = createCollection("Nuova")!;
+    addToCollection("Altra", [9]);
+    expect(createCollection("nuova")).toBeNull();
+    expect(createCollection(" ")).toBeNull();
+    const all = setCollectionIds(nuova.id, [5, 3, 5, 8]);
+    expect(all.map((r) => [r.nome, r.ids])).toEqual([
+      ["Altra", [9]],
+      ["Nuova", [5, 3, 8]],
+    ]);
   });
 
   it("un nome vuoto non crea nulla", () => {

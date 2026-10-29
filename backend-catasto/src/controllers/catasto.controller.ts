@@ -153,6 +153,11 @@ export const CatastoController = {
     res.json(await CatastoService.getFuochiByIds(ids, parseLang(req.query.lang)));
   },
 
+  /** GET /api/catasto/suggest?q=…: i fuochi della casella «Trova e aggiungi». */
+  async suggest(req: Request, res: Response) {
+    res.json(await CatastoService.suggestFuochi(req.query.q ?? "", parseLang(req.query.lang)));
+  },
+
   async getParenti(req: Request, res: Response) {
     const id = parseNumericId(req.params.id, "fuoco id");
     res.json(await CatastoService.getParenti(id, parseLang(req.query.lang)));
