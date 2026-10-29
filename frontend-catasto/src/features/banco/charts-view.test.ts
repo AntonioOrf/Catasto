@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CatastoStats } from "@catasto/shared";
-import { distributionItems, imponibileItems, pieSlices, sharesByKey, withCatastoItems } from "./charts-view";
+import { distributionItems, pieSlices, sharesByKey, withCatastoItems } from "../catasto/components/stats/chart-items";
+import { imponibileItems } from "./charts-view";
 
 const fmt = (n: number) => n.toLocaleString("it-IT", { useGrouping: "always" } as Intl.NumberFormatOptions);
 const over = (n: string) => `oltre ${n}`;

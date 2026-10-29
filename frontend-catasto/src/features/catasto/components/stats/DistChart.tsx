@@ -1,7 +1,7 @@
 import { useId } from "react";
-import { useLanguage, useT } from "../../../i18n";
-import { chartsViewMessages } from "../charts-view.messages";
-import { PIE_MAX, pieSlices, type ChartItem } from "../charts-view";
+import { useLanguage, useT } from "../../../../i18n";
+import { PIE_MAX, pieSlices, type ChartItem } from "./chart-items";
+import { statsMessages } from "./StatsPanel.messages";
 
 export type ChartKind = "bar" | "pie";
 
@@ -27,13 +27,13 @@ function arc(r0: number, r1: number, a0: number, a1: number): string {
 }
 
 /**
- * Un grafico della vista «Grafici»: barre orizzontali o torta ad anello, la
+ * Un grafico di statistiche: barre orizzontali o torta ad anello, la
  * stessa informazione in tabella. Con il confronto ogni barra ha una tacca
  * alla quota di tutto il catasto e la legenda della torta la scrive. I non
  * indicati sono tratteggiati e restano a parte.
  */
 export default function DistChart({ title, subtitle, items, kind, onKind, catasto }: DistChartProps) {
-  const t = useT(chartsViewMessages);
+  const t = useT(statsMessages);
   const { locale } = useLanguage();
   const id = useId();
   // useId contiene «:»: per un riferimento url(#…) serve un id semplice.
@@ -165,10 +165,10 @@ export default function DistChart({ title, subtitle, items, kind, onKind, catast
           <caption className="sr-only">{title}</caption>
           <thead>
             <tr className="border-b border-border-base">
-              <th scope="col" className="py-1 pr-2">{t("voce")}</th>
-              <th scope="col" className="py-1 pr-2 text-right">{t("numero")}</th>
-              <th scope="col" className="py-1 pr-2 text-right">{t("quota")}</th>
-              {catasto && <th scope="col" className="py-1 text-right">{t("quotaCatasto")}</th>}
+              <th scope="col" className="py-1 pr-2">{t("category")}</th>
+              <th scope="col" className="py-1 pr-2 text-right">{t("count")}</th>
+              <th scope="col" className="py-1 pr-2 text-right">{t("share")}</th>
+              {catasto && <th scope="col" className="py-1 text-right">{t("shareCatasto")}</th>}
             </tr>
           </thead>
           <tbody>

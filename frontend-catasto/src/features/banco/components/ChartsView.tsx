@@ -5,9 +5,10 @@ import AgePyramid from "../../catasto/components/stats/AgePyramid";
 import { statsMessages } from "../../catasto/components/stats/StatsPanel.messages";
 import { bancoMessages } from "../banco.messages";
 import { MAX_BOCCHE_BAR } from "../charts";
-import { boccheItems, distributionItems, imponibileItems, sharesByKey, withCatastoItems, type ChartItem } from "../charts-view";
+import { distributionItems, sharesByKey, withCatastoItems, type ChartItem } from "../../catasto/components/stats/chart-items";
+import DistChart, { type ChartKind } from "../../catasto/components/stats/DistChart";
+import { boccheItems, imponibileItems } from "../charts-view";
 import { chartsViewMessages } from "../charts-view.messages";
-import DistChart, { type ChartKind } from "./DistChart";
 
 const KINDS_STORAGE_KEY = "catasto.banco.grafici.v1";
 type ChartId = "imponibile" | "bocche" | "mestieri" | "quartieri" | "statoCivile";

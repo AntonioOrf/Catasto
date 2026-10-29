@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { emptyGroup, type CatastoStats, type MetricSummary } from "@catasto/shared";
 import { renderWithProviders } from "../../../../test/render";
 import { EMPTY_SIMPLE_FILTERS, type SearchParams } from "../../lib/simple-filters";
-import { distributionBars, memberBars } from "./stats-bars";
+import { distributionItems } from "./chart-items";
+import { memberBars } from "./stats-bars";
 import { statsMessages } from "./StatsPanel.messages";
 import { translate } from "../../../../i18n";
 
@@ -34,24 +35,24 @@ const t = (key: keyof (typeof statsMessages)["it"], vars?: Record<string, string
 
 describe("barre delle statistiche", () => {
   it("Altro e Non indicato in coda e marcati come voci di servizio", () => {
-    expect(distributionBars(stats.mestieri, t)).toEqual([
-      { label: "Lanaiolo", n: 3 },
-      { label: "Altro", n: 2, muted: true },
-      { label: "Non indicato", n: 5, muted: true },
+    expect(distributionItems(stats.mestieri, { other: t("other"), notStated: t("notStated") })).toEqual([
+      { key: "v:Lanaiolo", label: "Lanaiolo", n: 3 },
+      { key: "altro", label: "Altro", n: 2, other: true },
+      { key: "na", label: "Non indicato", n: 5, missing: true },
     ]);
   });
 
   it("i fuochi con molti membri si raggruppano", () => {
     const bars = memberBars([{ membri: 1, fuochi: 2 }, { membri: 12, fuochi: 3 }, { membri: 20, fuochi: 1 }], t);
     expect(bars).toEqual([
-      { label: "1 membro", n: 2 },
-      { label: "12 o più", n: 4 },
+      { key: "m1", label: "1 membro", n: 2 },
+      { key: "over", label: "12 o più", n: 4 },
     ]);
   });
 });
 
 describe("StatsPanel", () => {
-  beforeEach(() => { api.fetchStats.mockReset(); api.fetchStats.mockResolvedValue(stats); });
+  beforeEach(() => { localStorage.clear(); api.fetchStats.mockReset(); api.fetchStats.mockResolvedValue(stats); });
 
   it("mostra totali, tabella economica con i valori non calcolabili e i grafici con tabella dei dati", async () => {
     renderWithProviders(<StatsPanel search={search} />);
@@ -64,6 +65,11 @@ describe("StatsPanel", () => {
 
     const mestieri = screen.getByRole("figure", { name: "Fuochi per mestiere" });
     expect(within(mestieri).getByRole("table").textContent).toContain("Non indicato");
+    // Barre o torta per ogni grafico, ricordato sul dispositivo.
+    expect(within(mestieri).queryByRole("img")).toBeNull();
+    fireEvent.click(within(mestieri).getByRole("button", { name: "Torta" }));
+    expect(within(mestieri).getByRole("img").getAttribute("aria-label")).toContain("Lanaiolo 30%");
+    expect(JSON.parse(localStorage.getItem("catasto.statistiche.grafici.v1")!)).toEqual({ mestieri: "pie" });
 
     // Piramide: il sesso assente è riportato a parte, non perso.
     expect(screen.getByText(/Sesso non indicato o altro: 2/)).toBeTruthy();
