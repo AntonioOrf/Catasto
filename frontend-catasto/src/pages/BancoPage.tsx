@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { emptyGroup, type Fuoco, type QueryGroup } from "@catasto/shared";
-import { fetchFilterOptions, fetchFuochi } from "../api/catastoService";
+import { fetchFilterOptions, fetchFuochi, fetchStats } from "../api/catastoService";
 import { userMessage } from "../api/client";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
@@ -17,13 +17,18 @@ import { EMPTY_SIMPLE_FILTERS, type SearchParams } from "../features/catasto/lib
 import { viewerVolume } from "../features/catasto/lib/viewer-volume";
 import CompareBar from "../features/compare/components/CompareBar";
 import { bancoMessages, type BancoMessageKey } from "../features/banco/banco.messages";
-import { SELEZIONE, useAddTarget, type TargetKey } from "../features/banco/add-target";
-import { addToCollection, readCollectionFromHash, type Raccolta } from "../features/banco/collections";
+import { loadTargetKey, storeTargetKey, useAddTarget, type TargetKey } from "../features/banco/add-target";
+import { addToCollection, loadCollections, readCollectionFromHash, type Raccolta } from "../features/banco/collections";
+import type { ChartItem } from "../features/banco/charts-view";
+import { chartsViewMessages } from "../features/banco/charts-view.messages";
+import { useTargetActions } from "../features/banco/useTargetActions";
 import { useCollections } from "../features/banco/useCollections";
 import { loadColumns, resetColumns, storeColumns, visibleColumns, type ColumnsState } from "../features/banco/columns";
-import BancoCharts from "../features/banco/components/BancoCharts";
 import BancoTable from "../features/banco/components/BancoTable";
+import ChartsView from "../features/banco/components/ChartsView";
 import CollectionsPanel from "../features/banco/components/CollectionsPanel";
+import DestinationPanel from "../features/banco/components/DestinationPanel";
+import UndoToast from "../features/banco/components/UndoToast";
 import FinderPanel from "../features/banco/components/FinderPanel";
 import ColumnsMenu from "../features/banco/components/ColumnsMenu";
 import QueryPanel from "../features/banco/components/QueryPanel";
@@ -43,25 +48,66 @@ const COLUMN_LABELS: Partial<Record<string, BancoMessageKey>> = {
 };
 
 type Source = { kind: "query" } | { kind: "raccolta"; raccolta: Pick<Raccolta, "id" | "nome" | "ids"> };
+type View = "tabella" | "grafici";
+
+/** Preferenze del Banco sul dispositivo: vista e confronto con tutto il catasto. */
+const VIEW_STORAGE_KEY = "catasto.banco.vista.v1";
+const COMPARE_STORAGE_KEY = "catasto.banco.confronto.v1";
+const readPref = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+const writePref = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // non salvata: vale finché la pagina è aperta
+  }
+};
+
+/** Tutto il catasto, per il confronto dei grafici: nessun filtro. */
+const ALL_FUOCHI: SearchParams = { ...EMPTY_SIMPLE_FILTERS, sortBy: "nome", sortOrder: "ASC", advancedMode: false, ast: emptyGroup("AND") };
 
 /**
  * Banco di lavoro (#46): la stessa query della Consultazione (stesso AST,
- * stesso compilatore), letta come una frase, con colonne a scelta, grafici su
- * tutti i risultati, raccolte e una tabella densa. Pensato per il computer;
- * sul telefono resta usabile con la tabella che scorre di lato.
+ * stesso compilatore), letta come una frase. «Trova e aggiungi» in testa;
+ * sotto, la vista Tabella (tabella densa con accanto la raccolta che si
+ * riempie) o la vista Grafici (cifre e grafici su tutti i risultati). Pensato
+ * per il computer; sul telefono la tabella scorre di lato.
  */
 export default function BancoPage() {
   const t = useT(bancoMessages);
+  const tc = useT(chartsViewMessages);
   const { lang, locale } = useLanguage();
   const { ast, setAst, setAdvancedMode, searchParams, sortBy, sortOrder, handleSort } = useFilters();
 
   const [source, setSource] = useState<Source>({ kind: "query" });
   const [notice, setNotice] = useState("");
-  // Dove vanno i fuochi trovati e le caselle della tabella; una raccolta
-  // aperta diventa anche la destinazione.
-  const [targetKey, setTargetKey] = useState<TargetKey>(SELEZIONE);
+  // Dove vanno i fuochi trovati e la colonna a sinistra della tabella: si
+  // ricorda sul dispositivo; una raccolta aperta diventa la destinazione.
+  const [targetKey, setTargetKeyState] = useState<TargetKey>(() => loadTargetKey(loadCollections()[0]?.id));
+  const setTargetKey = useCallback((key: TargetKey) => {
+    setTargetKeyState(key);
+    storeTargetKey(key);
+  }, []);
   const target = useAddTarget(targetKey);
+  const actions = useTargetActions(target);
+  const { notify } = actions;
+  const closeNotice = useCallback(() => notify(null), [notify]);
   const collections = useCollections();
+  const [view, setViewState] = useState<View>(() => (readPref(VIEW_STORAGE_KEY) === "grafici" ? "grafici" : "tabella"));
+  const setView = (next: View) => {
+    setViewState(next);
+    writePref(VIEW_STORAGE_KEY, next);
+  };
+  const [compareAll, setCompareAllState] = useState(() => readPref(COMPARE_STORAGE_KEY) === "1");
+  const setCompareAll = (on: boolean) => {
+    setCompareAllState(on);
+    writePref(COMPARE_STORAGE_KEY, on ? "1" : "0");
+  };
   const openCollection = (raccolta: Pick<Raccolta, "id" | "nome" | "ids">) => {
     setSource({ kind: "raccolta", raccolta });
     if (raccolta.id) setTargetKey({ kind: "raccolta", id: raccolta.id });
@@ -120,7 +166,22 @@ export default function BancoPage() {
   const total = results.data?.pagination?.total ?? 0;
   const totalPages = results.data?.pagination?.totalPages || 1;
 
+  // Medie in fondo alla tabella e vista Grafici.
   const statsState = useCatastoStats(search, true);
+  const catastoStats = useQuery({
+    queryKey: ["catastoStats", lang, "tutto"],
+    queryFn: ({ signal }) => fetchStats(ALL_FUOCHI, signal),
+    enabled: view === "grafici" && compareAll,
+    staleTime: 30 * 60 * 1000,
+  });
+
+  // Un clic su una voce dei grafici aggiunge le sue condizioni alla query.
+  const restrict = (item: ChartItem) => {
+    if (!item.restrict) return;
+    const before = ast;
+    editAst({ ...ast, children: [...ast.children, ...item.restrict] });
+    actions.notify({ text: tc("restricted", { voce: item.label }), undo: () => editAst(before) });
+  };
 
   const [columns, setColumns] = useState<ColumnsState>(loadColumns);
   const changeColumns = (next: ColumnsState) => {
@@ -135,8 +196,6 @@ export default function BancoPage() {
     [t, lang],
   );
 
-  const [activeId, setActiveId] = useState<number | null>(null);
-  const activeRow = rows.find((r) => r.id === activeId) ?? null;
   const [viewer, setViewer] = useState<Fuoco | null>(null);
   const viewerTarget = viewer ? viewerVolume(viewer, "campione") : null;
 
@@ -168,85 +227,103 @@ export default function BancoPage() {
           <QueryPanel ast={ast} onChange={editAst} options={filterOptions} />
         )}
 
-        <FinderPanel target={target} onTarget={setTargetKey} />
+        <FinderPanel target={target} onTarget={setTargetKey} actions={actions} />
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem] items-start">
-          <section aria-labelledby="banco-risultati" className="min-w-0 space-y-2">
-            <div className="flex flex-wrap items-baseline gap-x-4 border-b border-border-base pb-1">
-              <h2 id="banco-risultati" className="text-xl font-bold text-accent-strong">
-                {t("results")}
-              </h2>
-              <span role="status" aria-live="polite" className="italic text-text-accent tabular-nums">
-                {countLabel}
-              </span>
+        <section aria-labelledby="banco-risultati" className="space-y-3">
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-border-base pb-1">
+            <h2 id="banco-risultati" className="text-xl font-bold text-accent-strong">
+              {t("results")}
+            </h2>
+            <span role="status" aria-live="polite" className="italic text-text-accent tabular-nums">
+              {countLabel}
+            </span>
+            <span role="group" aria-label={tc("viewLabel")} className="inline-flex self-center border border-border-base/60 rounded-ui text-sm">
+              {(["tabella", "grafici"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={view === v}
+                  onClick={() => setView(v)}
+                  className={`min-h-9 px-3 ${view === v ? "bg-primary text-on-primary" : "text-text-accent hover:text-primary"}`}
+                >
+                  {v === "tabella" ? tc("viewTable") : tc("viewCharts")}
+                </button>
+              ))}
+            </span>
+            {view === "tabella" && (
               <span className="ml-auto flex items-baseline gap-4">
                 <ColumnsMenu state={columns} onChange={changeColumns} onReset={() => setColumns(resetColumns())} label={columnLabel} />
                 <ExportMenu search={search} totalRecords={total} />
               </span>
-            </div>
+            )}
+          </div>
 
-            <BancoTable
-              columns={visibleColumns(columns)}
-              rows={rows}
-              label={columnLabel}
-              stats={statsState.stats}
-              sortBy={sortBy}
-              sortOrder={sortOrder}
-              onSort={handleSort}
-              activeId={activeId}
-              onActive={setActiveId}
-              onOpenCarta={setViewer}
-              loading={results.isLoading}
-              stale={results.isPlaceholderData}
-              fetching={results.isFetching}
-              error={results.isError ? userMessage(results.error, t("loadError"), lang) : null}
-              onRetry={() => void results.refetch()}
-              target={target}
-            />
-
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-              <label className="inline-flex items-center gap-2 text-text-accent">
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setPageState({ search, page: 1 });
-                  }}
-                  className="min-h-9 border border-border-base rounded-ui px-1 bg-bg-main text-text-main"
-                >
-                  {PAGE_SIZES.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-                {t("perPage")}
-              </label>
-            </div>
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              loading={results.isFetching}
-              handlePageChange={(next) => {
-                if (next >= 1 && next <= totalPages) setPageState({ search, page: next });
-              }}
-            />
-          </section>
-
-          <section aria-labelledby="banco-grafici" className="space-y-2 xl:sticky xl:top-4">
-            <h2 id="banco-grafici" className="text-xl font-bold text-accent-strong border-b border-border-base pb-1">
-              {t("chartsSection")}
-            </h2>
-            <p className="text-xs text-text-accent">{t("chartsNote")}</p>
-            <BancoCharts
+          {view === "grafici" ? (
+            <ChartsView
               stats={statsState.stats}
               loading={statsState.loading}
               error={statsState.unavailable ? null : statsState.error}
               unavailable={statsState.unavailable}
-              active={activeRow}
+              catasto={catastoStats.data}
+              compare={compareAll}
+              onCompare={setCompareAll}
+              options={filterOptions}
+              onRestrict={source.kind === "query" ? restrict : undefined}
             />
-          </section>
-        </div>
+          ) : (
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem] items-start">
+              <div className="min-w-0 space-y-2">
+                <BancoTable
+                  columns={visibleColumns(columns)}
+                  rows={rows}
+                  label={columnLabel}
+                  stats={statsState.stats}
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
+                  onSort={handleSort}
+                  onOpenCarta={setViewer}
+                  loading={results.isLoading}
+                  stale={results.isPlaceholderData}
+                  fetching={results.isFetching}
+                  error={results.isError ? userMessage(results.error, t("loadError"), lang) : null}
+                  onRetry={() => void results.refetch()}
+                  target={target}
+                  onToggle={(row) => actions.toggle(row.id, row.nome)}
+                />
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                  <label className="inline-flex items-center gap-2 text-text-accent">
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setPageState({ search, page: 1 });
+                      }}
+                      className="min-h-9 border border-border-base rounded-ui px-1 bg-bg-main text-text-main"
+                    >
+                      {PAGE_SIZES.map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                    {t("perPage")}
+                  </label>
+                </div>
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  loading={results.isFetching}
+                  handlePageChange={(next) => {
+                    if (next >= 1 && next <= totalPages) setPageState({ search, page: next });
+                  }}
+                />
+              </div>
+
+              <DestinationPanel target={target} actions={actions} onOpen={openCollection} />
+            </div>
+          )}
+        </section>
 
         <CollectionsPanel
           activeId={source.kind === "raccolta" ? source.raccolta.id : null}
@@ -257,6 +334,7 @@ export default function BancoPage() {
       </main>
       <Footer />
       <CompareBar />
+      <UndoToast notice={actions.notice} onClose={closeNotice} />
 
       <ArchivioViewerModal
         isOpen={viewerTarget !== null}

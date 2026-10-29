@@ -90,6 +90,14 @@ body {
      contrasto sul fondo, in ciascun tema: chart-1 è la serie singola. */
   --chart-1: #2a5bb8;
   --chart-2: #c0571b;
+  /* Fette delle torte del Banco, dopo le due serie: tinte distinte anche fra
+     loro, la più neutra per ultima («Altre voci»). */
+  --chart-3: #1f7a6d;
+  --chart-4: #8a5aa8;
+  --chart-5: #9a7712;
+  --chart-6: #6b87c7;
+  --chart-7: #a3452e;
+  --chart-8: #7d8599;
 
   background-color: var(--color-bg-main);
   color: var(--color-text-main);
@@ -134,6 +142,12 @@ body {
   --accent-strong: #a9bfee;
   --chart-1: #5f86d6;
   --chart-2: #d27a3a;
+  --chart-3: #3fae9c;
+  --chart-4: #b08ad0;
+  --chart-5: #d4b04a;
+  --chart-6: #9db4e6;
+  --chart-7: #d0705a;
+  --chart-8: #8c93a6;
 }
 
 /* Le opzioni dei <select> non ereditano in modo affidabile lo sfondo del

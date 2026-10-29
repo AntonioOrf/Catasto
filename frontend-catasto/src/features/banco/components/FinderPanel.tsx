@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { SELECTION_MAX_FUOCHI, SUGGEST_LIMIT, type SuggestItem } from "@catasto/shared";
+import { SELECTION_MAX_FUOCHI, SUGGEST_LIMIT } from "@catasto/shared";
 import { fetchSuggest } from "../../../api/catastoService";
 import { fetchFuochiByIdsChunked } from "../../../api/fuochi-by-ids";
 import { userMessage } from "../../../api/client";
@@ -8,24 +8,23 @@ import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { useLanguage, useT } from "../../../i18n";
 import { useCompare } from "../../compare/compare-context";
 import { SELEZIONE, type AddTarget, type TargetKey } from "../add-target";
-import { createCollection, renameCollection } from "../collections";
+import { createCollection } from "../collections";
 import { finderMessages } from "../finder.messages";
 import { parsePastedIds } from "../paste-ids";
 import { useCollections } from "../useCollections";
+import type { TargetActions } from "../useTargetActions";
 import CollectionNameForm from "./CollectionNameForm";
 
 interface FinderPanelProps {
   target: AddTarget;
   onTarget: (key: TargetKey) => void;
+  actions: TargetActions;
 }
 
 const SEARCH_DEBOUNCE_MS = 200;
 const PASTE_DEBOUNCE_MS = 400;
 const MISSING_SHOWN = 10;
 
-const link = "min-h-9 inline-flex items-center text-primary underline underline-offset-4 decoration-primary/40 hover:decoration-primary";
-
-type Notice = { text: string; undo?: () => void };
 
 const isTextField = (el: Element | null) =>
   el instanceof HTMLElement && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName));
@@ -35,9 +34,9 @@ const isTextField = (el: Element | null) =>
  * (capofamiglia, mestiere, popolo, numero del fuoco, carta del campione) e
  * un campo per incollare un elenco di numeri. I fuochi vanno nella
  * destinazione scelta, la selezione o una raccolta; la query del Banco non
- * cambia. Ogni aggiunta si può annullare.
+ * cambia. Esiti e «Annulla» passano da `actions`, gli stessi della tabella.
  */
-export default function FinderPanel({ target, onTarget }: FinderPanelProps) {
+export default function FinderPanel({ target, onTarget, actions }: FinderPanelProps) {
   const t = useT(finderMessages);
   const { lang, locale } = useLanguage();
   const collections = useCollections();
@@ -50,16 +49,11 @@ export default function FinderPanel({ target, onTarget }: FinderPanelProps) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  const [notice, setNotice] = useState<Notice | null>(null);
-  const [naming, setNaming] = useState<"rename" | "create" | null>(null);
+  const [creating, setCreating] = useState(false);
   const [pasted, setPasted] = useState("");
 
-  const nome = target.nome;
-  const dest = nome ? t("destCollection", { nome }) : t("destSelection");
-  const to = nome ? t("toCollection", { nome }) : t("toSelection");
-  const into = nome ? t("inCollection", { nome }) : t("inSelection");
-  const from = nome ? t("fromCollection", { nome }) : t("fromSelection");
-  const fullDest = nome ? t("fullCollection", { nome }) : t("fullSelection");
+  const dest = target.nome ? t("destCollection", { nome: target.nome }) : t("destSelection");
+  const { add, toggle } = actions;
 
   // «/» da qualunque punto della pagina, tranne mentre si scrive altrove.
   useEffect(() => {
@@ -86,34 +80,6 @@ export default function FinderPanel({ target, onTarget }: FinderPanelProps) {
   const total = term ? (suggest.data?.total ?? 0) : 0;
   const showList = open && q.trim().length > 0;
   const activeIndex = Math.min(active, Math.max(0, items.length - 1));
-
-  const add = (ids: number[], label: string) => {
-    const before = target.ids;
-    if (ids.length === 1 && target.has(ids[0])) {
-      setNotice({ text: t("already", { nome: label, in: into }) });
-      return;
-    }
-    if (target.full) {
-      setNotice({ text: t("full", { dest: fullDest, max: SELECTION_MAX_FUOCHI }) });
-      return;
-    }
-    const added = target.add(ids);
-    if (added.length === 0) return;
-    setNotice({
-      text: added.length === 1 ? t("added", { nome: label, to }) : t("addedMany", { n: added.length, to }),
-      undo: () => target.restore(before),
-    });
-  };
-
-  const toggle = (item: SuggestItem) => {
-    if (!target.has(item.id)) {
-      add([item.id], item.nome);
-      return;
-    }
-    const before = target.ids;
-    target.remove([item.id]);
-    setNotice({ text: t("removed", { nome: item.nome, from }), undo: () => target.restore(before) });
-  };
 
   const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowDown") {
@@ -155,20 +121,13 @@ export default function FinderPanel({ target, onTarget }: FinderPanelProps) {
 
   // --- destinazione ---
   const selectValue = target.key.kind === "raccolta" ? `r:${target.key.id}` : "selezione";
-  const count = (n: number) => (n === 1 ? t("collectionCountOne") : t("collectionCount", { n: n.toLocaleString(locale) }));
 
-  const nameSubmit = (nome: string) => {
-    if (naming === "rename" && target.key.kind === "raccolta") {
-      const result = renameCollection(target.key.id, nome);
-      if (!result.ok) return result.reason;
-      setNotice({ text: t("renamed", { nome: nome.trim() }) });
-    } else {
-      const created = createCollection(nome);
-      if (!created) return nome.trim() ? "taken" : "empty";
-      onTarget({ kind: "raccolta", id: created.id });
-      setNotice({ text: t("created", { nome: created.nome }) });
-    }
-    setNaming(null);
+  const createSubmit = (nome: string) => {
+    const created = createCollection(nome);
+    if (!created) return nome.trim() ? "taken" : "empty";
+    onTarget({ kind: "raccolta", id: created.id });
+    actions.notify({ text: t("created", { nome: created.nome }) });
+    setCreating(false);
     return null;
   };
 
@@ -195,9 +154,9 @@ export default function FinderPanel({ target, onTarget }: FinderPanelProps) {
             value={selectValue}
             onChange={(e) => {
               const v = e.target.value;
-              if (v === "new") setNaming("create");
+              if (v === "new") setCreating(true);
               else {
-                setNaming(null);
+                setCreating(false);
                 onTarget(v === "selezione" ? SELEZIONE : { kind: "raccolta", id: v.slice(2) });
               }
             }}
@@ -214,32 +173,10 @@ export default function FinderPanel({ target, onTarget }: FinderPanelProps) {
         </label>
       </div>
 
-      {/* Destinazione: nome (si rinomina sul posto) e quanti fuochi contiene. */}
-      <div className="text-sm">
-        {naming ? (
-          <CollectionNameForm
-            key={naming}
-            initial={naming === "rename" ? (target.nome ?? "") : ""}
-            submitLabel={naming === "rename" ? t("save") : t("create")}
-            onSubmit={nameSubmit}
-            onCancel={() => setNaming(null)}
-          />
-        ) : target.nome ? (
-          <p className="flex flex-wrap items-baseline gap-x-3">
-            <button type="button" onClick={() => setNaming("rename")} title={t("rename")} className="font-semibold text-text-main hover:underline decoration-dashed underline-offset-4 text-left">
-              {target.nome}
-            </button>
-            <span className="text-text-accent tabular-nums">{count(target.ids.length)}</span>
-            <button type="button" onClick={() => setNaming("rename")} aria-label={t("renameAria", { nome: target.nome })} className={link}>
-              {t("rename")}
-            </button>
-          </p>
-        ) : (
-          <p className="text-text-accent">
-            <span className="tabular-nums">{count(target.ids.length)}</span> · {t("selectionNote")}
-          </p>
-        )}
-      </div>
+      {/* Il nome si scrive qui; contenuto e rinomina stanno nel pannello della raccolta. */}
+      {creating && (
+        <CollectionNameForm initial="" submitLabel={t("create")} onSubmit={createSubmit} onCancel={() => setCreating(false)} />
+      )}
 
       <div id={`${baseId}-pane-s`} role="tabpanel" aria-labelledby={`${baseId}-tab-s`} hidden={tab !== "search"} className="relative">
         <label htmlFor={`${baseId}-q`} className="sr-only">
@@ -257,7 +194,7 @@ export default function FinderPanel({ target, onTarget }: FinderPanelProps) {
             aria-controls={listId}
             aria-autocomplete="list"
             aria-activedescendant={showList && items[activeIndex] ? `${listId}-${activeIndex}` : undefined}
-            aria-describedby={`${baseId}-hint`}
+            aria-keyshortcuts="/"
             placeholder={t("searchPlaceholder")}
             value={q}
             onChange={(e) => {
@@ -272,13 +209,10 @@ export default function FinderPanel({ target, onTarget }: FinderPanelProps) {
             style={{ outline: "none" }}
             className="flex-1 min-w-0 min-h-11 bg-transparent text-base"
           />
-          <kbd aria-hidden="true" className="text-xs text-text-accent border border-border-base/60 rounded-ui px-1.5">
+          <kbd aria-hidden="true" title={t("searchHint")} className="text-xs text-text-accent border border-border-base/60 rounded-ui px-1.5">
             /
           </kbd>
         </div>
-        <p id={`${baseId}-hint`} className="mt-1 text-xs text-text-accent">
-          {t("searchHint")}
-        </p>
 
         {showList && (
           // mousedown non toglie il fuoco alla casella: si continua a scrivere dopo un clic.
@@ -311,7 +245,7 @@ export default function FinderPanel({ target, onTarget }: FinderPanelProps) {
                     aria-selected={i === activeIndex}
                     aria-label={`${item.nome}${inside ? `, ${t("inside")}` : ""}`}
                     onMouseEnter={() => setActive(i)}
-                    onClick={() => toggle(item)}
+                    onClick={() => toggle(item.id, item.nome)}
                     className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-3 py-2 cursor-pointer border-b border-border-base/20 ${
                       i === activeIndex ? "bg-item-hover" : ""
                     }`}
@@ -400,25 +334,6 @@ export default function FinderPanel({ target, onTarget }: FinderPanelProps) {
         </button>
       </div>
 
-      <p role="status" aria-live="polite" className="flex flex-wrap items-baseline gap-x-3 text-sm italic text-text-accent empty:hidden">
-        {notice && (
-          <>
-            <span>{notice.text}</span>
-            {notice.undo && (
-              <button
-                type="button"
-                onClick={() => {
-                  notice.undo?.();
-                  setNotice({ text: t("undone") });
-                }}
-                className={`${link} not-italic`}
-              >
-                {t("undo")}
-              </button>
-            )}
-          </>
-        )}
-      </p>
     </section>
   );
 }

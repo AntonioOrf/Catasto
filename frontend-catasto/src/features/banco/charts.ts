@@ -1,16 +1,9 @@
 import { IMPONIBILE_BANDS, type CatastoStats } from "@catasto/shared";
 
 /**
- * Dati dei tre grafici del Banco, calcolati dalle statistiche di tutta la
- * query (non dalla pagina), e la voce che contiene la riga attiva.
+ * Fasce dell'imponibile, bocche e mediana per i grafici e le medie del
+ * Banco, calcolati dalle statistiche di tutta la query (non dalla pagina).
  */
-
-/** Indice della fascia dell'imponibile che contiene il valore; -1 se manca. */
-export function bandIndex(value: number | null | undefined): number {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return -1;
-  for (let i = IMPONIBILE_BANDS.length - 1; i >= 0; i--) if (Number(value) >= IMPONIBILE_BANDS[i]) return i;
-  return 0;
-}
 
 /** «0», «1–50», …, «oltre 1.000»: le cifre nella lingua data. */
 export function bandLabel(index: number, format: (n: number) => string, over: (n: string) => string): string {

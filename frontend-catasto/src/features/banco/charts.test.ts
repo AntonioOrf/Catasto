@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bandIndex, bandLabel, boccheCounts, weightedMedian } from "./charts";
+import { bandLabel, boccheCounts, weightedMedian } from "./charts";
 
 const fmt = (n: number) => new Intl.NumberFormat("it-IT", { useGrouping: "always" } as Intl.NumberFormatOptions).format(n);
 const over = (n: string) => `oltre ${n}`;
@@ -7,8 +7,6 @@ const over = (n: string) => `oltre ${n}`;
 describe("grafici del Banco", () => {
   it("fasce dell'imponibile come nella issue", () => {
     expect([0, 1, 2, 3, 4, 5].map((i) => bandLabel(i, fmt, over))).toEqual(["0", "1–50", "51–200", "201–500", "501–1.000", "oltre 1.000"]);
-    expect([0, 0.5, 1, 50, 51, 1000, 1001, 99999].map(bandIndex)).toEqual([0, 0, 1, 1, 2, 4, 5, 5]);
-    expect(bandIndex(null)).toBe(-1);
   });
 
   it("bocche: le famiglie molto grandi si sommano in una barra", () => {

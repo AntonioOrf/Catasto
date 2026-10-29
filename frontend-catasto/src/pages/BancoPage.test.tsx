@@ -77,7 +77,7 @@ describe("Banco di lavoro", () => {
     expect([page, limit]).toEqual([1, 50]);
 
     const headers = within(table).getAllByRole("columnheader").map((th) => th.textContent);
-    expect(headers).toEqual(["Seleziona", "Capofamiglia", "Mestiere", "Quartiere » popolo", "Imponibile", "Fortune", "Bocche", "Campione"]);
+    expect(headers).toEqual(["Nella destinazione", "Capofamiglia", "Mestiere", "Quartiere » popolo", "Imponibile", "Fortune", "Bocche", "Campione"]);
     expect(within(table).getAllByText("San Giovanni » San Lorenzo", { selector: "td" })).toHaveLength(2);
 
     const footer = await within(table).findByRole("rowheader", { name: "mediana su 2 fuochi" });
@@ -101,19 +101,34 @@ describe("Banco di lavoro", () => {
     expect(within(table).getAllByRole("columnheader").map((th) => th.textContent)).not.toContain("Età media");
   });
 
-  it("i grafici evidenziano la voce della riga attiva", async () => {
+  it("vista Grafici: cifre, barre o torta, confronto con tutto il catasto, clic che restringe la query", async () => {
     renderPage();
-    const row = (await screen.findByText("MEDICI COSIMO", { selector: "td" })).closest("tr")!;
-    const charts = screen.getByRole("region", { name: "Grafici sui risultati" });
-    await within(charts).findByRole("figure", { name: "Fuochi per numero di bocche" });
-    fireEvent.mouseEnter(row);
-    const active = within(charts).getAllByText("(contiene la riga attiva)");
-    expect(active).toHaveLength(3);
-    expect(active.map((el) => el.parentElement!.textContent)).toEqual([
-      "oltre 1.000 (contiene la riga attiva)",
-      "12 o più (contiene la riga attiva)",
-      "Banchiere (contiene la riga attiva)",
-    ]);
+    fireEvent.click(await screen.findByRole("button", { name: "Grafici" }));
+    expect(screen.queryByRole("table", { name: /Risultati della query/ })).toBeNull();
+    const imponibile = await screen.findByRole("figure", { name: "Fuochi per fasce dell'imponibile" });
+    // Mestieri partono a torta, imponibile a barre; l'interruttore cambia il singolo grafico.
+    expect(within(screen.getByRole("figure", { name: "Fuochi per mestiere" })).getByRole("img")).toBeTruthy();
+    fireEvent.click(within(imponibile).getByRole("button", { name: "Torta" }));
+    expect(within(imponibile).getByRole("img").getAttribute("aria-label")).toContain("201–500 50%");
+    fireEvent.click(within(imponibile).getByRole("button", { name: "Barre" }));
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Confronta con tutto il catasto" }));
+    await waitFor(() => expect(api.fetchStats.mock.calls.some(([s]) => !s.advancedMode && s.ast.children.length === 0)).toBe(true));
+
+    fireEvent.click(within(imponibile).getByRole("button", { name: /^201–500: .*Restringi la query: 201–500$/ }));
+    await waitFor(() => {
+      const ast = api.fetchStats.mock.calls.at(-1)![0].ast;
+      expect(ast.children).toEqual([
+        { kind: "condition", field: "imponibile", operator: "gte", value: 201 },
+        { kind: "condition", field: "imponibile", operator: "lt", value: 501 },
+      ]);
+    });
+    expect(screen.getByText("Query ristretta: 201–500. I grafici si ricalcolano.")).toBeTruthy();
+    expect(screen.queryByText("Tutti i fuochi")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Annulla" }));
+    // Torna la query di prima (le statistiche arrivano dalla cache).
+    expect(await screen.findByText("Tutti i fuochi")).toBeTruthy();
+    expect(localStorage.getItem("catasto.banco.vista.v1")).toBe("grafici");
   });
 
   it("un link #raccolta apre i fuochi della raccolta e la salva sul dispositivo", async () => {
@@ -137,46 +152,55 @@ describe("Banco di lavoro", () => {
     expect(api.fetchSuggest).toHaveBeenLastCalledWith("medici", expect.anything());
 
     fireEvent.keyDown(box, { key: "Enter" });
-    expect(await within(finder).findByText("Aggiunto MEDICI COSIMO alla selezione.")).toBeTruthy();
+    expect(await screen.findByText("Aggiunto MEDICI COSIMO alla selezione.")).toBeTruthy();
     const row = (await screen.findByText("MEDICI COSIMO", { selector: "td" })).closest("tr")!;
-    expect(within(row).getByRole("checkbox")).toHaveProperty("checked", true);
+    expect(within(row).getByRole("button", { name: "Togli MEDICI COSIMO da: selezione" }).getAttribute("aria-pressed")).toBe("true");
     expect(within(finder).getByRole("option", { name: "MEDICI COSIMO, Già dentro" })).toBeTruthy();
+    // Il pannello accanto alla tabella mostra la selezione che si riempie.
+    const dest = screen.getByRole("complementary", { name: /Selezione/ });
+    expect(await within(dest).findByText("MEDICI COSIMO")).toBeTruthy();
 
     fireEvent.keyDown(box, { key: "Enter" });
-    expect(await within(finder).findByText("MEDICI COSIMO è già nella selezione.")).toBeTruthy();
+    expect(await screen.findByText("MEDICI COSIMO è già nella selezione.")).toBeTruthy();
 
     fireEvent.change(box, { target: { value: "" } });
     fireEvent.change(box, { target: { value: "medici" } });
     fireEvent.click(await within(finder).findByRole("option", { name: "MEDICI COSIMO, Già dentro" }));
-    fireEvent.click(within(finder).getByRole("button", { name: "Annulla" }));
-    expect(within(row).getByRole("checkbox")).toHaveProperty("checked", true);
+    expect(within(row).getByRole("button", { name: "Aggiungi MEDICI COSIMO a: selezione" }).getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: "Annulla" }));
+    expect(within(row).getByRole("button", { name: "Togli MEDICI COSIMO da: selezione" })).toBeTruthy();
   });
 
-  it("una nuova raccolta diventa la destinazione; la casella della riga aggiunge e toglie; si rinomina", async () => {
-    renderPage();
+  it("una nuova raccolta diventa la destinazione e si ricorda; + e ✓ nella tabella; si rinomina dal pannello", async () => {
+    const { unmount } = renderPage();
     const finder = screen.getByRole("region", { name: "Trova e aggiungi fuochi" });
     fireEvent.change(within(finder).getByRole("combobox", { name: "Destinazione" }), { target: { value: "new" } });
     const name = within(finder).getByRole("textbox", { name: "Nome della raccolta" });
     fireEvent.change(name, { target: { value: "Lanaioli" } });
     fireEvent.submit(name.closest("form")!);
-    expect(await within(finder).findByText("Raccolta «Lanaioli» creata: i fuochi trovati ora vanno lì.")).toBeTruthy();
+    expect(await screen.findByText("Raccolta «Lanaioli» creata: i fuochi trovati ora vanno lì.")).toBeTruthy();
 
     const row = (await screen.findByText("RUCELLAI GIOVANNI", { selector: "td" })).closest("tr")!;
-    const box = within(row).getByRole("checkbox", { name: "RUCELLAI GIOVANNI nella raccolta «Lanaioli»" });
-    fireEvent.click(box);
+    fireEvent.click(within(row).getByRole("button", { name: "Aggiungi RUCELLAI GIOVANNI a: raccolta «Lanaioli»" }));
     expect(JSON.parse(localStorage.getItem(COLLECTIONS_STORAGE_KEY)!)[0]).toMatchObject({ nome: "Lanaioli", ids: [1] });
-    fireEvent.click(box);
+    fireEvent.click(within(row).getByRole("button", { name: "Togli RUCELLAI GIOVANNI da: raccolta «Lanaioli»" }));
     expect(JSON.parse(localStorage.getItem(COLLECTIONS_STORAGE_KEY)!)[0].ids).toEqual([]);
 
-    fireEvent.click(within(finder).getByRole("button", { name: "Rinomina la raccolta Lanaioli" }));
-    const rename = within(finder).getByRole("textbox", { name: "Nome della raccolta" });
+    const dest = screen.getByRole("complementary", { name: /Lanaioli/ });
+    fireEvent.click(within(dest).getByRole("button", { name: "Rinomina la raccolta Lanaioli" }));
+    const rename = within(dest).getByRole("textbox", { name: "Nome della raccolta" });
     fireEvent.change(rename, { target: { value: "  " } });
     fireEvent.submit(rename.closest("form")!);
-    expect(within(finder).getByRole("alert").textContent).toBe("Il nome non può essere vuoto.");
+    expect(within(dest).getByRole("alert").textContent).toBe("Il nome non può essere vuoto.");
     fireEvent.change(rename, { target: { value: "Lanaioli di Oltrarno" } });
     fireEvent.submit(rename.closest("form")!);
-    expect(await within(finder).findByText("Raccolta rinominata in «Lanaioli di Oltrarno».")).toBeTruthy();
+    expect(await screen.findByText("Raccolta rinominata in «Lanaioli di Oltrarno».")).toBeTruthy();
     expect(screen.getByRole("region", { name: "Raccolte" }).textContent).toContain("Lanaioli di Oltrarno");
+
+    // Tornando al Banco la destinazione è ancora la raccolta.
+    unmount();
+    renderPage();
+    expect(await screen.findByRole("complementary", { name: /Lanaioli di Oltrarno/ })).toBeTruthy();
   });
 
   it("incolla un elenco: conta nuovi, ripetuti e inesistenti prima di aggiungere", async () => {
@@ -188,7 +212,7 @@ describe("Banco di lavoro", () => {
     expect(within(finder).getByText("2 da aggiungere")).toBeTruthy();
     expect(within(finder).getByText("1 ripetuto, contato una volta")).toBeTruthy();
     fireEvent.click(within(finder).getByRole("button", { name: "Aggiungi 2 fuochi" }));
-    expect(await within(finder).findByText("Aggiunti 2 fuochi alla selezione.")).toBeTruthy();
+    expect(await screen.findByText("Aggiunti 2 fuochi alla selezione.")).toBeTruthy();
     expect(within(finder).getByText("2 già dentro")).toBeTruthy();
   });
 });

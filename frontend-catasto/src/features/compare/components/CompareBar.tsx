@@ -1,11 +1,9 @@
 import { useId, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { COMPARE_MAX_FUOCHI, COMPARE_MIN_FUOCHI, emptyGroup } from "@catasto/shared";
-import { downloadExport } from "../../../api/catastoService";
+import { COMPARE_MAX_FUOCHI, COMPARE_MIN_FUOCHI } from "@catasto/shared";
 import { userMessage } from "../../../api/client";
 import { useLanguage, useT } from "../../../i18n";
-import { saveBlob } from "../../catasto/lib/download";
-import { EMPTY_SIMPLE_FILTERS } from "../../catasto/lib/simple-filters";
+import { exportFuochiIds } from "../../catasto/lib/export-ids";
 import { useCompare } from "../compare-context";
 import { compareMessages } from "../compare.messages";
 import AddToCollection from "./AddToCollection";
@@ -39,11 +37,7 @@ export default function CompareBar() {
     setBusy(true);
     setStatus(t("exporting"));
     try {
-      const { blob, filename } = await downloadExport(
-        { ...EMPTY_SIMPLE_FILTERS, sortBy: "nome", sortOrder: "ASC", advancedMode: false, ast: emptyGroup("AND"), ids: ids.join(",") },
-        { format: "csv", parenti: false, sep: lang === "it" ? "semicolon" : "comma" },
-      );
-      saveBlob(blob, filename);
+      const filename = await exportFuochiIds(ids, lang);
       setStatus(t("exported", { file: filename }));
     } catch (error) {
       setStatus(userMessage(error, t("exportFailed"), lang));
