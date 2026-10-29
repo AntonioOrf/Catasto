@@ -1,27 +1,43 @@
-# Backend — Catasto Fiorentino 1427
+# Backend e API
 
-API REST in **TypeScript** su **Node.js 20 + Express 4**, con **MySQL 8** tramite `mysql2/promise` e validazione con **zod**. Espone i dati del catasto (fuochi, parenti, località, mestieri), la ricerca avanzata a query composte, un proxy per i manifest IIIF dell'Archivio di Stato e il sistema di segnalazioni con moderazione.
+🇮🇹 **Italiano** · 🇬🇧 [English](en/backend.md)
 
-> Vedi anche: [Architettura e modello dati](architettura.md) · [Casi d'uso](casi-d-uso.md) · [Installazione](guides.md)
-
----
-
-## Indice
-
-1. [Struttura del codice](#struttura-del-codice)
-2. [Pipeline di una richiesta](#pipeline-di-una-richiesta)
-3. [Riferimento API](#riferimento-api)
-4. [Ricerca avanzata: formato dell'AST](#ricerca-avanzata-formato-dellast)
-5. [Segnalazioni e moderazione](#segnalazioni-e-moderazione)
-6. [Traduzioni (`lang=en`)](#traduzioni-langen)
-7. [Migrazioni](#migrazioni)
-8. [Variabili d'ambiente](#variabili-dambiente)
-9. [Script e test](#script-e-test)
-10. [Limiti noti](#limiti-noti)
+| Campo | Valore |
+|---|---|
+| Identificativo | `CAT-DOC-03` |
+| Versione | 2.0 |
+| Data | 2026-10-29 |
+| Stato | Approvato |
+| Classificazione | Pubblico |
+| Responsabili | Antonio Orfitelli, Pasquale Ruotolo |
+| Lingua | Italiano (testo di riferimento) |
+| Traduzione | [Backend and API](en/backend.md) |
+| Documenti collegati | [CAT-DOC-00 Standard documentale](standard-documentale.md) · [CAT-DOC-01 Installazione e deployment](guides.md) · [CAT-DOC-02 Architettura e modello dati](architettura.md) · [CAT-DOC-04 Frontend](frontend.md) · [CAT-DOC-05 Casi d'uso](casi-d-uso.md) · [CAT-DOC-06 Revisione del codice](revisione-codice.md) · [Readme del repository](../readme.md) |
 
 ---
 
-## Struttura del codice
+## 1. Scopo e destinatari
+
+Il documento è rivolto a sviluppatori, a chi integra le API del portale e agli amministratori che gestiscono la moderazione. Descrive il backend del portale del Catasto fiorentino del 1427/30: un'API REST in **TypeScript** su **Node.js 20 + Express 4**, con **MySQL 8** tramite `mysql2/promise` e validazione con **zod**. Il backend espone i dati del catasto (fuochi, parenti, località, mestieri), la ricerca avanzata a query composte, un proxy per i manifest IIIF dell'Archivio di Stato di Firenze e il sistema di segnalazioni con moderazione della redazione. Il modello dati è descritto in [Architettura e modello dati](architettura.md), l'installazione in [Installazione e deployment](guides.md), gli scenari d'uso in [Casi d'uso](casi-d-uso.md).
+
+Contenuto:
+
+2. [Struttura del codice](#2-struttura-del-codice)
+3. [Pipeline di una richiesta](#3-pipeline-di-una-richiesta)
+4. [Riferimento API](#4-riferimento-api)
+5. [Ricerca avanzata: formato dell'AST](#5-ricerca-avanzata-formato-dellast)
+6. [Segnalazioni e moderazione](#6-segnalazioni-e-moderazione)
+7. [Traduzioni (`lang=en`)](#7-traduzioni-langen)
+8. [Migrazioni](#8-migrazioni)
+9. [Variabili d'ambiente](#9-variabili-dambiente)
+10. [Script e test](#10-script-e-test)
+11. [Limiti noti](#11-limiti-noti)
+
+---
+
+## 2. Struttura del codice
+
+### 2.1 Backend
 
 Pattern **route → controller → service → model**, con le regole di dominio condivise nel pacchetto `@catasto/shared`.
 
@@ -77,6 +93,8 @@ backend-catasto/
         └── import-traduzioni.ts   # import del CSV compilato dalla redazione
 ```
 
+### 2.2 Pacchetto condiviso
+
 Il pacchetto **`packages/shared`** contiene ciò che frontend e backend devono vedere allo stesso modo:
 
 | File | Contenuto |
@@ -90,7 +108,7 @@ Il pacchetto **`packages/shared`** contiene ciò che frontend e backend devono v
 
 ---
 
-## Pipeline di una richiesta
+## 3. Pipeline di una richiesta
 
 ```mermaid
 flowchart LR
@@ -112,11 +130,25 @@ flowchart LR
 
 ---
 
-## Riferimento API
+## 4. Riferimento API
+
+### 4.1 Base URL e provenienza dei dati
 
 Base URL: stessa origine del sito (`/api`, proxato da nginx) oppure `http://localhost:3005` in sviluppo.
 
-### Riepilogo
+Le risposte mescolano i tre livelli di provenienza dello [standard documentale](standard-documentale.md#56-provenienza-e-integrità-del-dato--provenance-and-data-integrity):
+
+| Livello | Nelle risposte |
+|---|---|
+| **Dato della fonte** | Fuochi, parenti e etichette di lookup letti dal dump (ricerca Herlihy–Klapisch-Zuber, digitalizzata da ACRH); volume e carta del campione (`volume`, `foglio`) |
+| **Dato contribuito** | `segnatura_portata`: proposta con una segnalazione e pubblicata solo dopo l'accettazione della redazione (tabella `fuoco_segnature`) |
+| **Dato derivato** | Statistiche (`/stats`), traduzioni inglesi delle etichette (`lang=en`), ordinamenti, descrizioni leggibili delle query, codici d'archivio IIIF associati ai volumi |
+
+I valori economici (fortune, credito, credito ai Monti, imponibile, deduzioni) sono in **fiorini** (fl.), come nei dati di origine, e non sono né convertiti né arrotondati. Un valore assente nella fonte resta assente (`null`, cella vuota nell'export), mai `0`.
+
+> Il parametro e il campo **`serie`** indicano sempre la **serie territoriale** (città, contado, distretto) del fuoco, non una serie archivistica.
+
+### 4.2 Riepilogo degli endpoint
 
 | Metodo | Percorso | Accesso | Descrizione |
 |---|---|---|---|
@@ -141,9 +173,9 @@ Base URL: stessa origine del sito (`/api`, proxato da nginx) oppure `http://loca
 | GET | `/api/segnalazioni/moderazione?t=` | token firmato | Pagina di conferma (non modifica nulla) |
 | POST | `/api/segnalazioni/moderazione` | token firmato | Applica la decisione |
 
-Tutti gli endpoint di lettura accettano `?lang=en` (anche `POST /api/catasto/query`, nella query string): vedi [Traduzioni](#traduzioni-langen).
+Tutti gli endpoint di lettura accettano `?lang=en` (anche `POST /api/catasto/query`, nella query string): vedi [Traduzioni](#7-traduzioni-langen).
 
-### Limiti di frequenza
+### 4.3 Limiti di frequenza
 
 | Limiter | Ambito | Soglia |
 |---|---|---|
@@ -154,9 +186,9 @@ Tutti gli endpoint di lettura accettano `?lang=en` (anche `POST /api/catasto/que
 | `createLimiter` | `POST /api/segnalazioni` | 5 / ora / IP, più 10 / ora per hash IP salvato nel DB |
 | `adminLimiter` | rotte admin e moderazione | 100 richieste **fallite** / 15 min / IP |
 
-I contatori sono in memoria: valgono per processo e si azzerano al riavvio. Dietro un proxy impostare `TRUST_PROXY` (vedi [variabili](#variabili-dambiente)), altrimenti tutte le richieste risultano dallo stesso IP.
+I contatori sono in memoria: valgono per processo e si azzerano al riavvio. Dietro un proxy impostare `TRUST_PROXY` (vedi [variabili](#9-variabili-dambiente)), altrimenti tutte le richieste risultano dallo stesso IP.
 
-### Paginazione e ordinamento
+### 4.4 Paginazione e ordinamento
 
 Valida per `/api/catasto`, `/api/catasto/sidebar` e `POST /api/catasto/query`. I valori non validi non danno errore: si usa il default.
 
@@ -167,22 +199,22 @@ Valida per `/api/catasto`, `/api/catasto/sidebar` e `POST /api/catasto/query`. I
 | `sort_by` | `fortune`, `credito`, `creditoM`, `imponibile`, `deduzioni`, `localita`; qualunque altro valore ordina per nome. A parità di valore decide l'id del fuoco, quindi le pagine non si sovrappongono | nome |
 | `order` | `ASC` / `DESC` | `ASC` |
 
-### `GET /api/catasto` — ricerca semplice
+### 4.5 Ricerca semplice: `GET /api/catasto`
 
 Tutti i filtri sono parametri di query **scalari** (`?x[]=` → 400), lunghi al massimo 200 caratteri. Le chiavi sconosciute vengono ignorate.
 
 | Parametro | Semantica |
 |---|---|
 | `q_persona` | Parole del nome, in qualunque ordine; `di` viene ignorato. `?q_persona=nuto di nardo` → `Nome_Fuoco LIKE %nuto% AND LIKE %nardo%` |
-| `q_localita` | Testo cercato in quartiere, popolo, piviere o serie |
-| `volume` | Volume esatto (`81`) |
+| `q_localita` | Testo cercato in quartiere, popolo, piviere o serie territoriale |
+| `volume` | Volume esatto del campione (`81`) |
 | `mestiere`, `bestiame`, `immigrazione`, `rapporto`, `casa` | Id numerico della voce di lookup |
 | `fortune_min` / `fortune_max` (e `credito_*`, `creditoM_*`, `imponibile_*`, `deduzioni_*`) | Intervalli in fiorini (`>=` / `<=`) |
-| `serie`, `quartiere`, `piviere`, `popolo` | Lista di id separati da virgola (max 100): `?quartiere=3,7` |
+| `serie`, `quartiere`, `piviere`, `popolo` | Lista di id separati da virgola (max 100): `?quartiere=3,7`. `serie` è la serie territoriale |
 | `particolarita_parente` | Il fuoco ha almeno un parente con quella particolarità |
 | `ids` | Fuochi scelti a mano: lista di id separati da virgola, al massimo `SELECTION_MAX_FUOCHI` (500). Serve all'export della selezione e alle raccolte del Banco di lavoro |
 
-Esempio:
+Esempio (valori illustrativi):
 
 ```http
 GET /api/catasto?q_persona=nardo&quartiere=3,7&fortune_min=500&sort_by=fortune&order=DESC&limit=20
@@ -208,10 +240,11 @@ GET /api/catasto?q_persona=nardo&quartiere=3,7&fortune_min=500&sort_by=fortune&o
 }
 ```
 
-- `codice_archivio` identifica il volume digitalizzato del **campione** (da `t_archivio_volumi`): se presente, il visore può aprire la carta.
-- `segnatura_portata` è la segnatura della **portata** pubblicata dalla redazione (da `fuoco_segnature`); `codice_archivio_portata` è il volume corrispondente, se digitalizzato.
+- `volume` e `foglio` sono l'unità (volume) e la componente (carta) del **campione** in cui è registrato il fuoco (dato della fonte).
+- `codice_archivio` identifica il volume digitalizzato del **campione** (da `t_archivio_volumi`): se presente, il visore delle carte può aprire la carta.
+- `segnatura_portata` è la segnatura della **portata** pubblicata dalla redazione (da `fuoco_segnature`, dato contribuito); `codice_archivio_portata` è il volume corrispondente, se digitalizzato. La segnatura è restituita come è stata registrata: la forma di citazione normalizzata è `ASFi, Catasto, <volume>, c. <n><r|v>` (vedi lo [standard documentale](standard-documentale.md#53-segnature--shelfmarks)).
 
-### `GET /api/catasto/sidebar`
+### 4.6 Indice per la sidebar: `GET /api/catasto/sidebar`
 
 Stessi filtri. Risposta **senza wrapper**, pensata per un elenco lungo e leggero:
 
@@ -219,7 +252,7 @@ Stessi filtri. Risposta **senza wrapper**, pensata per un elenco lungo e leggero
 [{ "id": 1234, "nome": "NUTO NARDO", "mestiere": "Lanaiolo" }]
 ```
 
-### `POST /api/catasto/query` — ricerca avanzata
+### 4.7 Ricerca avanzata: `POST /api/catasto/query`
 
 ```json
 {
@@ -229,15 +262,15 @@ Stessi filtri. Risposta **senza wrapper**, pensata per un elenco lungo e leggero
 }
 ```
 
-`view` è `"table"` (risposta come `GET /api/catasto`), `"banco"` (come `"table"`, più `bocche` ed `eta_media` per ogni fuoco) o `"sidebar"` (risposta come `GET /sidebar`). Anche `GET /api/catasto` accetta `view=banco`: le bocche (parenti registrati, 0 se nessuno) e l'età media arrivano da una sola query raggruppata sui parenti dei fuochi della pagina. Un AST non valido → `400 {"error":"Query non valida: …"}`. Il formato è descritto [più sotto](#ricerca-avanzata-formato-dellast).
+`view` è `"table"` (risposta come `GET /api/catasto`), `"banco"` (come `"table"`, più `bocche` ed `eta_media` per ogni fuoco) o `"sidebar"` (risposta come `GET /sidebar`). Anche `GET /api/catasto` accetta `view=banco`: le bocche (parenti registrati, 0 se nessuno) e l'età media arrivano da una sola query raggruppata sui parenti dei fuochi della pagina. Un AST non valido → `400 {"error":"Query non valida: …"}`. Il formato è descritto [più sotto](#5-ricerca-avanzata-formato-dellast).
 
-### `GET /api/catasto/fuochi?ids=12,345,678` — fuochi per id
+### 4.8 Fuochi per id: `GET /api/catasto/fuochi?ids=12,345,678`
 
 Carica in una sola richiesta i fuochi della selezione (barra della selezione, vista di confronto), presi anche da pagine o ricerche diverse. `ids` è una lista di id numerici separati da virgola, al massimo `FUOCHI_BY_IDS_MAX` (50, in `@catasto/shared`; il client divide una selezione più grande in blocchi); i duplicati contano una volta. Qualunque altra forma (vuoto, non numerico, array, troppi id) → `400`.
 
 Risposta: array di fuochi con gli stessi campi di `GET /api/catasto`, **nell'ordine degli id richiesti**; gli id inesistenti mancano senza errore (il client li confronta con quelli chiesti). Accetta `lang`.
 
-### `GET /api/catasto/suggest?q=…` — trova e aggiungi
+### 4.9 Trova e aggiungi: `GET /api/catasto/suggest?q=…`
 
 La casella «Trova e aggiungi» del Banco di lavoro: risponde mentre si scrive, separata dalla ricerca completa (non tocca la query del Banco). `q` si legge in tre modi (`utils/suggest-query.ts`):
 
@@ -247,9 +280,9 @@ La casella «Trova e aggiungi» del Banco di lavoro: risponde mentre si scrive, 
 
 Risposta: `{ "data": [{ "id", "nome", "mestiere", "quartiere", "popolo", "imponibile", "volume", "foglio" }], "total": 23, "mode": "testo" }`, al massimo `SUGGEST_LIMIT` (8) fuochi in ordine di nome; `total` conta tutti quelli che corrispondono, `mode` è `id`, `carta` o `testo`. Il mestiere arriva tradotto con `lang`. `q` vuoto → nessun risultato; troppo lungo (oltre 200) o non testuale → `400`. Ha un limite proprio (600 richieste ogni 15 minuti) per non consumare quello della tabella.
 
-### `GET /api/catasto/stats` — statistiche della ricerca
+### 4.10 Statistiche della ricerca: `GET /api/catasto/stats`
 
-Aggregati sugli **stessi fuochi della tabella**: accetta gli stessi filtri di `GET /api/catasto` (paginazione e ordinamento sono ignorati) e `lang`. `POST /api/catasto/query/stats` fa lo stesso con `{ "ast": … }` nel body. Il compilatore delle condizioni è lo stesso della ricerca, quindi `fuochi` coincide sempre con `pagination.total` della tabella.
+Aggregati (dati derivati) sugli **stessi fuochi della tabella**: accetta gli stessi filtri di `GET /api/catasto` (paginazione e ordinamento sono ignorati) e `lang`. `POST /api/catasto/query/stats` fa lo stesso con `{ "ast": … }` nel body. Il compilatore delle condizioni è lo stesso della ricerca, quindi `fuochi` coincide sempre con `pagination.total` della tabella.
 
 ```json
 {
@@ -270,15 +303,15 @@ Aggregati sugli **stessi fuochi della tabella**: accetta gli stessi filtri di `G
 }
 ```
 
-- **Valori assenti**: per ogni misura economica `assenti` conta i fuochi senza valore; somma, media, minimo, massimo e quantili usano solo i presenti (coerente con R-13: assente non è 0). Senza valori presenti le misure sono `null`.
+- **Valori assenti**: per ogni misura economica `assenti` conta i fuochi senza valore; somma, media, minimo, massimo e quantili usano solo i presenti (coerente con R-13: assente non è 0). Senza valori presenti le misure sono `null`. Tutte le misure economiche sono in fiorini.
 - **Mediana e quartili**: definizione "tipo 7" (interpolazione lineare, come R, numpy ed Excel `QUARTILE.INC`), calcolati in MySQL 8 con `ROW_NUMBER()` e `COUNT(*) OVER ()`: per ogni misura il DB restituisce al più sei righe, mai l'intera colonna.
-- **Distribuzioni**: `mestieri` riporta le prime 10 voci, le altre sommate in `altro`; `quartieri` e `serie` uniscono le partizioni omonime come i filtri; `assenti` = etichetta non indicata.
+- **Distribuzioni**: `mestieri` riporta le prime 10 voci, le altre sommate in `altro`; `quartieri` e `serie` (serie territoriali) uniscono le partizioni omonime come i filtri; `assenti` = etichetta non indicata.
 - **Composizione**: `membri` = numero di fuochi per numero di parenti registrati (0 compreso); `eta` = parenti per fascia di 5 anni (`da`; 90 = 90 e oltre) e sesso, con le età assenti a parte; `statoCivile` = parenti per stato civile.
-- **Fasce dell'imponibile**: fuochi per fascia (`da` = estremo inferiore, fasce `IMPONIBILE_BANDS` di `@catasto/shared`: 0, 1–50, 51–200, 201–500, 501–1.000, oltre), sempre tutte anche se vuote, con gli imponibili assenti a parte. Servono al grafico del Banco di lavoro.
+- **Fasce dell'imponibile**: fuochi per fascia (`da` = estremo inferiore, fasce `IMPONIBILE_BANDS` di `@catasto/shared`: 0, 1–50, 51–200, 201–500, 501–1.000, oltre, in fiorini), sempre tutte anche se vuote, con gli imponibili assenti a parte. Servono al grafico del Banco di lavoro.
 - **Lingua**: con `lang=en` sono tradotte le etichette di mestieri, sesso e stato civile (luoghi esclusi, come nel resto dell'API).
 - **Cache**: 60 secondi, chiave = SQL compilato + parametri + lingua (due ricerche equivalenti condividono il risultato), al massimo 200 voci; richieste contemporanee per la stessa chiave condividono il calcolo. Sull'intero dataset (61.000 fuochi, 270.000 parenti, MySQL 8 locale) una richiesta a freddo richiede circa un secondo.
 
-### `GET /api/catasto/export` — export della ricerca
+### 4.11 Export della ricerca: `GET /api/catasto/export`
 
 Restituisce **tutte** le righe della ricerca come file, nello stesso ordine della tabella. Accetta gli stessi filtri e lo stesso ordinamento di `GET /api/catasto` (la paginazione è ignorata), più:
 
@@ -297,24 +330,26 @@ Restituisce **tutte** le righe della ricerca come file, nello stesso ordine dell
 
 **Contenuto.**
 
-- **Fuochi**: una riga per fuoco con id, nome, mestiere, rapporto di lavoro, bestiame, immigrazione, casa, particolarità, serie, quartiere, piviere, popolo, fortune, credito, credito ai monti, imponibile, deduzioni, volume, carta, segnatura della portata e codice d'archivio del volume (IIIF).
+- **Fuochi**: una riga per fuoco con id, nome, mestiere, rapporto di lavoro, bestiame, immigrazione, casa, particolarità, serie (territoriale), quartiere, piviere, popolo, fortune, credito, credito ai monti, imponibile, deduzioni (in fiorini), volume, carta, segnatura della portata e codice d'archivio del volume (IIIF).
 - **Parenti** (formato lungo): id e nome del fuoco, parentela, sesso, età, stato civile, particolarità; una riga per parente.
 - I valori assenti sono **celle vuote**, mai `0`; gli zeri restano zeri. I numeri sono numeri (anche nell'XLSX), le etichette di lookup sono tradotte con `lang=en`.
 - **Metadati**: fonte (Klapisch-Zuber / ACRH), data dell'export, descrizione leggibile della query (la stessa dell'anteprima della ricerca avanzata), ordinamento, numero di fuochi. Nel CSV sono righe iniziali che cominciano con `#` (R: `comment.char = "#"`, pandas: `comment="#"`); nell'XLSX stanno nel foglio "Info".
 - **CSV**: UTF-8 **con BOM** (Excel riconosce gli accenti), RFC 4180, righe terminate da CRLF.
-- Nome del file in `Content-Disposition`: `catasto1427-fuochi-AAAA-MM-GG.csv`, `catasto1427-parenti-AAAA-MM-GG.csv` o `catasto1427-AAAA-MM-GG.xlsx`. L'header `X-Export-Total` riporta il numero di fuochi.
+- Nome del file in `Content-Disposition`: `catasto1427-fuochi-AAAA-MM-GG.csv`, `catasto1427-parenti-AAAA-MM-GG.csv` o `catasto1427-AAAA-MM-GG.xlsx` (data dell'export, ISO 8601). L'header `X-Export-Total` riporta il numero di fuochi.
 
 **Streaming.** Le righe vengono lette dal DB e scritte man mano (stream di mysql2 con backpressure, `exceljs` in streaming per l'XLSX): l'export completo non viene mai tenuto in memoria. Lo stream di una query viene sempre letto fino in fondo, anche se il client chiude a metà, perché una connessione in pausa non tornerebbe più al pool.
 
 **Limiti.** Prima di scrivere qualunque byte il backend conta i fuochi: oltre `EXPORT_MAX_ROWS` (default 100.000, più dell'intero dataset) risponde `400 {"error":"La ricerca restituisce N fuochi: l'export è limitato a M. Restringi i filtri e riprova."}`, mai un file troncato. Filtri, AST o opzioni non validi sono anch'essi `400`. Un errore del DB a export già iniziato chiude la connessione: il client vede un download fallito.
 
+Esempio (dominio fittizio):
+
 ```bash
 curl -o fuochi.csv "https://catasto.example.org/api/catasto/export?quartiere=1,2&sort_by=fortune&order=DESC&sep=semicolon"
 ```
 
-### `GET /api/catasto/manifest/:id`
+### 4.12 Manifest IIIF: `GET /api/catasto/manifest/:id`
 
-Proxy verso `https://archiviodigitale-icar.cultura.gov.it/metadata/{id}/manifest.json?type=archive`. Restituisce solo ciò che serve al visore:
+Proxy verso `https://archiviodigitale-icar.cultura.gov.it/metadata/{id}/manifest.json?type=archive` (Archivio di Stato di Firenze, Archivio digitale ICAR). Restituisce solo ciò che serve al visore delle carte:
 
 ```json
 [
@@ -323,13 +358,13 @@ Proxy verso `https://archiviodigitale-icar.cultura.gov.it/metadata/{id}/manifest
 ]
 ```
 
-- Solo immagini `https`; `label` troncato a 200 caratteri.
+- Solo immagini `https`; `label` (la carta, recto/verso, come la indica il manifest) troncato a 200 caratteri.
 - Cache in memoria di 24 h (max 500 volumi) e `Cache-Control: public, max-age=86400`; le richieste contemporanee per lo stesso volume sono unite in una sola chiamata.
 - Errori: `400` id non numerico · `404` volume non trovato · `502` servizio esterno non disponibile o manifest oltre 10 MB (in produzione il 502 arriva come messaggio generico).
 
-### `GET /api/filters`
+### 4.13 Opzioni dei filtri: `GET /api/filters`
 
-Opzioni per i menu dei filtri. Parametri opzionali `serie`, `quartiere`, `piviere` (liste di id) restringono i livelli geografici inferiori.
+Opzioni per i menu dei filtri. Parametri opzionali `serie` (serie territoriale), `quartiere`, `piviere` (liste di id) restringono i livelli geografici inferiori.
 
 ```json
 {
@@ -342,7 +377,9 @@ Opzioni per i menu dei filtri. Parametri opzionali `serie`, `quartiere`, `pivier
 
 Per le partizioni geografiche le voci omonime che differiscono solo per il numero romano (`San Giovanni (I)`, `San Giovanni (II)`) sono **unite**: l'`id` è la lista `"3,7"`, da passare così com'è alla ricerca semplice. Le opzioni statiche restano in cache per tutta la vita del processo.
 
-### `GET /api/parenti/:id`
+### 4.14 Membri del fuoco: `GET /api/parenti/:id`
+
+Esempio (valori illustrativi):
 
 ```json
 [
@@ -353,7 +390,7 @@ Per le partizioni geografiche le voci omonime che differiscono solo per il numer
 
 Un fuoco inesistente restituisce `[]`.
 
-### `POST /api/filters/cache/invalidate`
+### 4.15 Invalidazione della cache: `POST /api/filters/cache/invalidate`
 
 Rotta admin (header `Authorization: Bearer <ADMIN_TOKEN>`, stesso `adminLimiter` delle altre). Svuota la cache delle opzioni dei filtri e quella delle traduzioni: la richiesta successiva le rilegge dal DB. Serve dopo un reimport del dump o un import di traduzioni, per non aspettare la scadenza (`FILTERS_CACHE_TTL`, di default un'ora) né riavviare il backend.
 
@@ -362,17 +399,19 @@ curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://catasto.example.org
 # {"ok":true}
 ```
 
-### `GET /api/mestieri`
+### 4.16 Mestieri: `GET /api/mestieri`
 
 Righe grezze della tabella `mestieri`, ordinate per nome (per etichetta tradotta con `lang=en`). Il frontend non la usa (prende i mestieri da `/api/filters`): resta come **API pubblica** per chi estrae i dati, con la stessa forma delle colonne del dump. Va considerata stabile: cambiarla rompe i client esterni.
 
-### `GET /health`
+### 4.17 Stato del servizio: `GET /health`
 
 `200 {"status":"ok","db":"up"}` oppure `503 {"status":"error","db":"down"}`. Non soggetto al rate limit: usarlo per healthcheck e monitoraggio.
 
 ---
 
-## Ricerca avanzata: formato dell'AST
+## 5. Ricerca avanzata: formato dell'AST
+
+### 5.1 Struttura e limiti
 
 ```mermaid
 classDiagram
@@ -394,21 +433,21 @@ classDiagram
 
 **Limiti** (superati → 400, mai troncamento): profondità 5, 50 condizioni totali, 100 valori per `in`/`not_in`, 200 caratteri per valore testuale.
 
-### Campi
+### 5.2 Campi
 
 | Chiave | Etichetta | Tipo | Note |
 |---|---|---|---|
 | `nome` | Nome fuoco | text | |
-| `volume` | Volume | text | |
-| `foglio` | Foglio (carta) | text | |
+| `volume` | Volume | text | volume del campione |
+| `foglio` | Foglio (carta) | text | carta del campione |
 | `fortune`, `credito`, `credito_m`, `imponibile`, `deduzioni` | Dati economici | number | fiorini |
 | `mestiere`, `bestiame`, `immigrazione`, `rapporto`, `casa` | Attributi | enum | id di lookup |
-| `serie`, `quartiere`, `piviere`, `popolo` | Geografia | enum | join su `t_struttura_catastale` |
+| `serie`, `quartiere`, `piviere`, `popolo` | Geografia | enum | join su `t_struttura_catastale`; `serie` = serie territoriale |
 | `particolarita_parente` | Particolarità parente | enum | `EXISTS` sui parenti |
 | `eta_parente` | Età parente | number | `EXISTS`: "almeno un parente con…" |
-| `segnatura_portata` | Segnatura della portata | text | dato redazionale |
+| `segnatura_portata` | Segnatura della portata | text | dato redazionale (dato contribuito) |
 
-### Operatori
+### 5.3 Operatori
 
 | Tipo | Operatori |
 |---|---|
@@ -416,7 +455,7 @@ classDiagram
 | number | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `between` (`[min, max]`), `is_empty`, `is_not_empty` |
 | enum | `eq`, `neq`, `in`, `not_in`, `is_empty`, `is_not_empty` |
 
-Regole di traduzione:
+Regole di traduzione in SQL:
 
 - `neq`, `not_contains`, `not_in` includono anche i valori `NULL` (“diverso da X” comprende “non indicato”).
 - Sui campi dei parenti le forme negative diventano `NOT EXISTS`: `eta_parente neq 0` = "nessun parente di età 0".
@@ -424,9 +463,9 @@ Regole di traduzione:
 - Per `serie`, `quartiere`, `piviere` e `popolo` il valore può essere la lista di id restituita da `/api/filters` (`"3,7"`): `eq` diventa `IN (3, 7)`, `neq` `NOT IN`, e le liste dentro `in` / `not_in` vengono espanse.
 - Un AST oltre i 5 livelli viene rifiutato con `400` prima della validazione completa, anche se annidato migliaia di volte.
 
-### Esempio
+### 5.4 Esempio
 
-"Fuochi con nome che contiene *Nardo*, con fortune fra 100 e 500 **oppure** mestiere 12/15, e almeno un parente oltre i 60 anni":
+"Fuochi con nome che contiene *Nardo*, con fortune fra 100 e 500 fiorini **oppure** mestiere 12/15, e almeno un parente oltre i 60 anni" (valori illustrativi):
 
 ```json
 {
@@ -456,9 +495,11 @@ WHERE ( f.Nome_Fuoco LIKE ? ESCAPE '!'
 
 ---
 
-## Segnalazioni e moderazione
+## 6. Segnalazioni e moderazione
 
-### `POST /api/segnalazioni`
+Le segnalazioni sono il canale dei **dati contribuiti**: una proposta dell'utente diventa visibile solo dopo la decisione della redazione.
+
+### 6.1 Invio: `POST /api/segnalazioni`
 
 | Campo | Regole |
 |---|---|
@@ -472,7 +513,7 @@ WHERE ( f.Nome_Fuoco LIKE ? ESCAPE '!'
 
 Risposta: `201 {"id": 57, "stato": "nuova"}`. L'IP non viene salvato in chiaro ma come hash con `SEGNALAZIONI_SALT`.
 
-### Ciclo di vita
+### 6.2 Ciclo di vita
 
 ```mermaid
 stateDiagram-v2
@@ -490,10 +531,10 @@ stateDiagram-v2
 
 - I **link email** agiscono solo su segnalazioni `nuova` o `in_esame`; altrimenti rispondono `409`.
 - La **PATCH admin** accetta qualunque transizione.
-- Effetti per `tipo = segnatura`: diventando `accettata` la segnatura è pubblicata in `fuoco_segnature`. Lasciando `accettata`, se era quella pubblicata, torna visibile l'ultima altra segnatura ancora accettata per lo stesso fuoco; se non ce ne sono, il fuoco resta senza. Tutto in transazione con `SELECT … FOR UPDATE`.
+- Effetti per `tipo = segnatura`: diventando `accettata` la segnatura della portata è pubblicata in `fuoco_segnature`. Lasciando `accettata`, se era quella pubblicata, torna visibile l'ultima altra segnatura ancora accettata per lo stesso fuoco; se non ce ne sono, il fuoco resta senza. Tutto in transazione con `SELECT … FOR UPDATE`.
 - Per `dato_errato` e `altro` cambia solo lo stato: la correzione del dato resta manuale.
 
-### Flusso email (FormSubmit)
+### 6.3 Flusso email (FormSubmit)
 
 ```mermaid
 sequenceDiagram
@@ -530,7 +571,7 @@ Esiti della moderazione: `403` secret non configurato · `400` token non valido 
 
 > **Nota di sicurezza.** I link di moderazione transitano per FormSubmit e per la casella della redazione: chi vi ha accesso può decidere le segnalazioni aperte finché il token non scade. Proteggere la casella come si proteggerebbe `ADMIN_TOKEN`.
 
-### API admin
+### 6.4 API admin
 
 Header `Authorization: Bearer <ADMIN_TOKEN>` (prefisso `Bearer ` sensibile alle maiuscole). Senza `ADMIN_TOKEN` configurato le rotte rispondono `403`; token errato → `401`.
 
@@ -546,11 +587,13 @@ curl -X PATCH -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: applicat
 
 ---
 
-## Traduzioni (`lang=en`)
+## 7. Traduzioni (`lang=en`)
+
+### 7.1 Ambito
 
 Il sito ha una versione inglese: il frontend aggiunge `?lang=en` a ogni richiesta quando l'inglese è attivo (in italiano non manda nulla). È riconosciuto solo `en`; qualunque altro valore, o nessuno, vale italiano e non produce mai un errore.
 
-**Cosa si traduce.** Solo le etichette delle tabelle di lookup del dump; id, filtri e semantica delle ricerche restano identici. Luoghi (serie, quartieri, pivieri, popoli) e nomi di persona sono nomi propri e restano in italiano, come i messaggi di errore.
+**Cosa si traduce.** Solo le etichette delle tabelle di lookup del dump (le traduzioni sono dati derivati; il valore della fonte resta quello italiano). Id, filtri e semantica delle ricerche restano identici. Luoghi (serie territoriali, quartieri, pivieri, popoli) e nomi di persona sono nomi propri e restano in italiano, come i messaggi di errore.
 
 | Endpoint | Campi tradotti |
 |---|---|
@@ -563,15 +606,19 @@ Il sito ha una versione inglese: il frontend aggiunge `?lang=en` a ogni richiest
 
 Un valore senza traduzione resta in italiano. L'ordinamento SQL della tabella (`sort_by=mestiere`) resta quello dell'etichetta italiana.
 
+### 7.2 Tabella e migrazioni
+
 **Tabella `traduzioni_lookup`** (migrazione `002`): `tabella` (nome della tabella del dump: `mestieri`, `bestiame`, `rapporto_mestiere`, `immigrazione`, `casa`, `particolarita_fuoco`, `particolarita_parenti`, `rapporti_parentela`, `sesso_parenti`, `statocivile_parenti`), `valore_it`, `lingua` (`en`), `valore`. La chiave è l'**etichetta italiana**, non l'id: la tabella sta fuori dal dump, sopravvive ai reimport e si popola senza conoscere gli id. Il confronto ignora maiuscole, accenti e spazi superflui (collation `utf8mb4_unicode_ci` nel DB, stessa normalizzazione nel backend).
 
-**Seed** (migrazione `003`): circa 590 traduzioni di valori plausibili — sesso, stato civile, parentela, casa, rapporto di lavoro, bestiame, immigrazione, particolarità e circa 250 grafie di mestieri del vocabolario del Catasto del 1427 (Herlihy e Klapisch-Zuber). Le righe che non corrispondono a valori del dump sono innocue; `INSERT IGNORE` non sovrascrive traduzioni già corrette.
+**Seed** (migrazione `003`): circa 590 traduzioni di valori plausibili — sesso, stato civile, parentela, casa, rapporto di lavoro, bestiame, immigrazione, particolarità e circa 250 grafie di mestieri del vocabolario del Catasto fiorentino del 1427/30 (Herlihy e Klapisch-Zuber, *Les Toscans et leurs familles*). Le righe che non corrispondono a valori del dump sono innocue; `INSERT IGNORE` non sovrascrive traduzioni già corrette.
 
 **Etichette reali** (migrazione `004`): il dump usa descrizioni lunghe ("arte della lana, lanaiolo, ritagliatore, …"), che il seed di `003` non intercettava. `004` traduce le 226 etichette esportate dal database di produzione con `db:export-traduzioni` (tutte le tabelle di lookup) e, a differenza di `003`, aggiorna le righe già presenti. Funziona uguale su MySQL e TiDB.
 
 **Cache.** Le traduzioni restano in memoria 10 minuti per lingua (la copia italiana dei filtri in cache non viene mai modificata: la traduzione ne fa una copia). Se la tabella non esiste (migrazione non applicata) o il DB dà errore, le risposte restano in italiano invece di andare in 500.
 
-**Completare le traduzioni.** La redazione lavora su un CSV `tabella,valore_it,valore_en`:
+### 7.3 Completare le traduzioni
+
+La redazione lavora su un CSV `tabella,valore_it,valore_en`:
 
 ```bash
 # valori distinti del dump ancora senza traduzione (--tutte: anche quelli tradotti)
@@ -588,9 +635,9 @@ Il CSV segue RFC 4180 (campi con virgole o apici fra doppi apici). L'import è t
 
 ---
 
-## Migrazioni
+## 8. Migrazioni
 
-Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici. Le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `schema_migrations`) sono create dal runner in `src/scripts/migrate.ts`, che applica in ordine i file `migrations/*.sql` non ancora registrati.
+Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici (dati della fonte). Le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `schema_migrations`) sono create dal runner in `src/scripts/migrate.ts`, che applica in ordine i file `migrations/*.sql` non ancora registrati.
 
 La ricerca in tabella legge `fuoco_segnature`: senza migrazioni risponde 500.
 
@@ -607,7 +654,7 @@ docker compose exec backend node backend-catasto/dist/scripts/migrate.js
 
 ---
 
-## Variabili d'ambiente
+## 9. Variabili d'ambiente
 
 | Variabile | Default | Uso |
 |---|---|---|
@@ -627,11 +674,13 @@ docker compose exec backend node backend-catasto/dist/scripts/migrate.js
 | `EXPORT_MAX_ROWS` | `100000` | Numero massimo di fuochi di un export; oltre, `400` con un messaggio |
 | `FILTERS_CACHE_TTL` | `3600` | Durata in secondi della cache delle opzioni dei filtri; `0` = senza scadenza. Per svuotarla subito: `POST /api/filters/cache/invalidate` |
 
-Esempio completo per la produzione: [`.env.prod.example`](../.env.prod.example).
+Esempio completo per la produzione, con valori fittizi: [`.env.prod.example`](../.env.prod.example).
 
 ---
 
-## Script e test
+## 10. Script e test
+
+### 10.1 Comandi
 
 | Comando (in `backend-catasto/`) | Effetto |
 |---|---|
@@ -646,7 +695,11 @@ Esempio completo per la produzione: [`.env.prod.example`](../.env.prod.example).
 | `npm test` | test unitari (`vitest run`, database simulato) |
 | `npm run test:integration` | test di integrazione su un MySQL vero (vedi sotto) |
 
+### 10.2 Test unitari
+
 I **test unitari** (vitest, database sempre simulato) coprono query builder semplice e AST (compresi liste geografiche, ordinamento stabile e AST troppo annidati), controller di ricerca, middleware (admin, errori), `validation.ts`, cache delle opzioni dei filtri, token di moderazione, servizio di notifica, cambi di stato delle segnalazioni (con il ripristino della segnatura precedente), validazione della creazione, rotte di moderazione, `TRUST_PROXY`, `toPages` del manifest, l'associazione portata→volume e le traduzioni (parsing di `lang`, normalizzazione, fallback, cache, CSV di export/import).
+
+### 10.3 Test di integrazione
 
 I **test di integrazione** (`test/integration/`) eseguono le query compilate su MySQL 8: il setup cancella tutte le tabelle del database indicato, carica il dump di prova `test/fixtures/catasto-fixture.sql` (pochi fuochi scelti per i casi limite) e applica le migrazioni con lo stesso runner della produzione. Il database si indica **solo** con variabili `TEST_DB_*`, mai con le `DB_*` del backend, e il nome deve contenere `test`:
 
@@ -664,10 +717,27 @@ In CI girano in un job dedicato con il servizio `mysql:8.0` di GitHub Actions.
 
 ---
 
-## Limiti noti
+## 11. Limiti noti
 
-I problemi emersi dalla revisione del codice di settembre 2026 sono stati corretti; lo storico è in [revisione-codice.md](revisione-codice.md). Resta un comportamento da conoscere:
+I problemi emersi dalla revisione del codice di settembre 2026 sono stati corretti; lo storico è in [Revisione del codice](revisione-codice.md). Resta un comportamento da conoscere:
 
 | Area | Descrizione |
 |---|---|
 | Rate limit | I contatori sono in memoria e per processo: con più istanze del backend i limiti valgono per istanza. |
+
+---
+
+## 12. Riferimenti e fonti
+
+- Herlihy, David, e Christiane Klapisch-Zuber. *Les Toscans et leurs familles. Une étude du catasto florentin de 1427*. Paris: Presses de la Fondation nationale des sciences politiques – Éditions de l'EHESS, 1978.
+- Dati digitalizzati: ACRH, <https://journals.openedition.org/acrh/7458> (dump `init/Catasto.sql`; fonte citata nei metadati degli export).
+- Immagini: Archivio di Stato di Firenze, Archivio digitale ICAR, servizio IIIF (manifest restituiti da `GET /api/catasto/manifest/:id`).
+
+---
+
+## 13. Registro delle modifiche
+
+| Versione | Data | Autore | Descrizione |
+|---|---|---|---|
+| 1.x | — | — | Versioni precedenti, senza registro |
+| 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
