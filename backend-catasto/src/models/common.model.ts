@@ -7,7 +7,7 @@ import { parseIdList } from "../utils/query-builder.js";
  * Giovanni"): le partizioni omonime diventano una sola voce, con gli id
  * raggruppati da GROUP_CONCAT e separati da virgola.
  */
-const groupedLabel = (column: string) =>
+export const groupedLabel = (column: string) =>
   `TRIM(REGEXP_REPLACE(${column}, ' \\\\([IVX]+\\\\)$', ''))`;
 
 const STATIC_FILTER_QUERIES = {
@@ -52,20 +52,46 @@ async function loadStaticFilters(): Promise<FilterOptions> {
   return Object.fromEntries(entries) as unknown as FilterOptions;
 }
 
+/**
+ * Durata della cache delle opzioni dei filtri, in secondi (`FILTERS_CACHE_TTL`).
+ * Le opzioni cambiano solo con un reimport del dump: un'ora evita di dover
+ * riavviare il backend, e `0` disattiva la scadenza (comportamento storico).
+ * Per renderle subito visibili c'è POST /api/filters/cache/invalidate.
+ */
+export const DEFAULT_FILTERS_CACHE_TTL_S = 3600;
+
+export function parseCacheTtlMs(value: string | undefined, defaultSeconds = DEFAULT_FILTERS_CACHE_TTL_S): number {
+  const trimmed = value?.trim();
+  if (!trimmed || !/^\d+$/.test(trimmed)) return defaultSeconds * 1000;
+  return Number(trimmed) * 1000;
+}
+
 export class CommonModel {
   // Promise e non valore: richieste concorrenti a freddo condividono lo stesso
   // caricamento invece di lanciare dieci query ciascuna.
-  private static staticFilters: Promise<FilterOptions> | null = null;
+  private static staticFilters: { promise: Promise<FilterOptions>; expiresAt: number } | null = null;
+
+  /** Svuota la cache delle opzioni: la richiesta successiva le rilegge dal DB. */
+  static invalidateFilters(): void {
+    this.staticFilters = null;
+  }
+
+  private static loadFilters(): Promise<FilterOptions> {
+    const cached = this.staticFilters;
+    if (cached && cached.expiresAt > Date.now()) return cached.promise;
+
+    const ttl = parseCacheTtlMs(process.env.FILTERS_CACHE_TTL);
+    const promise = loadStaticFilters().catch((error) => {
+      // Un errore transitorio del DB non deve restare in cache per sempre.
+      if (this.staticFilters?.promise === promise) this.staticFilters = null;
+      throw error;
+    });
+    this.staticFilters = { promise, expiresAt: ttl === 0 ? Infinity : Date.now() + ttl };
+    return promise;
+  }
 
   static async getFilters(selection: GeoSelection = {}): Promise<FilterOptions> {
-    if (!this.staticFilters) {
-      this.staticFilters = loadStaticFilters().catch((error) => {
-        // Un errore transitorio del DB non deve restare in cache per sempre.
-        this.staticFilters = null;
-        throw error;
-      });
-    }
-    const baseFilters = await this.staticFilters;
+    const baseFilters = await this.loadFilters();
 
     const conditions: string[] = [];
     const params: number[] = [];

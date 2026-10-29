@@ -45,7 +45,9 @@ const allowedOrigins = corsOrigin?.split(",").map((o) => o.trim());
 // browsers block every response to the frontend (a different origin) even
 // with CORS enabled - "cross-origin" restores that.
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
-app.use(cors({ origin: allowedOrigins ?? true }));
+// Il nome dei file di export sta in Content-Disposition: un frontend su
+// un'altra origine (es. Vercel) lo legge solo se esposto.
+app.use(cors({ origin: allowedOrigins ?? true, exposedHeaders: ["Content-Disposition", "X-Export-Total"] }));
 app.use(compression() as any);
 // Limite esplicito: i body accettati sono un AST di ricerca o una segnalazione,
 // entrambi nell'ordine dei KB. Il default di express (100kb) è già stretto, ma

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useLanguage, useT } from "../../../i18n";
 import { paginationMessages } from "./Pagination.messages";
+import { pageWindow } from "../lib/page-window";
 
 interface PaginationProps {
   page: number;
@@ -12,11 +12,12 @@ interface PaginationProps {
 }
 
 const navButtonClasses = (disabled: boolean) =>
-  `flex items-center gap-1 md:gap-2 px-3 md:px-4 min-h-11 rounded text-xs md:text-sm font-bold transition-colors ${
+  `flex items-center gap-1 md:gap-2 px-3 min-h-11 rounded-ui text-sm transition-colors border ${
     disabled
-      ? "text-text-accent opacity-40 cursor-not-allowed bg-transparent"
-      : "text-accent-strong hover:bg-item-hover bg-bg-main border border-border-base"
+      ? "text-text-accent opacity-40 cursor-not-allowed border-transparent"
+      : "text-accent-strong hover:bg-item-hover bg-bg-main border-border-base"
   }`;
+
 
 export default function Pagination({
   page,
@@ -48,7 +49,7 @@ export default function Pagination({
   return (
     <nav
       aria-label={t("nav")}
-      className="bg-bg-sidebar px-4 py-3 md:px-6 md:py-4 border-t border-border-base flex items-center justify-between rounded-b-sm"
+      className="bg-bg-sidebar px-4 py-3 md:px-6 border-t border-border-base flex flex-wrap items-center justify-between gap-3 rounded-b-ui"
     >
       <button
         type="button"
@@ -57,13 +58,41 @@ export default function Pagination({
         aria-label={t("prevAria")}
         className={navButtonClasses(isFirst || loading)}
       >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        <span aria-hidden="true">‹</span>
         <span className="hidden sm:inline">{t("prev")}</span>
       </button>
 
+      {/* Riquadri delle pagine vicine; quella attiva in blu pieno. */}
+      <ol className="hidden md:flex items-center gap-1.5">
+        {pageWindow(page, totalPages).map((p, i) =>
+          p === "gap" ? (
+            <li key={`gap-${i}`} aria-hidden="true" className="px-1 text-text-accent">
+              …
+            </li>
+          ) : (
+            <li key={p}>
+              <button
+                type="button"
+                onClick={() => p !== page && handlePageChange(p)}
+                disabled={loading}
+                aria-current={p === page ? "page" : undefined}
+                aria-label={t("goTo", { n: p.toLocaleString(locale) })}
+                className={`min-h-11 min-w-11 px-2 rounded-ui border text-sm tabular-nums transition-colors disabled:cursor-not-allowed ${
+                  p === page
+                    ? "bg-primary text-on-primary border-primary font-semibold"
+                    : "bg-bg-main text-accent-strong border-border-base hover:bg-item-hover"
+                }`}
+              >
+                {p.toLocaleString(locale)}
+              </button>
+            </li>
+          ),
+        )}
+      </ol>
+
       {/* Un campo e non una select: con 60.000 fuochi le pagine sono oltre
           mille, e una select con mille opzioni non si usa né si naviga. */}
-      <div className="flex items-center gap-2 text-xs md:text-sm text-text-accent">
+      <div className="flex items-center gap-2 text-sm text-text-accent">
         <label htmlFor="pagination-page">{t("page")}</label>
         <input
           id="pagination-page"
@@ -79,7 +108,7 @@ export default function Pagination({
             if (e.key === "Enter") commit();
             if (e.key === "Escape") setDraft(String(page));
           }}
-          className="w-16 md:w-20 min-h-11 border border-border-base rounded px-2 bg-bg-main text-text-main font-bold text-center tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-16 md:w-20 min-h-11 border border-border-base rounded-ui px-2 bg-bg-main text-text-main text-center tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <span>
           {t("of")} <b className="text-text-main tabular-nums">{totalPages.toLocaleString(locale)}</b>
@@ -94,7 +123,7 @@ export default function Pagination({
         className={navButtonClasses(isLast || loading)}
       >
         <span className="hidden sm:inline">{t("next")}</span>
-        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        <span aria-hidden="true">›</span>
       </button>
     </nav>
   );

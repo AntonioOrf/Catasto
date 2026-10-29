@@ -33,3 +33,21 @@ describe("FuocoModel.attachCodiciPortata", () => {
     expect(query).not.toHaveBeenCalled();
   });
 });
+
+describe("FuocoModel.attachComposizione", () => {
+  beforeEach(() => query.mockReset());
+
+  it("una sola query per la pagina; senza parenti 0 bocche ed età media assente", async () => {
+    query.mockResolvedValue([[{ id: 1, bocche: 4, eta_media: "21.5000" }]]);
+    const rows = [fuoco(1, null), fuoco(2, null)];
+    await FuocoModel.attachComposizione(rows);
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(query.mock.calls[0][1]).toEqual([[1, 2]]);
+    expect(rows.map((r) => [r.bocche, r.eta_media])).toEqual([[4, 21.5], [0, null]]);
+  });
+
+  it("una pagina vuota non interroga il DB", async () => {
+    await FuocoModel.attachComposizione([]);
+    expect(query).not.toHaveBeenCalled();
+  });
+});

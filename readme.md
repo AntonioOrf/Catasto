@@ -38,6 +38,10 @@ Il portale è pensato per:
 | 🔗 | **Query salvate e condivise** | Salvataggio sul dispositivo e link condivisibili (`#q=…`) che riaprono la stessa ricerca |
 | 👪 | **Scheda del fuoco** | Dati economici, mestiere, località e composizione familiare (parentela, età, stato civile) |
 | 🖼️ | **Visore delle carte** | Apre il volume IIIF sulla carta del fuoco (campione e, quando nota, portata), con zoom, trascinamento e gesti touch |
+| 📊 | **Statistiche** | Totali, medie, mediane e quartili dei dati economici (con i valori assenti a parte), distribuzioni per mestiere, quartiere e serie, piramide delle età, sulla stessa ricerca della tabella |
+| 📥 | **Export** | Tutte le righe della ricerca in CSV (UTF-8 con BOM) o Excel, con i parenti in formato lungo e i metadati della query |
+| ⚖️ | **Confronto** | Da 2 a 5 fuochi affiancati, anche da ricerche diverse, con le differenze economiche e un link condivisibile (`#confronta=…`) |
+| 📖 | **Glossario e guida** | Suggerimenti accanto ai termini tecnici, pagina del glossario, percorso guidato alla prima visita, ricerche d'esempio |
 | ✍️ | **Segnalazioni** | Dato errato, segnatura della portata o altro, con moderazione della redazione tramite link firmati via email o API |
 | 🌓 | **Tema chiaro e scuro** | Con obiettivo di accessibilità WCAG 2.1 AA |
 
@@ -92,7 +96,7 @@ Per la produzione con Docker (porta `1427`) segui la [guida all'installazione](d
 ## Contribuire
 
 1. Crea un ramo dal `main`.
-2. Prima di aprire la PR esegui i controlli della CI: `npm run build`, `npm run lint -w catasto-frontend`, `npx tsc --noEmit` in `backend-catasto/` e `frontend-catasto/`, `npm test`.
+2. Prima di aprire la PR esegui i controlli della CI: `npm run build`, `npm run lint`, `npx tsc --noEmit` in `backend-catasto/` e `frontend-catasto/`, `npm test` e, con un MySQL di prova, `npm run test:integration -w catasto-backend` (vedi [Backend](docs/backend.md#script-e-test)).
 3. Se aggiungi tabelle, crea una nuova migrazione numerata in `backend-catasto/migrations/`.
 4. Se aggiungi un campo interrogabile, basta dichiararlo in `packages/shared/src/fields.ts`: frontend e backend lo usano entrambi.
 

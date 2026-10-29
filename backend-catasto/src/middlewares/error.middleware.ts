@@ -8,8 +8,17 @@ export const errorHandler = (
   err: any,
   _req: Request,
   res: Response,
-  _next: NextFunction
+  next: NextFunction
 ) => {
+  // Risposta già iniziata (es. un export in streaming): non si può più
+  // mandare un JSON. L'handler di default di Express chiude la connessione,
+  // così il client vede un download fallito e non un file troncato in silenzio.
+  if (res.headersSent) {
+    console.error("❌ Error dopo l'invio degli header:", err?.stack ?? err);
+    next(err);
+    return;
+  }
+
   // body-parser e altri middleware usano `status` o `statusCode`.
   const rawStatus = Number(err?.status ?? err?.statusCode);
   const statusCode = rawStatus >= 400 && rawStatus < 600 ? rawStatus : 500;

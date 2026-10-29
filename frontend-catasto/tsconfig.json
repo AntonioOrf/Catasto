@@ -5,7 +5,6 @@
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
       "@catasto/shared": ["../packages/shared/src"]
     },
     "types": ["vite/client"]

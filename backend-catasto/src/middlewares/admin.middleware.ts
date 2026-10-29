@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { Request, Response, NextFunction } from "express";
+import rateLimit from "express-rate-limit";
 
 /**
  * Autenticazione della sola area di moderazione. Non c'è un sistema utenti: la
@@ -31,3 +32,16 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction) =>
 
   next();
 };
+
+/**
+ * Limite sui tentativi di autenticazione: il token è l'unica barriera delle
+ * rotte admin, non deve essere indovinabile a forza di richieste. Un'unica
+ * istanza per tutte le rotte admin, così i tentativi si sommano.
+ */
+export const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});

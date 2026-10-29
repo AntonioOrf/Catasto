@@ -12,9 +12,10 @@ export const catastoTableMessages = defineMessages({
     results: "risultati",
     colHead: "Capofamiglia",
     colPlace: "Località",
-    colSummary: "Dati Sintetici",
+    colSummary: "Dati sintetici",
     colRefs: "Riferimenti",
     expand: "Espandi",
+    colSelect: "Selezione per il confronto",
     loading: "Caricamento dati in corso...",
   },
   en: {
@@ -31,6 +32,7 @@ export const catastoTableMessages = defineMessages({
     colSummary: "Summary data",
     colRefs: "References",
     expand: "Expand",
+    colSelect: "Selection for comparison",
     loading: "Loading data...",
   },
 });

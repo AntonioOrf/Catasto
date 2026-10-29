@@ -31,3 +31,7 @@ export const eta = (value: number | null | undefined) => (assente(value) ? "-" :
 /** Piviere e popolo, solo le parti presenti. Stringa vuota se mancano entrambi. */
 export const piviereEPopolo = (piviere?: string | null, popolo?: string | null) =>
   [piviere, popolo].filter((part) => part && part.trim()).join(" » ");
+
+/** Solo la cifra (la parola "fiorini" la mette chi impagina); null se il dato manca. */
+export const cifra = (value: number | null | undefined, lang: Lang = getLang()): string | null =>
+  assente(value) ? null : numberFormat(lang).format(value);

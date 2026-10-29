@@ -2,20 +2,52 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { CatastoService, type FuochiView } from "../services/catasto.service.js";
 import { paginationSchema, parseNumericId, splitPaginationQuery, ValidationError } from "../utils/validation.js";
-import { astSchema } from "../utils/query-ast-builder.js";
+import { astSchema, buildQueryFromAst } from "../utils/query-ast-builder.js";
+import { buildQuery } from "../utils/query-builder.js";
 import { parseLang } from "../models/traduzioni.model.js";
+import { FUOCHI_BY_IDS_MAX, describeQuery } from "@catasto/shared";
+import { ExportService, type ExportOptions } from "../services/export.service.js";
+import { describeSimpleFilters } from "../utils/describe-filters.js";
+import { StatsService } from "../services/stats.service.js";
 
 const advancedQuerySchema = z.object({
   ast: astSchema,
-  view: z.enum(["table", "sidebar"]).catch("table"),
+  view: z.enum(["table", "sidebar", "banco"]).catch("table"),
 });
+
+/**
+ * Opzioni dell'export, uguali in query string (GET) e nel body (POST).
+ * `parenti` accetta booleani o "true"/"1"; `sep` anche per nome, perché il
+ * punto e virgola in una query string va codificato.
+ */
+const exportOptionsSchema = z.object({
+  format: z.enum(["csv", "xlsx"], { message: "Formato non valido: usa csv o xlsx" }).default("csv"),
+  parenti: z
+    .union([z.boolean(), z.enum(["true", "false", "1", "0"])])
+    .default(false)
+    .transform((v) => v === true || v === "true" || v === "1"),
+  sep: z
+    .enum([",", ";", "comma", "semicolon"], { message: "Separatore non valido: usa comma o semicolon" })
+    .default(",")
+    .transform((v) => (v === ";" || v === "semicolon" ? ";" : ",")),
+});
+
+const parseExportOptions = (input: unknown, lang: unknown): ExportOptions => {
+  const parsed = exportOptionsSchema.safeParse(input ?? {});
+  if (!parsed.success) throw new ValidationError(parsed.error.issues[0]?.message ?? "Opzioni di export non valide");
+  return { ...parsed.data, lang: parseLang(lang) };
+};
+
+/** Body con il solo AST: export e statistiche della ricerca avanzata. */
+const advancedExportSchema = z.object({ ast: astSchema });
 
 /** L'indice laterale carica blocchi grandi: il default di pagina è diverso dalla tabella. */
 const SIDEBAR_DEFAULT_LIMIT = "1000";
 
-const search = (view: FuochiView) => async (req: Request, res: Response) => {
-  // `lang` sceglie la lingua delle etichette, non e' un filtro.
-  const { lang, ...query } = req.query;
+const search = (defaultView: FuochiView) => async (req: Request, res: Response) => {
+  // `lang` sceglie la lingua delle etichette e `view` la vista: non sono filtri.
+  const { lang, view: requested, ...query } = req.query;
+  const view: FuochiView = defaultView === "table" && requested === "banco" ? "banco" : defaultView;
   const { pagination, filters } = splitPaginationQuery(
     query,
     view === "sidebar" ? { limit: SIDEBAR_DEFAULT_LIMIT } : {},
@@ -44,6 +76,81 @@ export const CatastoController = {
     res.json(
       await CatastoService.queryFuochi(parsed.data.ast, pagination, parsed.data.view, parseLang(req.query.lang)),
     );
+  },
+
+  /**
+   * GET /api/catasto/export: stessi filtri e ordinamento della tabella, tutte
+   * le pagine. Paginazione ignorata.
+   */
+  async exportSimple(req: Request, res: Response) {
+    const { lang, format, parenti, sep, ...query } = req.query;
+    const options = parseExportOptions({ format, parenti, sep }, lang);
+    const { pagination, filters } = splitPaginationQuery(query);
+    const compiled = buildQuery(filters);
+    await ExportService.exportFuochi(
+      res,
+      compiled,
+      pagination,
+      (filterOptions) => describeSimpleFilters(filters, filterOptions, options.lang),
+      options,
+    );
+  },
+
+  /** POST /api/catasto/query/export: stesso AST della ricerca avanzata. */
+  async exportAdvanced(req: Request, res: Response) {
+    const parsed = advancedExportSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError(
+        `Query non valida: ${parsed.error.issues[0]?.message ?? "formato non riconosciuto"}`,
+      );
+    }
+    const { format, parenti, sep } = req.body;
+    const options = parseExportOptions({ format, parenti, sep }, req.query.lang);
+    const pagination = paginationSchema.parse(req.body ?? {});
+    const ast = parsed.data.ast;
+    await ExportService.exportFuochi(
+      res,
+      buildQueryFromAst(ast),
+      pagination,
+      (filterOptions) => describeQuery(ast, filterOptions, options.lang),
+      options,
+    );
+  },
+
+  /** GET /api/catasto/stats: aggregati sugli stessi filtri della tabella. */
+  async stats(req: Request, res: Response) {
+    const { lang, ...query } = req.query;
+    // Paginazione e ordinamento non cambiano gli aggregati.
+    const { filters } = splitPaginationQuery(query);
+    res.json(await StatsService.searchStats(filters, parseLang(lang)));
+  },
+
+  /** POST /api/catasto/query/stats: aggregati sull'AST della ricerca avanzata. */
+  async queryStats(req: Request, res: Response) {
+    const parsed = advancedExportSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError(
+        `Query non valida: ${parsed.error.issues[0]?.message ?? "formato non riconosciuto"}`,
+      );
+    }
+    res.json(await StatsService.queryStats(parsed.data.ast, parseLang(req.query.lang)));
+  },
+
+  /**
+   * GET /api/catasto/fuochi?ids=1,2,3: fuochi da pagine o ricerche diverse,
+   * in una richiesta (selezione e confronto). Al massimo FUOCHI_BY_IDS_MAX id
+   * numerici, validati come gli altri parametri; i duplicati contano una volta.
+   */
+  async getByIds(req: Request, res: Response) {
+    const raw = req.query.ids;
+    if (typeof raw !== "string" || !/^\d{1,10}(,\d{1,10})*$/.test(raw.replace(/\s+/g, ""))) {
+      throw new ValidationError("Parametro ids non valido: servono id numerici separati da virgola");
+    }
+    const ids = [...new Set(raw.replace(/\s+/g, "").split(",").map(Number))];
+    if (ids.length > FUOCHI_BY_IDS_MAX) {
+      throw new ValidationError(`Troppi fuochi: al massimo ${FUOCHI_BY_IDS_MAX}`);
+    }
+    res.json(await CatastoService.getFuochiByIds(ids, parseLang(req.query.lang)));
   },
 
   async getParenti(req: Request, res: Response) {

@@ -14,9 +14,34 @@ const manifestLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// L'export legge tutte le righe della ricerca: limite molto più stretto del
+// traffico normale, e separato per non consumare la quota della tabella.
+const exportLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Troppi export in poco tempo. Riprova tra qualche minuto." },
+});
+
+// Una decina di query aggregate per richiesta (con cache breve): limite
+// separato, più largo dell'export perché il pannello segue i filtri.
+const statsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 150,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Troppe richieste di statistiche. Riprova tra qualche minuto." },
+});
+
 router.get("/", asyncHandler(CatastoController.getAll));
+router.get("/stats", statsLimiter, asyncHandler(CatastoController.stats));
+router.post("/query/stats", statsLimiter, asyncHandler(CatastoController.queryStats));
+router.get("/export", exportLimiter, asyncHandler(CatastoController.exportSimple));
+router.post("/query/export", exportLimiter, asyncHandler(CatastoController.exportAdvanced));
 router.post("/query", asyncHandler(CatastoController.query));
 router.get("/sidebar", asyncHandler(CatastoController.getSidebar));
+router.get("/fuochi", asyncHandler(CatastoController.getByIds));
 router.get("/manifest/:id", manifestLimiter, asyncHandler(CatastoController.getManifest));
 
 export default router;

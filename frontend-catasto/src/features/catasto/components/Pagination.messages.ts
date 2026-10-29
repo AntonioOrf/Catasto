@@ -9,6 +9,7 @@ export const paginationMessages = defineMessages({
     of: "di",
     nextAria: "Pagina successiva",
     next: "Successivo",
+    goTo: "Pagina {n}",
   },
   en: {
     nav: "Results pagination",
@@ -18,5 +19,6 @@ export const paginationMessages = defineMessages({
     of: "of",
     nextAria: "Next page",
     next: "Next",
+    goTo: "Page {n}",
   },
 });

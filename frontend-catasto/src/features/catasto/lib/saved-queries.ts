@@ -78,8 +78,3 @@ export function saveQuery(nome: string, ast: QueryGroup): SavedQuery[] {
 export function deleteQuery(id: string): SavedQuery[] {
   return persist(loadSavedQueries().filter((q) => q.id !== id));
 }
-
-/** Import di un preset ricevuto da un altro utente (link condiviso). */
-export function importQuery(nome: string, ast: QueryGroup): SavedQuery[] {
-  return saveQuery(nome, ast);
-}

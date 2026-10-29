@@ -10,11 +10,12 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(import.meta.dirname, './src'),
       '@catasto/shared': path.resolve(import.meta.dirname, '../packages/shared/src/index.ts'),
     },
   },
   test: {
+    // I test di componenti e hook dichiarano `@vitest-environment jsdom`.
     environment: 'node',
+    setupFiles: ['./src/test/setup.ts'],
   },
 })

@@ -35,6 +35,14 @@ describe("buildQuery", () => {
     expect(params).toEqual([1, 2, 3]);
     expect(usedTables.has("tser")).toBe(true);
   });
+
+  it("ids: fuochi scelti a mano, fino a SELECTION_MAX_FUOCHI", () => {
+    const { conditions, params } = buildQuery({ ids: "7,3" });
+    expect(conditions).toContain("f.ID_Fuochi IN (?,?)");
+    expect(params).toEqual([7, 3]);
+    expect(() => buildQuery({ ids: Array.from({ length: 501 }, (_, i) => i + 1).join(",") })).toThrow(ValidationError);
+    expect(() => buildQuery({ ids: "1,x" })).toThrow(ValidationError);
+  });
 });
 
 describe("buildQuery - input ostili", () => {

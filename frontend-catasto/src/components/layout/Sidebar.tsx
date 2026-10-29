@@ -1,9 +1,8 @@
 import React, { useRef, useState, useEffect } from "react";
-import { List } from "lucide-react";
 import type { SidebarItem } from "@catasto/shared";
 import Spinner from "../common/Spinner";
 import { useIsDesktop } from "../../hooks/useMediaQuery";
-import { useT } from "../../i18n";
+import { useLanguage, useT } from "../../i18n";
 import { sidebarMessages } from "./Sidebar.messages";
 
 /** Altezza fissa delle voci: la lista è virtualizzata e calcola le posizioni. */
@@ -19,6 +18,8 @@ interface SidebarProps {
   handleSidebarClick: (id: number) => void;
   loadMoreSidebar: () => void;
   hasMore: boolean;
+  /** Fuochi della ricerca, mostrati accanto al titolo. */
+  totalRecords: number;
 }
 
 export default React.memo(function Sidebar({
@@ -31,8 +32,10 @@ export default React.memo(function Sidebar({
   handleSidebarClick,
   loadMoreSidebar,
   hasMore,
+  totalRecords,
 }: SidebarProps) {
   const t = useT(sidebarMessages);
+  const { locale } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const asideRef = useRef<HTMLElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -122,8 +125,8 @@ export default React.memo(function Sidebar({
           onClick={() => handleSidebarClick(row.id)}
           aria-current={isSelected ? "true" : undefined}
           className={`
-            w-full text-left p-2 rounded text-sm transition-colors h-full flex flex-col justify-center
-            ${isSelected ? "bg-primary text-on-primary" : "hover:bg-item-hover text-text-main"}
+ w-full text-left p-2 rounded-ui text-sm transition-colors h-full flex flex-col justify-center
+ ${isSelected ? "bg-primary text-on-primary" : "hover:bg-item-hover text-text-main"}
           `}
         >
           <div className="font-bold truncate font-serif">{row.nome}</div>
@@ -148,19 +151,21 @@ export default React.memo(function Sidebar({
         ref={asideRef}
         aria-label={t("ariaLabel")}
         className={`
-          bg-bg-sidebar border-r border-border-base flex flex-col 
-          transition-all duration-300 ease-in-out motion-reduce:transition-none
-          absolute top-0 left-0 bottom-0 z-30 shadow-2xl lg:shadow-none lg:static
-          ${isSidebarOpen ? "w-[80%] sm:w-72 translate-x-0" : "w-0 -translate-x-full opacity-0 lg:w-0"}
+ bg-bg-sidebar border-r border-border-base flex flex-col 
+ transition-all duration-300 ease-in-out motion-reduce:transition-none
+ absolute top-0 left-0 bottom-0 z-30 lg:static
+ ${isSidebarOpen ? "w-[80%] sm:w-72 translate-x-0" : "w-0 -translate-x-full opacity-0 lg:w-0"}
         `}
       >
         <div
           className="p-4 bg-bg-sidebar border-b border-border-base flex items-center justify-between whitespace-nowrap overflow-hidden flex-shrink-0"
           style={{ height: "60px" }}
         >
-          <h2 className="font-bold text-text-main uppercase text-xs tracking-wider flex items-center gap-2">
-            <List className="h-4 w-4" aria-hidden="true" /> {t("title")}
-          </h2>
+          <h2 className="font-semibold text-accent-strong text-base">{t("title")}</h2>
+          <span className="text-sm text-text-accent tabular-nums">
+            <span className="sr-only">{t("countLabel")} </span>
+            {totalRecords.toLocaleString(locale)}
+          </span>
         </div>
 
         <div className="flex-1 overflow-y-auto relative" ref={containerRef} onScroll={onScroll}>

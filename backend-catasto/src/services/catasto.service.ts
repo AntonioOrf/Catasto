@@ -13,7 +13,8 @@ import type {
   QueryGroup,
 } from "@catasto/shared";
 
-export type FuochiView = "table" | "sidebar";
+/** "banco": la vista tabella con bocche ed età media (Banco di lavoro). */
+export type FuochiView = "table" | "sidebar" | "banco";
 
 /** Campi di lookup della vista tabella e tabella del dump da cui vengono. */
 const FUOCO_LOOKUP_FIELDS: Partial<Record<keyof Fuoco, TabellaLookup>> = {
@@ -135,7 +136,7 @@ export class CatastoService {
 
     const [total, rows, traduttore] = await Promise.all([
       FuocoModel.count(filters.conditions, filters.params, filters.usedTables),
-      FuocoModel.findAll(query),
+      FuocoModel.findAll(query).then((r) => (view === "banco" ? FuocoModel.attachComposizione(r) : r)),
       TraduzioniModel.forLang(lang),
     ]);
     const data = traduttore.translateRows(rows, FUOCO_LOOKUP_FIELDS);
@@ -157,6 +158,24 @@ export class CatastoService {
 
   static queryFuochi(ast: QueryGroup, pagination: Pagination, view: FuochiView, lang: Lingua = "it") {
     return this.runQuery(buildQueryFromAst(ast), pagination, view, lang);
+  }
+
+  /**
+   * Fuochi per id, nell'ordine richiesto (confronto). Gli id inesistenti
+   * mancano dalla risposta: il client li riconosce confrontando gli id.
+   */
+  static async getFuochiByIds(ids: number[], lang: Lingua = "it"): Promise<Fuoco[]> {
+    const query: FuocoQuery = {
+      conditions: `WHERE f.ID_Fuochi IN (${ids.map(() => "?").join(",")})`,
+      params: ids,
+      usedTables: new Set(["f"]),
+      orderByClause: "ORDER BY f.ID_Fuochi",
+      limit: ids.length,
+      offset: 0,
+    };
+    const [rows, traduttore] = await Promise.all([FuocoModel.findAll(query), TraduzioniModel.forLang(lang)]);
+    const byId = new Map(traduttore.translateRows(rows, FUOCO_LOOKUP_FIELDS).map((f) => [Number(f.id), f]));
+    return ids.flatMap((id) => byId.get(id) ?? []);
   }
 
   static async getParenti(fuocoId: number, lang: Lingua = "it"): Promise<Parenti[]> {

@@ -1,3 +1,4 @@
+import type { Readable } from "node:stream";
 import pool from "../config/db.js";
 import { Fuoco, SidebarItem, volumeCatastoPortata } from "@catasto/shared";
 
@@ -26,7 +27,22 @@ const JOINS: ReadonlyArray<{ alias: string; sql: string; requires?: string }> = 
 /** Tutte le tabelle proiettate dalla vista completa della tabella. */
 const TABLE_VIEW_ALIASES = JOINS.map((j) => j.alias);
 
-function buildFrom(aliases: Iterable<string>): string {
+/** Colonne della vista tabella, condivise dalla pagina e dall'export. */
+const TABLE_SELECT = `
+      SELECT
+        f.ID_Fuochi as id, f.Nome_Fuoco as nome,
+        f.Imponibile_Fuoco as imponibile, f.Credito_Fuoco as credito,
+        f.CreditoM_Fuoco as credito_m, f.Fortune_Fuoco as fortune, f.Deduzioni_Fuoco as deduzioni,
+        f.Volume_Fuoco as volume, f.Foglio_Fuoco as foglio,
+        pf.Particolarita as particolarita_fuoco,
+        b.Bestiame as bestiame, i.Immigrazione as immigrazione, rm.RapportoLavoro as rapporto_mestiere,
+        m.Mestiere as mestiere, c.Casa as casa,
+        tq.nome_quartiere as quartiere, tp.nome_popolo as popolo,
+        tpi.nome_piviere as piviere, tser.nome_serie as serie,
+        tav.codice_archivio,
+        fs.segnatura as segnatura_portata`;
+
+export function buildFrom(aliases: Iterable<string>): string {
   const needed = new Set(aliases);
   for (const join of JOINS) {
     if (needed.has(join.alias) && join.requires) needed.add(join.requires);
@@ -54,23 +70,38 @@ export class FuocoModel {
   }
 
   static async findAll(q: FuocoQuery): Promise<Fuoco[]> {
-    const sql = `
-      SELECT
-        f.ID_Fuochi as id, f.Nome_Fuoco as nome,
-        f.Imponibile_Fuoco as imponibile, f.Credito_Fuoco as credito,
-        f.CreditoM_Fuoco as credito_m, f.Fortune_Fuoco as fortune, f.Deduzioni_Fuoco as deduzioni,
-        f.Volume_Fuoco as volume, f.Foglio_Fuoco as foglio,
-        pf.Particolarita as particolarita_fuoco,
-        b.Bestiame as bestiame, i.Immigrazione as immigrazione, rm.RapportoLavoro as rapporto_mestiere,
-        m.Mestiere as mestiere, c.Casa as casa,
-        tq.nome_quartiere as quartiere, tp.nome_popolo as popolo,
-        tpi.nome_piviere as piviere, tser.nome_serie as serie,
-        tav.codice_archivio,
-        fs.segnatura as segnatura_portata
-      ${buildFrom(TABLE_VIEW_ALIASES)} ${q.conditions} ${q.orderByClause} LIMIT ? OFFSET ?
-    `;
+    const sql = `${TABLE_SELECT} ${buildFrom(TABLE_VIEW_ALIASES)} ${q.conditions} ${q.orderByClause} LIMIT ? OFFSET ?`;
     const [rows]: any = await pool.query(sql, [...q.params, q.limit, q.offset]);
     return this.attachCodiciPortata(rows as Fuoco[]);
+  }
+
+  /**
+   * Tutte le righe della ricerca, senza paginazione, come stream di oggetti:
+   * l'export le scrive man mano invece di tenerle in memoria. Lo stream di
+   * mysql2 rispetta la backpressure (mette in pausa la connessione).
+   */
+  static streamAll(q: Pick<FuocoQuery, "conditions" | "params" | "orderByClause">): Readable {
+    const sql = `${TABLE_SELECT} ${buildFrom(TABLE_VIEW_ALIASES)} ${q.conditions} ${q.orderByClause}`;
+    return pool.pool.query(sql, q.params).stream();
+  }
+
+  /**
+   * Parenti dei fuochi della ricerca, una riga per parente (formato lungo),
+   * nello stesso ordine dei fuochi. Le etichette arrivano in italiano.
+   */
+  static streamParenti(q: Pick<FuocoQuery, "conditions" | "params" | "orderByClause" | "usedTables">): Readable {
+    const sql = `
+      SELECT p.ID_FUOCO as id_fuoco, f.Nome_Fuoco as nome_fuoco, p.Eta as eta,
+        rp.Parentela as parentela, sp.Sesso_Parenti as sesso,
+        scp.StatoCivle as stato_civile, pp.ParticolaritaParenti as particolarita
+      ${buildFrom(q.usedTables)}
+      JOIN parenti p ON p.ID_FUOCO = f.ID_Fuochi
+      LEFT JOIN rapporti_parentela rp ON p.Parentela = rp.ID_Parentela
+      LEFT JOIN sesso_parenti sp ON p.Sesso = sp.ID_Sesso_Parenti
+      LEFT JOIN statocivile_parenti scp ON p.StatoCivile = scp.ID_StatoCivile
+      LEFT JOIN particolarita_parenti pp ON p.Particolarita = pp.ID_ParticolaritaParenti
+      ${q.conditions} ${q.orderByClause}`;
+    return pool.pool.query(sql, q.params).stream();
   }
 
   /**
@@ -96,6 +127,32 @@ export class FuocoModel {
     );
     for (const [row, volume] of volumi) {
       row.codice_archivio_portata = byVolume.get(volume) ?? null;
+    }
+    return rows;
+  }
+
+  /**
+   * Bocche (parenti registrati) ed età media dei fuochi di una pagina, per il
+   * Banco di lavoro: una sola query raggruppata sugli id della pagina invece
+   * di una sottoquery per riga. Un fuoco senza parenti ha 0 bocche.
+   */
+  static async attachComposizione(rows: Fuoco[]): Promise<Fuoco[]> {
+    if (rows.length === 0) return rows;
+    const ids = rows.map((r) => Number(r.id));
+    const [stats]: any = await pool.query(
+      "SELECT ID_FUOCO AS id, COUNT(*) AS bocche, AVG(Eta) AS eta_media FROM parenti WHERE ID_FUOCO IN (?) GROUP BY ID_FUOCO",
+      [ids],
+    );
+    const byId = new Map<number, { bocche: number; eta_media: number | null }>(
+      (stats as { id: number; bocche: number; eta_media: string | number | null }[]).map((r) => [
+        Number(r.id),
+        { bocche: Number(r.bocche), eta_media: r.eta_media === null ? null : Number(r.eta_media) },
+      ]),
+    );
+    for (const row of rows) {
+      const c = byId.get(Number(row.id));
+      row.bocche = c?.bocche ?? 0;
+      row.eta_media = c?.eta_media ?? null;
     }
     return rows;
   }

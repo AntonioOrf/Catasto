@@ -2,11 +2,16 @@ node_modules
 **/node_modules
 dist
 **/dist
-dist-ssr
+**/dist-ssr
 .git
 .gitignore
 .github
 docker-compose.yml
+# Il contesto di build delle due immagini è la root: questo è l'unico
+# .dockerignore che Docker legge, anche per le regole dei workspace. I
+# Dockerfile servono solo al builder, non dentro le immagini.
+**/Dockerfile
+**/.dockerignore
 # Segreti e dati: il contesto di build non deve mai includerli, nemmeno
 # nello stage intermedio (COPY . .).
 .env

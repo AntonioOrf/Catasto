@@ -1,7 +1,9 @@
 name: Docker images
 
 # Pubblica le immagini su Docker Hub a ogni merge su main, solo se la CI è
-# passata: un'immagine rotta non deve mai diventare "latest".
+# passata: un'immagine rotta non deve mai diventare "latest". Avviato a mano
+# da un ramo diverso da main pubblica solo il tag :sha, per provare
+# un'immagine senza toccare quella in produzione.
 on:
   workflow_run:
     workflows: [CI]
@@ -40,6 +42,22 @@ jobs:
         id: sha
         run: echo "short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
+      # :latest solo per il main: da workflow_run (che parte solo dal main) o da
+      # un avvio manuale sul main.
+      - name: Tags
+        id: tags
+        env:
+          IMAGE: ipavon/catasto1427-${{ matrix.app }}
+          SHORT: ${{ steps.sha.outputs.short }}
+          LATEST: ${{ github.event_name == 'workflow_run' || github.ref == 'refs/heads/main' }}
+        run: |
+          {
+            echo "list<<EOF"
+            echo "$IMAGE:$SHORT"
+            if [ "$LATEST" = "true" ]; then echo "$IMAGE:latest"; fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       # Il contesto è la radice del monorepo: il Dockerfile copia anche
       # packages/shared.
       - uses: docker/build-push-action@v6
@@ -47,8 +65,6 @@ jobs:
           context: .
           file: ${{ matrix.app }}-catasto/Dockerfile
           push: true
-          tags: |
-            ipavon/catasto1427-${{ matrix.app }}:latest
-            ipavon/catasto1427-${{ matrix.app }}:${{ steps.sha.outputs.short }}
+          tags: ${{ steps.tags.outputs.list }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}

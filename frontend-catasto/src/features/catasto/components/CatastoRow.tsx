@@ -1,28 +1,14 @@
 import React, { forwardRef } from "react";
-import {
-  Briefcase,
-  Layers,
-  Coins,
-  Home,
-  Bookmark,
-  FileText,
-  ChevronDown,
-  ChevronRight,
-  Info,
-  Users,
-  PawPrint,
-  Flag,
-  Hammer,
-  ExternalLink,
-  ScrollText,
-  type LucideIcon,
-} from "lucide-react";
-import type { Fuoco, Parenti, TipoSegnalazione } from "@catasto/shared";
+import { BookOpen, ChevronDown, ChevronRight } from "lucide-react";
+import { SELECTION_MAX_FUOCHI, type Fuoco, type Parenti, type TipoSegnalazione } from "@catasto/shared";
 import type { RiferimentoArchivio } from "../lib/archivio";
 import { parseSegnaturaPortata } from "../lib/segnatura";
-import { eta, fiorini, piviereEPopolo } from "../lib/formato";
+import { cifra, eta, nonIndicato, piviereEPopolo } from "../lib/formato";
 import { useLanguage, useT } from "../../../i18n";
 import { catastoRowMessages } from "./CatastoRow.messages";
+import { useOptionalCompare } from "../../compare/compare-context";
+import GlossaryTerm from "../../glossary/GlossaryTerm";
+import { compareMessages } from "../../compare/compare.messages";
 
 export interface CatastoRowProps {
   row: Fuoco;
@@ -35,23 +21,15 @@ export interface CatastoRowProps {
   onSegnala?: (row: Fuoco, tipo?: TipoSegnalazione) => void;
 }
 
-const smallLabel = "text-[11px] md:text-xs text-text-accent uppercase block";
-const sectionTitle =
-  "text-xs md:text-sm font-bold text-primary uppercase tracking-wider mb-2 md:mb-3 flex items-center gap-2 border-b border-border-base pb-1";
-const dashedSection = "pt-2 border-t border-dashed border-border-base";
-
 /**
- * Riga e card si espandono al click: senza questo handler restano
- * irraggiungibili da tastiera. Il controllo sul target evita che Invio su un
- * pulsante interno (visore, segnalazione) espanda anche la riga.
+ * Riga e scheda del fuoco secondo la revisione grafica (#44, #45): niente
+ * icone sui dati, etichette in maiuscoletto vero, numeri in cifre tabellari,
+ * riferimenti come link nel carattere del sito. L'unica icona dei dati è il
+ * libro, che dice che il link apre la carta.
  */
-const toggleOnKey = (id: number, onRowClick: (id: number) => void) => (e: React.KeyboardEvent) => {
-  if (e.target !== e.currentTarget) return;
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    onRowClick(id);
-  }
-};
+
+const smallCapsLabel = "small-caps text-text-accent";
+const missing = "italic text-text-accent";
 
 /** Esegue `action` senza propagare il click alla riga, che altrimenti si espanderebbe. */
 const stop = (action: () => void) => (e: React.MouseEvent) => {
@@ -59,323 +37,277 @@ const stop = (action: () => void) => (e: React.MouseEvent) => {
   action();
 };
 
-const ExpandIcon = ({ expanded }: { expanded: boolean }) =>
-  expanded ? (
-    <ChevronDown className="h-5 w-5 text-primary" aria-hidden="true" />
-  ) : (
-    <ChevronRight className="h-5 w-5 text-text-accent opacity-50" aria-hidden="true" />
-  );
+/** Id del dettaglio espanso, per aria-controls. */
+const detailsId = (id: number) => `fuoco-dettagli-${id}`;
 
-/** Etichetta che distingue campione e portata, uguale nei due riquadri. */
-const RefLabel = ({ children }: { children: string }) => (
-  <span className="font-sans text-[10px] uppercase tracking-wider text-text-accent">{children}</span>
-);
-
-/** Righe "Vol." e "c." del riquadro, identiche per campione e portata. */
-const VolumeCarta = ({ volume, carta, link = false }: { volume: string; carta: string; link?: boolean }) => {
+/**
+ * Unico controllo da tastiera per aprire e chiudere la scheda: prima era la
+ * riga stessa (tabIndex=0), che conteneva altri pulsanti, cioè interattivi
+ * annidati. Il clic sul resto della riga resta come scorciatoia col mouse.
+ */
+const ExpandButton = ({ row, expanded, onRowClick }: Pick<CatastoRowProps, "row" | "expanded" | "onRowClick">) => {
   const t = useT(catastoRowMessages);
+  const label = t(expanded ? "collapseDetails" : "expandDetails", { nome: row.nome });
   return (
-    <>
-      <span className="flex items-center gap-2">
-        <Bookmark className="h-3 w-3 text-primary flex-shrink-0" aria-hidden="true" />
-        <span className="font-bold">{t("vol")}</span>
-        <span className={link ? "text-primary underline underline-offset-2" : ""}>{volume}</span>
-      </span>
-      <span className="flex items-center gap-2">
-        <FileText className="h-3 w-3 text-primary flex-shrink-0" aria-hidden="true" />
-        <span className="font-bold">{t("carta")}</span>
-        <span className={link ? "text-primary underline underline-offset-2" : ""}>{carta}</span>
-      </span>
-    </>
+    <button
+      type="button"
+      onClick={stop(() => onRowClick(row.id))}
+      aria-expanded={expanded}
+      aria-controls={expanded ? detailsId(row.id) : undefined}
+      aria-label={label}
+      title={label}
+      className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-ui text-text-accent hover:text-primary hover:bg-primary/10 transition-colors"
+    >
+      {expanded ? <ChevronDown className="h-5 w-5 text-primary" aria-hidden="true" /> : <ChevronRight className="h-5 w-5" aria-hidden="true" />}
+    </button>
   );
-};
-
-const refBase = {
-  block: "flex flex-col gap-1 text-sm text-text-main font-mono p-2 rounded w-fit border text-left",
-  inline: "inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded border",
-};
-const refStatic = {
-  block: "border-border-base bg-bg-sidebar",
-  inline: "text-text-accent bg-bg-sidebar border-border-base",
 };
 
 /**
- * Riferimento del campione: pulsante verso il visore quando il volume è
- * digitalizzato, testo semplice altrimenti.
+ * Casella del confronto: piccola e senza testo nella tabella, perché la
+ * scelta è un'azione secondaria; il nome accessibile dice cosa fa. Fuori
+ * dalla home (nessun provider) non c'è.
  */
-const ArchiveReference = ({
-  row,
-  onViewArchivio,
-  variant,
+export const CompareCheckbox = ({ row, withLabel = false }: { row: Fuoco; withLabel?: boolean }) => {
+  const compare = useOptionalCompare();
+  const t = useT(compareMessages);
+  if (!compare) return null;
+  const checked = compare.isSelected(row.id);
+  const disabled = !checked && compare.full;
+  return (
+    <label
+      onClick={(e) => e.stopPropagation()}
+      title={disabled ? t("full", { max: SELECTION_MAX_FUOCHI }) : undefined}
+      className={`inline-flex items-center justify-center gap-1.5 min-h-8 min-w-8 text-sm ${
+        disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+      } ${checked ? "text-primary" : "text-text-accent"}`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={() => compare.toggle(row)}
+        aria-label={t("checkboxAria", { nome: row.nome })}
+        className="h-[15px] w-[15px] m-0"
+      />
+      {withLabel && <span aria-hidden="true">{t("checkbox")}</span>}
+    </label>
+  );
+};
+
+/** Link alla carta: testo nel carattere del sito con l'icona del libro; testo semplice se il volume non è digitalizzato. */
+const CartaLink = ({
+  text,
+  ariaLabel,
+  title,
+  onOpen,
 }: {
-  row: Fuoco;
-  onViewArchivio?: CatastoRowProps["onViewArchivio"];
-  variant: "block" | "inline";
+  text: string;
+  ariaLabel: string;
+  title?: string;
+  onOpen?: () => void;
 }) => {
+  if (!onOpen) return <span title={title}>{text}</span>;
+  return (
+    <button
+      type="button"
+      onClick={stop(onOpen)}
+      aria-label={ariaLabel}
+      title={title}
+      className="inline-flex items-center gap-1.5 min-h-8 text-left text-primary underline underline-offset-[3px] decoration-primary/50 hover:decoration-primary"
+    >
+      <BookOpen className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+      <span>{text}</span>
+    </button>
+  );
+};
+
+/** «campione» in maiuscoletto e «Vol. 72, c. 33» come link; la portata, quando è nota, uguale. */
+const References = ({ row, onViewArchivio }: Pick<CatastoRowProps, "row" | "onViewArchivio">) => {
   const t = useT(catastoRowMessages);
-  const canView = Boolean(row.codice_archivio && onViewArchivio);
   const volume = row.volume || "?";
   const foglio = row.foglio || "?";
+  const canViewCampione = Boolean(row.codice_archivio && onViewArchivio);
 
-  const content =
-    variant === "block" ? (
-      <>
-        <RefLabel>{t("campione")}</RefLabel>
-        <VolumeCarta volume={volume} carta={foglio} link={canView} />
-      </>
-    ) : (
-      <>
-        <RefLabel>{t("campione")}</RefLabel>
-        <span>
-          {t("vol")} {volume} {t("carta")} {foglio}
-        </span>
-        {canView && <ExternalLink className="h-3 w-3" aria-hidden="true" />}
-      </>
-    );
-
-  if (!canView) {
-    return <span className={`${refBase[variant]} ${refStatic[variant]}`}>{content}</span>;
-  }
+  const portata = row.segnatura_portata ? parseSegnaturaPortata(row.segnatura_portata) : null;
+  const canViewPortata = Boolean(portata && row.codice_archivio_portata && portata.volume && portata.carta && onViewArchivio);
+  const portataText = portata
+    ? [portata.fondo, portata.volume && portata.carta ? `${t("vol")} ${portata.volume}, ${t("carta")} ${portata.carta}` : portata.testo]
+        .filter(Boolean)
+        .join(", ")
+    : "";
 
   return (
-    <button
-      type="button"
-      onClick={stop(() => onViewArchivio?.(row, "campione"))}
-      title={t("viewManuscript")}
-      aria-label={t("campioneAria", { volume, carta: foglio })}
-      className={`${refBase[variant]} ${
-        variant === "block"
-          ? "border-primary/50 bg-primary/5 hover:bg-primary/10 shadow-sm"
-          : "text-primary bg-primary/10 hover:bg-primary/20 border-primary/20 min-h-8"
-      } transition-colors`}
-    >
-      {content}
-    </button>
+    <div className="flex flex-col gap-1 text-sm">
+      <div>
+        <span className={`block ${smallCapsLabel}`}>{t("campione")}</span>
+        <CartaLink
+          text={`${t("vol")} ${volume}, ${t("carta")} ${foglio}`}
+          ariaLabel={t("campioneAria", { volume, carta: foglio })}
+          title={canViewCampione ? t("viewManuscript") : t("notDigitized")}
+          onOpen={canViewCampione ? () => onViewArchivio?.(row, "campione") : undefined}
+        />
+      </div>
+      {portata && (
+        <div>
+          <span className={`block ${smallCapsLabel}`}>{t("portata")}</span>
+          <CartaLink
+            text={portataText}
+            ariaLabel={t("portataAria", { volume: portata.volume ?? "", carta: portata.carta ?? "" })}
+            title={canViewPortata ? t("viewPortata", { segnatura: row.segnatura_portata ?? "" }) : t("portataTitle", { segnatura: row.segnatura_portata ?? "" })}
+            onOpen={canViewPortata ? () => onViewArchivio?.(row, "portata") : undefined}
+          />
+        </div>
+      )}
+    </div>
   );
 };
 
-/**
- * La segnatura della portata non esiste nel dump dell'Archivio: compare solo
- * per i fuochi in cui una segnalazione è stata verificata e accettata. Sta
- * accanto al campione, nello stesso formato; il fondo compare solo se non è
- * ASFi, Catasto. Quando manca non si mostra nulla - né etichetta né
- * placeholder - perché un "N/D" suggerirebbe un dato assente per quel fuoco
- * invece che per l'intera fonte. Se il volume della portata è digitalizzato
- * (il backend ne ha trovato il codice d'archivio) apre il visore come il
- * campione.
- */
-const PortataReference = ({
-  row,
-  onViewArchivio,
-  variant,
-}: {
-  row: Fuoco;
-  onViewArchivio?: CatastoRowProps["onViewArchivio"];
-  variant: "block" | "inline";
-}) => {
-  const t = useT(catastoRowMessages);
-  if (!row.segnatura_portata) return null;
-  const { fondo, volume, carta, testo } = parseSegnaturaPortata(row.segnatura_portata);
-  const canView = Boolean(row.codice_archivio_portata && volume && carta && onViewArchivio);
-
-  let content: React.ReactNode;
-  if (variant === "inline") {
-    const rif = volume && carta ? `${t("vol")} ${volume} ${t("carta")} ${carta}` : testo;
-    content = (
-      <>
-        <RefLabel>{t("portata")}</RefLabel>
-        <span>{fondo ? `${fondo}, ${rif}` : rif}</span>
-        {canView && <ExternalLink className="h-3 w-3" aria-hidden="true" />}
-      </>
-    );
-  } else {
-    content = (
-      <>
-        <RefLabel>{t("portata")}</RefLabel>
-        {fondo && (
-          <span className="flex items-start gap-2">
-            <ScrollText className="h-3 w-3 text-primary flex-shrink-0 mt-1" aria-hidden="true" />
-            <span>{fondo}</span>
-          </span>
-        )}
-        {volume && carta ? (
-          <VolumeCarta volume={volume} carta={carta} link={canView} />
-        ) : (
-          <span className="flex items-start gap-2">
-            <Bookmark className="h-3 w-3 text-primary flex-shrink-0 mt-1" aria-hidden="true" />
-            <span>{testo}</span>
-          </span>
-        )}
-      </>
-    );
-  }
-
-  const blockWidth = variant === "block" ? " max-w-48" : "";
-  if (!canView) {
-    return (
-      <span
-        className={`${refBase[variant]} ${refStatic[variant]}${blockWidth}`}
-        title={variant === "inline" ? t("portataTitle", { segnatura: row.segnatura_portata }) : row.segnatura_portata}
-      >
-        {content}
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={stop(() => onViewArchivio?.(row, "portata"))}
-      title={t("viewPortata", { segnatura: row.segnatura_portata })}
-      aria-label={t("portataAria", { volume: volume ?? "", carta: carta ?? "" })}
-      className={`${refBase[variant]}${blockWidth} ${
-        variant === "block"
-          ? "border-primary/50 bg-primary/5 hover:bg-primary/10 shadow-sm"
-          : "text-primary bg-primary/10 hover:bg-primary/20 border-primary/20 min-h-8"
-      } transition-colors`}
-    >
-      {content}
-    </button>
-  );
-};
-
+/** La serie in maiuscoletto, poi quartiere e «piviere » popolo» sotto un filetto verticale. */
 const Location = ({ row }: { row: Fuoco }) => {
   const t = useT(catastoRowMessages);
   const dettaglio = piviereEPopolo(row.piviere, row.popolo);
   return (
-    <>
-      <div className="font-bold text-primary flex items-center gap-1">
-        <Layers className="h-3 w-3 flex-shrink-0" aria-hidden="true" /> {row.serie || t("serieNd")}
-      </div>
-      <div className="text-text-main ml-2 border-l-2 border-border-base pl-2">{row.quartiere || t("quartiereNd")}</div>
-      {dettaglio && (
-        <div className="text-text-accent ml-2 border-l-2 border-border-base pl-2 italic text-[11px] md:text-xs leading-snug">
-          {dettaglio}
-        </div>
-      )}
-    </>
-  );
-};
-
-const DetailItem = ({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) => (
-  <div>
-    <span className={smallLabel}>{label}</span>
-    <span className={strong ? "font-bold text-primary text-sm md:text-lg" : "font-bold text-text-main"}>{value}</span>
-  </div>
-);
-
-const DetailRow = ({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value?: string }) => {
-  const t = useT(catastoRowMessages);
-  return (
-    <div className="flex items-start gap-2">
-      <Icon className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" aria-hidden="true" />
-      <div>
-        <span className={smallLabel}>{label}</span>
-        <span className="text-text-main">{value || t("noData")}</span>
+    <div className="text-sm">
+      <div className={`small-caps text-base ${row.serie ? "text-accent-strong" : "text-text-accent"}`}>{row.serie || t("serieNd")}</div>
+      <div className="border-l-2 border-border-base/40 pl-2 mt-0.5">
+        <div className={row.quartiere ? "text-text-main" : missing}>{row.quartiere || t("quartiereNd")}</div>
+        {dettaglio && <div className="text-text-accent italic leading-snug">{dettaglio}</div>}
       </div>
     </div>
   );
 };
 
-/** Invito a contribuire, nel dettaglio espanso, solo se la portata non è nota. */
-const SegnaturaPortataMancante = ({ row, onSegnala }: Pick<CatastoRowProps, "row" | "onSegnala">) => {
-  const t = useT(catastoRowMessages);
-  return !row.segnatura_portata && onSegnala ? (
-    <button
-      type="button"
-      onClick={stop(() => onSegnala(row, "segnatura"))}
-      className="min-h-11 text-left text-[11px] md:text-xs text-text-accent hover:text-primary underline underline-offset-2 transition-colors"
-    >
-      {t("portataMissing")}
-    </button>
-  ) : null;
-};
-
-const SegnalaButton = ({ row, onSegnala }: Pick<CatastoRowProps, "row" | "onSegnala">) => {
-  const t = useT(catastoRowMessages);
-  if (!onSegnala) return null;
-  return (
-    <button
-      type="button"
-      onClick={stop(() => onSegnala(row, "dato_errato"))}
-      className="flex items-center gap-1 min-h-11 text-[11px] md:text-xs text-text-accent hover:text-primary transition-colors uppercase tracking-wider"
-      title={t("reportTitle")}
-    >
-      <Flag className="h-3.5 w-3.5" aria-hidden="true" /> {t("report")}
-    </button>
-  );
-};
-
-const EconomicDetails = ({ row, onSegnala }: Pick<CatastoRowProps, "row" | "onSegnala">) => {
+/** La cifra in grassetto con «fiorini» in maiuscoletto; il dato assente resta assente. */
+const Fiorini = ({ value }: { value: number | null | undefined }) => {
   const t = useT(catastoRowMessages);
   const { lang } = useLanguage();
+  const n = cifra(value, lang);
+  if (n === null) return <span className={missing}>{nonIndicato(lang)}</span>;
   return (
-    <div>
-      <h3 className={sectionTitle}>
-        <Info className="h-4 w-4" aria-hidden="true" /> {t("economicDetails")}
-      </h3>
-      <div className="bg-bg-main p-3 md:p-4 rounded border border-border-base shadow-sm space-y-3 md:space-y-4 text-xs md:text-sm">
-        <div className="grid grid-cols-2 gap-3 md:gap-4">
-          <DetailItem label={t("credito")} value={fiorini(row.credito, lang)} />
-          <DetailItem label={t("creditoM")} value={fiorini(row.credito_m, lang)} />
-          <DetailItem label={t("fortune")} value={fiorini(row.fortune, lang)} />
-          <DetailItem label={t("deduzioni")} value={fiorini(row.deduzioni, lang)} />
-          <DetailItem label={t("imponibile")} value={fiorini(row.imponibile, lang)} strong />
-        </div>
-        <div className={`${dashedSection} space-y-2`}>
-          <DetailRow icon={PawPrint} label={t("bestiame")} value={row.bestiame} />
-          <DetailRow icon={Flag} label={t("immigrazione")} value={row.immigrazione} />
-          <DetailRow icon={Hammer} label={t("rapporto")} value={row.rapporto_mestiere} />
-        </div>
-        <div className={dashedSection}>
-          <span className={`${smallLabel} mb-1`}>{t("particolarita")}</span>
-          <p className="italic text-text-main bg-bg-sidebar p-2 rounded border border-border-base">
-            {row.particolarita_fuoco || t("noParticolarita")}
-          </p>
-        </div>
-        <div className={`${dashedSection} flex flex-wrap items-center justify-between gap-2`}>
-          <SegnaturaPortataMancante row={row} onSegnala={onSegnala} />
-          <SegnalaButton row={row} onSegnala={onSegnala} />
-        </div>
-      </div>
+    <span>
+      <span className="font-bold tabular-nums">{n}</span> <span className={smallCapsLabel}>{t("fiorini")}</span>
+    </span>
+  );
+};
+
+const Summary = ({ row }: { row: Fuoco }) => {
+  const t = useT(catastoRowMessages);
+  return (
+    <div className="text-base">
+      <Fiorini value={row.fortune} />
+      <div className="text-sm italic text-text-accent">{row.casa || t("nd")}</div>
     </div>
   );
 };
 
-const FamilyComposition = ({ loading, parenti }: { loading: boolean; parenti: Parenti[] }) => {
+/* ---------- Scheda del fuoco (#45) ---------- */
+
+const sectionTitle = "text-base md:text-lg font-semibold text-accent-strong border-b border-border-base pb-1 mb-3";
+
+/** Una riga del conto: etichetta, glossario e cifra allineata a destra. */
+const ContoRow = ({ label, term, value, minus = false }: { label: string; term: string; value: number | null | undefined; minus?: boolean }) => {
+  const { lang } = useLanguage();
+  const n = cifra(value, lang);
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-1">
+      <dt className="flex items-center gap-1">
+        {label} <GlossaryTerm id={term} />
+      </dt>
+      <dd className="m-0 tabular-nums text-right">
+        {n === null ? <span className={missing}>{nonIndicato(lang)}</span> : minus && Number(value) !== 0 ? `− ${n}` : n}
+      </dd>
+    </div>
+  );
+};
+
+/** Voce in maiuscoletto con il valore sotto; «nessun dato» in corsivo attenuato. */
+const Voce = ({ label, value }: { label: string; value?: string | null }) => {
   const t = useT(catastoRowMessages);
   return (
     <div>
-      <h3 className={sectionTitle}>
-        <Users className="h-4 w-4" aria-hidden="true" /> {t("family")}
+      <dt className={`${smallCapsLabel} text-sm`}>{label}</dt>
+      <dd className={`m-0 ${value ? "text-text-main" : missing}`}>{value || t("noData")}</dd>
+    </div>
+  );
+};
+
+const EconomicDetails = ({ row }: { row: Fuoco }) => {
+  const t = useT(catastoRowMessages);
+  const { lang } = useLanguage();
+  const imponibile = cifra(row.imponibile, lang);
+  return (
+    <section aria-labelledby={`${detailsId(row.id)}-eco`}>
+      <h3 id={`${detailsId(row.id)}-eco`} className={sectionTitle}>
+        {t("economicDetails")}
+      </h3>
+      {/* La stima si legge come un conto: le voci, le deduzioni col meno, il totale sotto un filetto. */}
+      <dl className="m-0 text-sm md:text-base">
+        <ContoRow label={t("fortune")} term="fortune" value={row.fortune} />
+        <ContoRow label={t("credito")} term="credito" value={row.credito} />
+        <ContoRow label={t("creditoM")} term="credito_m" value={row.credito_m} />
+        <ContoRow label={t("deduzioni")} term="deduzioni" value={row.deduzioni} minus />
+        <div className="flex items-baseline justify-between gap-4 pt-2 mt-1 border-t border-border-base font-bold text-accent-strong">
+          <dt className="flex items-center gap-1">
+            {t("imponibile")} <GlossaryTerm id="imponibile" />
+          </dt>
+          <dd className="m-0 tabular-nums text-right">{imponibile ?? <span className={`${missing} font-normal`}>{nonIndicato(lang)}</span>}</dd>
+        </div>
+      </dl>
+
+      <dl className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm md:text-base">
+        <Voce label={t("bestiame")} value={row.bestiame} />
+        <Voce label={t("immigrazione")} value={row.immigrazione} />
+        <Voce label={t("rapporto")} value={row.rapporto_mestiere} />
+      </dl>
+
+      <div className="mt-4 pt-3 border-t border-dotted border-border-base text-sm md:text-base">
+        <h4 className={`${smallCapsLabel} text-sm font-normal`}>{t("particolarita")}</h4>
+        <p className={`m-0 ${row.particolarita_fuoco ? "text-text-main" : missing}`}>
+          {row.particolarita_fuoco || t("noParticolarita")}
+        </p>
+      </div>
+    </section>
+  );
+};
+
+const FamilyComposition = ({ row, loading, parenti }: { row: Fuoco; loading: boolean; parenti: Parenti[] }) => {
+  const t = useT(catastoRowMessages);
+  const title = loading
+    ? t("family")
+    : parenti.length === 1
+      ? t("familyCountOne")
+      : t("familyCount", { n: parenti.length });
+  return (
+    <section aria-labelledby={`${detailsId(row.id)}-fam`}>
+      <h3 id={`${detailsId(row.id)}-fam`} className={sectionTitle}>
+        {title}
       </h3>
       {loading ? (
-        <div className="text-sm text-text-accent italic" role="status">{t("loading")}</div>
+        <p className="text-sm text-text-accent italic" role="status">{t("loading")}</p>
       ) : parenti.length > 0 ? (
-        <div className="overflow-x-auto border border-border-base rounded-md bg-bg-main">
-          <table className="min-w-full divide-y divide-border-base">
-            <thead className="bg-primary/10">
-              <tr>
-                {[t("colRelative"), t("colAge"), t("colStatus")].map((label) => (
-                  <th key={label} scope="col" className="px-2 py-2 text-left text-[11px] md:text-xs font-medium text-primary uppercase">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm md:text-base">
+            <thead>
+              <tr className="border-b border-border-base">
+                {[t("colRelative"), t("colAge"), t("colStatus")].map((label, i) => (
+                  <th key={label} scope="col" className={`py-1.5 pr-3 font-semibold text-accent-strong ${i === 1 ? "text-right" : "text-left"}`}>
                     {label}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="bg-bg-main divide-y divide-border-base">
+            <tbody>
               {parenti.map((parente, idx) => (
-                <tr key={idx} className="text-xs md:text-sm text-text-main">
-                  <td className="px-2 py-2 font-medium">
+                <tr key={idx} className="border-b border-border-base/30 align-top">
+                  <td className="py-1.5 pr-3">
                     {parente.parentela_desc || t("member")}
-                    {parente.sesso && <span className="text-[11px] text-text-accent ml-1">({parente.sesso})</span>}
+                    {parente.sesso && <span className={`${smallCapsLabel} ml-1.5`}>{parente.sesso}</span>}
                   </td>
-                  <td className="px-2 py-2">{eta(parente.eta)}</td>
-                  <td className="px-2 py-2">
-                    <div className="flex flex-col">
-                      <span>{parente.stato_civile}</span>
-                      <span className="text-[11px] italic text-text-accent">{parente.particolarita}</span>
-                    </div>
+                  <td className="py-1.5 pr-3 text-right tabular-nums">{eta(parente.eta)}</td>
+                  <td className="py-1.5 pr-3">
+                    {parente.stato_civile}
+                    {parente.particolarita && <span className="block text-sm italic text-text-accent">{parente.particolarita}</span>}
                   </td>
                 </tr>
               ))}
@@ -383,78 +315,97 @@ const FamilyComposition = ({ loading, parenti }: { loading: boolean; parenti: Pa
           </table>
         </div>
       ) : (
-        <div className="text-xs md:text-sm text-text-accent italic p-3 border border-dashed border-border-base rounded bg-bg-sidebar">
-          {t("noRelatives")}
-        </div>
+        <p className={`text-sm ${missing}`}>{t("noRelatives")}</p>
+      )}
+    </section>
+  );
+};
+
+/** Riga delle azioni, solo testo; l'unica icona è il libro della carta. */
+const Actions = ({ row, onViewArchivio, onSegnala }: Pick<CatastoRowProps, "row" | "onViewArchivio" | "onSegnala">) => {
+  const t = useT(catastoRowMessages);
+  const link = "min-h-11 inline-flex items-center gap-1.5 text-left underline underline-offset-[3px] hover:decoration-2";
+  return (
+    <div className="mt-6 pt-3 border-t border-border-base flex flex-wrap items-center gap-x-6 gap-y-1 text-sm md:text-base">
+      {row.codice_archivio && onViewArchivio && (
+        <button type="button" onClick={stop(() => onViewArchivio(row, "campione"))} className={`${link} text-primary`}>
+          <BookOpen className="h-4 w-4" aria-hidden="true" />
+          {t("openCarta", { carta: row.foglio || "?" })}
+        </button>
+      )}
+      {!row.segnatura_portata && onSegnala && (
+        <button type="button" onClick={stop(() => onSegnala(row, "segnatura"))} className={`${link} text-text-accent hover:text-primary`}>
+          {t("portataMissing")}
+        </button>
+      )}
+      {onSegnala && (
+        <button type="button" onClick={stop(() => onSegnala(row, "dato_errato"))} className={`${link} text-text-accent hover:text-primary`} title={t("reportTitle")}>
+          {t("report")}
+        </button>
       )}
     </div>
   );
 };
 
 /** Contenuto espanso, identico in tabella e card. */
-const ExpandedDetails = ({ row, loadingParenti, parentiData, onSegnala }: Omit<CatastoRowProps, "expanded" | "onRowClick" | "onViewArchivio">) => (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
-    <EconomicDetails row={row} onSegnala={onSegnala} />
-    <FamilyComposition loading={loadingParenti} parenti={parentiData} />
-  </div>
+const ExpandedDetails = ({ row, loadingParenti, parentiData, onSegnala, onViewArchivio }: Omit<CatastoRowProps, "expanded" | "onRowClick">) => (
+  <>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
+      <EconomicDetails row={row} />
+      <FamilyComposition row={row} loading={loadingParenti} parenti={parentiData} />
+    </div>
+    <Actions row={row} onViewArchivio={onViewArchivio} onSegnala={onSegnala} />
+  </>
 );
+
+/* ---------- Riga della tabella (#44) ---------- */
 
 const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
   ({ row, expanded, onRowClick, loadingParenti, parentiData, onViewArchivio, onSegnala }, ref) => {
     const t = useT(catastoRowMessages);
-    const { lang } = useLanguage();
+    const selected = useOptionalCompare()?.isSelected(row.id) ?? false;
+    // Riga aperta o selezionata: fondo appena tinto e un filetto a sinistra, sulla riga e sul dettaglio.
+    const filetto = `border-l-[3px] ${expanded || selected ? "border-l-primary" : "border-l-transparent"}`;
     return (
       <>
         <tr
           ref={ref}
           onClick={() => onRowClick(row.id)}
-          onKeyDown={toggleOnKey(row.id, onRowClick)}
-          tabIndex={0}
-          aria-expanded={expanded}
-          className={`cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2 border-b border-border-base ${
-            expanded ? "bg-primary/10" : "bg-bg-table hover:bg-primary/5"
+          className={`cursor-pointer transition-colors border-b border-border-base/40 align-top ${
+            expanded ? "bg-item-selected-open" : selected ? "bg-primary/5" : "bg-bg-table hover:bg-primary/5"
           }`}
         >
-          <td className="px-6 py-4">
-            <div className="text-lg font-medium text-text-main font-serif leading-tight">{row.nome}</div>
-            <div className="text-xs text-text-accent flex items-center gap-1 mt-1">
-              <Briefcase className="h-3 w-3" aria-hidden="true" /> {row.mestiere || t("noOccupation")}
-            </div>
+          <td className={`pl-3 pr-0 py-4 w-10 ${filetto}`}>
+            <CompareCheckbox row={row} />
           </td>
-
-          <td className="px-6 py-4">
-            <div className="flex flex-col gap-1 text-sm">
-              <Location row={row} />
-            </div>
+          <td className="px-4 py-4">
+            <div className={`text-lg leading-tight ${expanded ? "text-accent-strong font-semibold" : "text-text-main"}`}>{row.nome}</div>
+            <div className={`text-sm italic mt-0.5 ${row.mestiere ? "text-text-accent" : "text-text-accent/80"}`}>{row.mestiere || t("noOccupation")}</div>
           </td>
-
-          <td className="px-6 py-4">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-1 text-primary font-bold font-serif text-base tabular-nums">
-                <Coins className="h-4 w-4" aria-hidden="true" /> {fiorini(row.fortune, lang)}
-              </div>
-              <div className="flex items-center gap-1 text-xs text-text-main opacity-80">
-                <Home className="h-3 w-3" aria-hidden="true" /> {row.casa || t("nd")}
-              </div>
-            </div>
+          <td className="px-4 py-4">
+            <Location row={row} />
           </td>
-
-          <td className="px-6 py-4">
-            <div className="flex items-start gap-2">
-              <ArchiveReference row={row} onViewArchivio={onViewArchivio} variant="block" />
-              <PortataReference row={row} onViewArchivio={onViewArchivio} variant="block" />
-            </div>
+          <td className="px-4 py-4">
+            <Summary row={row} />
           </td>
-
-          <td className="px-6 py-4 text-right">
-            <ExpandIcon expanded={expanded} />
+          <td className="px-4 py-4">
+            <References row={row} onViewArchivio={onViewArchivio} />
+          </td>
+          <td className="px-3 py-3 text-right">
+            <ExpandButton row={row} expanded={expanded} onRowClick={onRowClick} />
           </td>
         </tr>
 
         {expanded && (
-          <tr className="bg-primary/5">
-            <td colSpan={5} className="px-6 py-6 border-b-2 border-text-accent/30">
-              <ExpandedDetails row={row} loadingParenti={loadingParenti} parentiData={parentiData} onSegnala={onSegnala} />
+          <tr id={detailsId(row.id)} className="bg-item-selected-open">
+            <td colSpan={6} className={`px-6 md:px-8 py-6 border-b border-border-base ${filetto}`}>
+              <ExpandedDetails
+                row={row}
+                loadingParenti={loadingParenti}
+                parentiData={parentiData}
+                onSegnala={onSegnala}
+                onViewArchivio={onViewArchivio}
+              />
             </td>
           </tr>
         )}
@@ -463,57 +414,57 @@ const CatastoRow = forwardRef<HTMLTableRowElement, CatastoRowProps>(
   },
 );
 
+/** Sul telefono ogni fuoco è una scheda: nome e mestiere, località, fiorini e casa, riferimento al campione. */
 export const CatastoMobileCard = React.memo(
   forwardRef<HTMLDivElement, CatastoRowProps>(
     ({ row, expanded, onRowClick, loadingParenti, parentiData, onViewArchivio, onSegnala }, ref) => {
       const t = useT(catastoRowMessages);
-      const { lang } = useLanguage();
+      const selected = useOptionalCompare()?.isSelected(row.id) ?? false;
       return (
         <div
           ref={ref}
           onClick={() => onRowClick(row.id)}
-          onKeyDown={toggleOnKey(row.id, onRowClick)}
-          tabIndex={0}
-          aria-expanded={expanded}
-          className={`focus-visible:outline-2 focus-visible:outline-primary p-4 rounded-lg border transition-colors cursor-pointer shadow-sm ${
-            expanded ? "bg-primary/10 border-primary" : "bg-bg-table border-border-base hover:border-primary/50"
+          className={`p-3 rounded-ui border border-border-base border-l-[3px] transition-colors cursor-pointer ${
+            expanded
+              ? "bg-item-selected-open border-l-primary"
+              : selected
+                ? "bg-primary/5 border-l-primary"
+                : "bg-bg-table border-l-border-base hover:bg-primary/5"
           }`}
         >
-          <div className="flex justify-between items-start">
-            <div className="flex-1 min-w-0 pr-2">
-              <h3 className="text-base font-serif font-bold text-text-main leading-tight truncate">{row.nome}</h3>
-              <p className="text-xs text-text-accent flex items-center gap-1 mt-1 truncate">
-                <Briefcase className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
-                {row.mestiere || t("noOccupation")}
-              </p>
+          <div className="flex justify-between items-start gap-2">
+            <div className="flex-1 min-w-0">
+              <h3 className={`text-lg leading-tight ${expanded ? "text-accent-strong font-semibold" : "text-text-main font-semibold"}`}>{row.nome}</h3>
+              <p className="text-sm italic text-text-accent">{row.mestiere || t("noOccupation")}</p>
             </div>
-            <div className="flex-shrink-0 mt-0.5">
-              <ExpandIcon expanded={expanded} />
+            <div className="flex-shrink-0 -mt-2 -mr-2">
+              <ExpandButton row={row} expanded={expanded} onRowClick={onRowClick} />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-dashed border-border-base text-xs">
-            <div className="space-y-1">
-              <Location row={row} />
-            </div>
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            <Location row={row} />
+            <Summary row={row} />
+          </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-1 text-primary font-bold font-serif text-sm tabular-nums">
-                <Coins className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" /> {fiorini(row.fortune, lang)}
-              </div>
-              <div className="flex items-center gap-1 text-text-main opacity-80 pl-1">
-                <Home className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" /> {row.casa || t("nd")}
-              </div>
-              <div className="mt-1.5 pl-1 flex flex-wrap gap-1">
-                <ArchiveReference row={row} onViewArchivio={onViewArchivio} variant="inline" />
-                <PortataReference row={row} onViewArchivio={onViewArchivio} variant="inline" />
-              </div>
-            </div>
+          <div className="flex items-end justify-between gap-2 mt-2">
+            <References row={row} onViewArchivio={onViewArchivio} />
+            <CompareCheckbox row={row} withLabel />
           </div>
 
           {expanded && (
-            <div className="mt-4 pt-4 border-t-2 border-text-accent/30 cursor-auto" onClick={(e) => e.stopPropagation()}>
-              <ExpandedDetails row={row} loadingParenti={loadingParenti} parentiData={parentiData} onSegnala={onSegnala} />
+            <div
+              id={detailsId(row.id)}
+              className="mt-4 pt-4 border-t border-border-base cursor-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExpandedDetails
+                row={row}
+                loadingParenti={loadingParenti}
+                parentiData={parentiData}
+                onSegnala={onSegnala}
+                onViewArchivio={onViewArchivio}
+              />
             </div>
           )}
         </div>

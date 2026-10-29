@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/* Source Serif 4 completo per l'alfabeto latino: a differenza dei file di
+   fontsource ha il maiuscoletto vero (smcp, c2sc), usato da .small-caps.
+   Sottoinsieme del font variabile di Adobe (OFL, vedi
+   assets/fonts/SourceSerif4-LICENSE.md); gli altri alfabeti e il corsivo
+   restano quelli di fontsource. Dichiarato dopo di loro, vince sul latino. */
+@font-face {
+  font-family: "Source Serif 4 Variable";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("./assets/fonts/SourceSerif4-Roman-latin.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0300-0301,
+    U+0303-0304, U+0308, U+0327, U+2000-206F, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+25B2, U+25BC;
+}
+
 /* Tailwind v4 usa currentColor come colore di bordo predefinito: qui torna al
    bordo del tema. Nel layer base e senza !important, così le utility
    (border-primary, border-red-500/40, ...) restano libere di sovrascriverlo. */
@@ -69,6 +84,12 @@ body {
      item-selected resta per le superfici: nel tema scuro è troppo scuro
      per stare sul fondo come testo (1.7:1). */
   --accent-strong: #1a3d7f;
+  /* Unico raggio del sito: niente pillole, niente angoli di misure diverse. */
+  --radius: 2px;
+  /* Serie dei grafici (statistiche). Coppia validata per daltonismo e
+     contrasto sul fondo, in ciascun tema: chart-1 è la serie singola. */
+  --chart-1: #2a5bb8;
+  --chart-2: #c0571b;
 
   background-color: var(--color-bg-main);
   color: var(--color-text-main);
@@ -111,6 +132,8 @@ body {
   --accent: #a3b3d9;
   --on-primary: #10172b;
   --accent-strong: #a9bfee;
+  --chart-1: #5f86d6;
+  --chart-2: #d27a3a;
 }
 
 /* Le opzioni dei <select> non ereditano in modo affidabile lo sfondo del
@@ -141,6 +164,9 @@ select option {
   --color-accent: var(--accent);
   --color-on-primary: var(--on-primary);
   --color-accent-strong: var(--accent-strong);
+  --radius-ui: var(--radius);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
 
   --color-item-hover: var(--color-item-hover);
   --color-item-selected: var(--color-item-selected);
@@ -177,6 +203,15 @@ html {
 /* Cifre allineate in colonna: fiorini ed età si confrontano a colpo d'occhio. */
 table {
   font-variant-numeric: tabular-nums;
+}
+
+/* Maiuscoletto vero della Source Serif per le etichette, al posto del
+   maiuscolo spaziato (uppercase + tracking) che sullo schermo grida.
+   `all-small-caps` usa smcp e c2sc del font: il testo resta in minuscolo
+   nel sorgente e per i lettori di schermo. */
+@utility small-caps {
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.04em;
 }
 
 /* Chi ha chiesto meno movimento al sistema non vede transizioni né scroll

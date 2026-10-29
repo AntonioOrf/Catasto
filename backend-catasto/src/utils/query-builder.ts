@@ -1,4 +1,4 @@
-import { AST_MAX_IN_VALUES, AST_MAX_TEXT_LENGTH } from "@catasto/shared";
+import { AST_MAX_IN_VALUES, AST_MAX_TEXT_LENGTH, SELECTION_MAX_FUOCHI } from "@catasto/shared";
 import { ValidationError } from "./validation.js";
 
 export interface QueryFilters {
@@ -25,6 +25,8 @@ export interface QueryFilters {
   popolo?: string;
   particolarita_parente?: string;
   casa?: string;
+  /** Fuochi scelti a mano (selezione, raccolta): id separati da virgola. */
+  ids?: string;
 }
 
 /** Metacaratteri LIKE: senza escape un `%` o `_` dell'utente diventa un jolly. */
@@ -61,12 +63,21 @@ const num = (value: unknown, name: string): number | undefined => {
   return parsed;
 };
 
-/** Lista di id separati da virgola, come la producono i GROUP_CONCAT di /api/filters. */
-export const parseIdList = (value: unknown, name: string): number[] | undefined => {
-  const str = text(value, name);
-  if (str === undefined) return undefined;
+/**
+ * Lista di id separati da virgola, come la producono i GROUP_CONCAT di
+ * /api/filters o una selezione di fuochi. Il tetto è sul numero di id; la
+ * lunghezza del testo è limitata di conseguenza (10 cifre più la virgola).
+ */
+export const parseIdList = (value: unknown, name: string, max = MAX_IDS): number[] | undefined => {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string" && typeof value !== "number") {
+    throw new ValidationError(`Parametro ${name} non valido`);
+  }
+  const str = String(value).trim();
+  if (str === "") return undefined;
+  if (str.length > max * 11) throw new ValidationError(`Parametro ${name} troppo lungo`);
   const parts = str.split(",").map((p) => p.trim());
-  if (parts.length > MAX_IDS || parts.some((p) => !/^\d+$/.test(p))) {
+  if (parts.length > max || parts.some((p) => !/^\d{1,10}$/.test(p))) {
     throw new ValidationError(`Parametro ${name} non valido`);
   }
   return parts.map(Number);
@@ -174,6 +185,12 @@ export const buildQuery = (filters: QueryFilters | Record<string, unknown>) => {
       conditions += ` AND ${column} IN (${values.map(() => "?").join(",")})`;
       params.push(...values);
     }
+  }
+
+  const ids = parseIdList(raw.ids, "ids", SELECTION_MAX_FUOCHI);
+  if (ids) {
+    conditions += ` AND f.ID_Fuochi IN (${ids.map(() => "?").join(",")})`;
+    params.push(...ids);
   }
 
   const particolarita = num(raw.particolarita_parente, "particolarita_parente");

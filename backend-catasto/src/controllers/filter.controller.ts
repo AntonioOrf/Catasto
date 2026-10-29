@@ -12,4 +12,10 @@ export const FilterController = {
     ]);
     res.json(translateFilters(filters, traduttore));
   },
+
+  invalidateCache(_req: Request, res: Response) {
+    CommonModel.invalidateFilters();
+    TraduzioniModel.clearCache();
+    res.json({ ok: true });
+  },
 };

@@ -38,7 +38,7 @@ export default function CustomNumberInput({
     "flex-1 px-1 hover:bg-primary hover:text-on-primary text-text-accent transition-colors flex items-center justify-center";
 
   return (
-    <div className={`relative flex items-center border border-border-base bg-bg-card text-text-main rounded-sm focus-within:ring-1 focus-within:ring-primary ${className}`}>
+    <div className={`relative flex items-center border border-border-base bg-bg-card text-text-main rounded-ui focus-within:ring-1 focus-within:ring-primary ${className}`}>
       <input
         id={id}
         aria-label={ariaLabel}

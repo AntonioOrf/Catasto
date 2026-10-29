@@ -11,6 +11,9 @@ export const clientMessages = defineMessages({
     parentiFailed: "Impossibile caricare la composizione familiare",
     filtersFailed: "Impossibile caricare le opzioni dei filtri",
     manifestFailed: "Impossibile scaricare le informazioni del volume dall'Archivio di Stato",
+    exportFailed: "L'export non è riuscito",
+    statsFailed: "Impossibile calcolare le statistiche",
+    compareFailed: "Impossibile caricare i fuochi da confrontare",
   },
   en: {
     serverUnreachable: "The server is not responding. Check your connection and try again.",
@@ -22,5 +25,8 @@ export const clientMessages = defineMessages({
     parentiFailed: "Could not load the household members",
     filtersFailed: "Could not load the filter options",
     manifestFailed: "Could not download the volume information from the State Archives",
+    exportFailed: "The export failed",
+    statsFailed: "Could not compute the statistics",
+    compareFailed: "Could not load the households to compare",
   },
 });

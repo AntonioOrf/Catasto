@@ -209,9 +209,9 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
 
   const detailUrl = archiveDetailUrl(archiveId);
   const showImage = Boolean(imageUrl) && !loading && !error;
-  const toolbarButton = 'p-2.5 sm:p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-border-base rounded text-text-main transition-colors';
+  const toolbarButton = 'p-2.5 sm:p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-border-base rounded-ui text-text-main transition-colors';
   const navArrow =
-    'absolute top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 sm:p-3 rounded-full shadow-lg backdrop-blur-sm transition-colors z-20';
+    'absolute top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 sm:p-3 rounded-ui shadow-lg backdrop-blur-sm transition-colors z-20';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg-main/95 backdrop-blur-sm p-0 sm:p-4 touch-none">
@@ -222,7 +222,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
         aria-labelledby="viewer-title"
         tabIndex={-1}
         onKeyDown={handleKeyDown}
-        className="bg-bg-table border-0 sm:border border-border-base shadow-2xl sm:rounded-lg w-full max-w-6xl h-full sm:h-[90vh] flex flex-col overflow-hidden focus:outline-none"
+        className="bg-bg-table border-0 sm:border border-border-base shadow-2xl sm:rounded-ui w-full max-w-6xl h-full sm:h-[90vh] flex flex-col overflow-hidden focus:outline-none"
       >
         <div className="flex items-center justify-between gap-2 p-3 sm:p-4 border-b border-border-base bg-bg-sidebar">
           <div className="flex flex-col min-w-0">
@@ -246,7 +246,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
             title={t('close')}
             aria-label={t('close')}
             onClick={onClose}
-            className="text-text-main hover:text-red-500 hover:bg-border-base/50 p-2.5 rounded transition-colors flex-shrink-0"
+            className="text-text-main hover:text-red-500 hover:bg-border-base/50 p-2.5 rounded-ui transition-colors flex-shrink-0"
           >
             <X className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
           </button>
@@ -270,7 +270,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                 href={detailUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-6 flex items-center gap-2 bg-primary text-on-primary px-4 min-h-11 rounded font-bold hover:bg-primary/90 transition-colors"
+                className="mt-6 flex items-center gap-2 bg-primary text-on-primary px-4 min-h-11 rounded-ui font-bold hover:bg-primary/90 transition-colors"
               >
                 <span>{t('openArchive')}</span>
                 <ExternalLink className="h-4 w-4" aria-hidden="true" />
@@ -361,7 +361,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                 onClick={() => goToPage(idx)}
                 aria-current={idx === currentIndex ? 'page' : undefined}
                 title={p.label || undefined}
-                className={`px-3 min-h-9 text-xs rounded transition-colors whitespace-nowrap ${idx === currentIndex ? 'bg-primary text-on-primary font-bold shadow-md' : 'bg-bg-sidebar text-text-main border border-border-base hover:bg-item-hover'}`}
+                className={`px-3 min-h-9 text-xs rounded-ui transition-colors whitespace-nowrap ${idx === currentIndex ? 'bg-primary text-on-primary font-bold shadow-md' : 'bg-bg-sidebar text-text-main border border-border-base hover:bg-item-hover'}`}
               >
                 {idx === 0 ? t('current') : t('nextN', { n: idx })}
               </button>
@@ -391,7 +391,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                 <button
                   type="button"
                   onClick={onSegnalaSegnatura}
-                  className="text-[11px] sm:text-xs text-text-main bg-bg-main hover:bg-item-hover px-2 min-h-9 rounded-sm flex items-center gap-1 border border-border-base transition-colors font-semibold"
+                  className="text-[11px] sm:text-xs text-text-main bg-bg-main hover:bg-item-hover px-2 min-h-9 rounded-ui flex items-center gap-1 border border-border-base transition-colors font-semibold"
                   title={t('reportTitle')}
                 >
                   <Flag className="h-3 w-3" aria-hidden="true" />
@@ -403,7 +403,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
                 href={detailUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[11px] sm:text-xs text-on-primary bg-primary hover:bg-primary/90 px-2 min-h-9 rounded-sm flex items-center gap-1 transition-colors shadow-sm font-semibold"
+                className="text-[11px] sm:text-xs text-on-primary bg-primary hover:bg-primary/90 px-2 min-h-9 rounded-ui flex items-center gap-1 transition-colors shadow-sm font-semibold"
               >
                 <ExternalLink className="h-3 w-3" aria-hidden="true" />
                 <span className="hidden sm:inline">{t('originalLong')}</span>

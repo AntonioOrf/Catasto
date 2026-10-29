@@ -12,13 +12,13 @@ export default function InfoPage() {
 
       <main className="flex-1 max-w-4xl mx-auto w-full p-6 md:p-10">
         <h2 className="text-3xl font-bold mb-6 text-primary">{t("title")}</h2>
-        <div className="bg-bg-sidebar border border-border-base rounded-lg p-6 shadow-lg mb-8">
+        <div className="bg-bg-sidebar border border-border-base rounded-ui p-6 mb-8">
           <h3 className="text-xl font-bold mb-4 text-primary">{t("projectTitle")}</h3>
           <p className="mb-4 leading-relaxed">{t("projectP1")}</p>
           <p className="leading-relaxed">{t("projectP2")}</p>
         </div>
 
-        <div className="bg-bg-sidebar border border-border-base rounded-lg p-6 shadow-lg">
+        <div className="bg-bg-sidebar border border-border-base rounded-ui p-6">
           <h3 className="text-xl font-bold mb-4 text-primary">{t("credits")}</h3>
           <ul className="list-disc list-inside space-y-2 text-text-main">
             <li><strong>{t("development")}</strong> Antonio Orfitelli, Pasquale Ruotolo</li>

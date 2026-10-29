@@ -58,11 +58,11 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
   }, [shareState]);
 
   return (
-    <div className="bg-bg-main border border-border-base rounded p-3 md:p-4 mt-2 space-y-4">
+    <div className="bg-bg-main border border-border-base rounded-ui p-3 md:p-4 mt-2 space-y-4">
       <QueryBuilder value={ast} onChange={onChange} options={options} />
 
       <div className="border-t border-dashed border-border-base pt-3">
-        <span className="text-[11px] uppercase tracking-wider text-text-accent block mb-1">
+        <span className="text-[11px] small-caps text-text-accent block mb-1">
           {t("currentSearch")}
         </span>
         <p className="text-xs md:text-sm text-text-main italic">{t("preview", { preview })}</p>
@@ -77,13 +77,13 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
           aria-label={t("filterNameAria")}
           placeholder={t("filterNamePlaceholder")}
           maxLength={60}
-          className="bg-bg-sidebar border border-border-base text-text-main text-xs md:text-sm rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="bg-bg-sidebar border border-border-base text-text-main text-xs md:text-sm rounded-ui px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
         <button
           type="button"
           onClick={handleSave}
           disabled={!nome.trim()}
-          className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-primary hover:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
+          className="flex items-center gap-1 text-[11px] font-bold small-caps text-primary hover:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
         >
           <Bookmark className="h-3.5 w-3.5" /> {t("saveFilter")}
         </button>
@@ -91,7 +91,7 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
         <button
           type="button"
           onClick={handleShare}
-          className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-text-accent hover:underline ml-auto"
+          className="flex items-center gap-1 text-[11px] font-bold small-caps text-text-accent hover:underline ml-auto"
         >
           {shareState === "copied" ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
           {shareState === "copied" ? t("linkCopied") : t("shareSearch")}
@@ -107,14 +107,14 @@ export default function AdvancedSearchPanel({ ast, onChange, options }: Advanced
 
       {saved.length > 0 && (
         <div className="border-t border-dashed border-border-base pt-3">
-          <span className="text-[11px] uppercase tracking-wider text-text-accent block mb-2">
+          <span className="text-[11px] small-caps text-text-accent block mb-2">
             {t("savedFilters")}
           </span>
           <div className="flex flex-wrap gap-2">
             {saved.map((query) => (
               <span
                 key={query.id}
-                className="inline-flex items-center gap-1 bg-bg-sidebar border border-border-base rounded-full pl-3 pr-1 py-1 text-xs text-text-main"
+                className="inline-flex items-center gap-1 bg-bg-sidebar border border-border-base rounded-ui pl-3 pr-1 py-1 text-xs text-text-main"
               >
                 <button
                   type="button"

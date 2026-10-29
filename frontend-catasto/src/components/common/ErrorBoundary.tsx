@@ -36,7 +36,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
       <div className="min-h-screen flex items-center justify-center bg-bg-main text-text-main font-serif p-6">
         <div
           role="alert"
-          className="bg-bg-card border border-border-base rounded-lg p-8 shadow-lg max-w-md text-center space-y-4"
+          className="bg-bg-card border border-border-base rounded-ui p-8 max-w-md text-center space-y-4"
         >
           <AlertCircle className="h-10 w-10 mx-auto text-primary" aria-hidden="true" />
           <h1 className="text-2xl font-bold text-primary">{t("title")}</h1>
@@ -46,7 +46,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded bg-primary text-on-primary font-bold hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-ui bg-primary text-on-primary font-bold hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <RotateCw className="h-4 w-4" aria-hidden="true" /> {t("reload")}
           </button>

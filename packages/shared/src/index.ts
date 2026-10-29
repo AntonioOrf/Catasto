@@ -2,6 +2,7 @@ export * from "./fields.js";
 export * from "./query-ast.js";
 export * from "./segnalazioni.js";
 export * from "./segnatura.js";
+export * from "./labels.js";
 
 export interface Fuoco {
   id: number;
@@ -30,6 +31,9 @@ export interface Fuoco {
    * La UI non deve mostrare nulla quando manca.
    */
   segnatura_portata?: string | null;
+  /** Solo nella vista "banco": parenti registrati (bocche) ed età media. */
+  bocche?: number;
+  eta_media?: number | null;
   /**
    * Id d'archivio del volume della portata, quando la segnatura accettata
    * indica un volume del fondo Catasto digitalizzato: permette di aprire la
@@ -93,3 +97,66 @@ export interface ApiResponse<T> {
   pagination?: PaginationInfo;
   error?: string;
 }
+
+/** Misure economiche delle statistiche (GET /api/catasto/stats). */
+export const STATS_METRICS = ["fortune", "credito", "credito_m", "imponibile", "deduzioni"] as const;
+export type StatsMetric = (typeof STATS_METRICS)[number];
+
+/**
+ * Riassunto di una misura. I valori assenti (`assenti`) sono contati a parte
+ * e non entrano in somma, media e quantili: assente non vuol dire 0.
+ * Con nessun valore presente le misure sono null.
+ */
+export interface MetricSummary {
+  presenti: number;
+  assenti: number;
+  somma: number | null;
+  media: number | null;
+  mediana: number | null;
+  q1: number | null;
+  q3: number | null;
+  min: number | null;
+  max: number | null;
+}
+
+/** Distribuzione per categoria: le prime voci, il resto in `altro`, i non indicati a parte. */
+export interface Distribution {
+  voci: { label: string; n: number }[];
+  altro: number;
+  assenti: number;
+}
+
+export interface CatastoStats {
+  fuochi: number;
+  parenti: number;
+  economia: Record<StatsMetric, MetricSummary>;
+  mestieri: Distribution;
+  quartieri: Distribution;
+  serie: Distribution;
+  /** Numero di fuochi per numero di membri registrati (0 = nessun parente registrato). */
+  membri: { membri: number; fuochi: number }[];
+  /** Parenti per fascia d'età di 5 anni (`da`, 90 = 90 e oltre) e sesso; età assente a parte. */
+  eta: { fasce: { da: number; sesso: string | null; n: number }[]; assenti: number };
+  statoCivile: Distribution;
+  /** Fuochi per fascia dell'imponibile (`da` = estremo inferiore, vedi IMPONIBILE_BANDS). */
+  fasceImponibile: { fasce: { da: number; n: number }[]; assenti: number };
+}
+
+/**
+ * Fuochi confrontabili insieme (vista di confronto) e tetto di id di
+ * GET /api/catasto/fuochi?ids=…, che serve a caricarli in una richiesta.
+ */
+export const COMPARE_MIN_FUOCHI = 2;
+export const COMPARE_MAX_FUOCHI = 5;
+
+/** Fuochi caricabili in una richiesta per id (nomi della selezione). */
+export const FUOCHI_BY_IDS_MAX = 50;
+
+/**
+ * Fuochi di una selezione o di una raccolta: tetto del parametro `ids` della
+ * ricerca e dell'export (GET /api/catasto?ids=…, /api/catasto/export?ids=…).
+ */
+export const SELECTION_MAX_FUOCHI = 500;
+
+/** Fasce dell'imponibile nelle statistiche: estremi inferiori, in fiorini. */
+export const IMPONIBILE_BANDS = [0, 1, 51, 201, 501, 1001] as const;
