@@ -19,7 +19,6 @@ import { tabIds } from "../components/common/tab-ids";
 import StatsPanel from "../features/catasto/components/stats/StatsPanel";
 import { homePageMessages } from "./HomePage.messages";
 import CompareBar from "../features/compare/components/CompareBar";
-import ExampleQueries from "../features/examples/ExampleQueries";
 import { useTour } from "../features/tour/tour-context";
 
 type ResultsView = "table" | "stats";
@@ -159,7 +158,6 @@ export default function HomePage() {
         <main ref={mainContentRef} className="flex-1 overflow-y-auto relative w-full flex flex-col">
           <div className="p-3 sm:p-4 md:p-8 flex-1">
             <FilterPanel loading={fetching} onRefresh={retry} filterOptions={filterOptions} />
-            <ExampleQueries filterOptions={filterOptions} />
 
             <Tabs
               idPrefix="results"
