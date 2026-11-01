@@ -7,6 +7,7 @@ import type {
   FilterOptions,
   Fuoco,
   IiifPage,
+  MappaLuoghi,
   Parenti,
   SidebarItem,
   SuggestResponse,
@@ -151,6 +152,13 @@ export const fetchStats = (search: SearchParams, signal?: AbortSignal) => {
   const params = buildParams({ ...search, sortBy: undefined, sortOrder: undefined });
   const query = params.toString() ? `?${params}` : "";
   return apiRequest<CatastoStats>(`/api/catasto/stats${query}`, fallback, { signal });
+};
+
+/** Luoghi della mappa con gli aggregati dei fuochi: filtri della ricerca semplice come parametri dell'API. */
+export const fetchMappaLuoghi = (filtri: Record<string, string>, signal?: AbortSignal) => {
+  const params = new URLSearchParams(filtri);
+  const query = params.toString() ? `?${params}` : "";
+  return apiRequest<MappaLuoghi>(`/api/mappa/luoghi${query}`, translate(messages, "mappaFailed"), { signal });
 };
 
 /** Fuochi per id (selezione e confronto), nell'ordine dato; gli inesistenti mancano. Al massimo FUOCHI_BY_IDS_MAX. */

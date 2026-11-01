@@ -11,6 +11,7 @@ import filterRoutes from "./routes/filter.routes.js";
 import parentiRoutes from "./routes/parenti.routes.js";
 import mestieriRoutes from "./routes/mestieri.routes.js";
 import segnalazioneRoutes from "./routes/segnalazione.routes.js";
+import mappaRoutes from "./routes/mappa.routes.js";
 import { NotificaService } from "./services/notifica.service.js";
 import { parseTrustProxy } from "./utils/trust-proxy.js";
 
@@ -78,6 +79,7 @@ app.get("/health", async (_req, res) => {
 
 app.use("/api/catasto", catastoRoutes);
 app.use("/api/filters", filterRoutes);
+app.use("/api/mappa", mappaRoutes);
 app.use("/api/parenti", parentiRoutes);
 app.use("/api/mestieri", mestieriRoutes);
 app.use("/api/segnalazioni", segnalazioneRoutes);

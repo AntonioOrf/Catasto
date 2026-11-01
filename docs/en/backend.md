@@ -47,7 +47,9 @@ backend-catasto/
 │   ├── 001_segnalazioni.sql      # application tables (segnalazioni, fuoco_segnature)
 │   ├── 002_traduzioni_lookup.sql # translations of lookup labels
 │   ├── 003_traduzioni_lookup_seed.sql # initial English translations
-│   └── 004_traduzioni_lookup_dump.sql # translations of the dump's actual labels (from db:export-traduzioni)
+│   ├── 004_traduzioni_lookup_dump.sql # translations of the dump's actual labels (from db:export-traduzioni)
+│   ├── 005_luoghi_geo.sql        # place coordinates for the map
+│   └── 006_luoghi_geo_automatici.sql # automatic matches with Repetti (from db:import-luoghi --sql)
 └── src/
     ├── server.ts                  # Express bootstrap: helmet, CORS, rate limit, routes, /health
     ├── config/db.ts               # mysql2 pool (connectionLimit 50, optional TLS)
@@ -56,15 +58,18 @@ backend-catasto/
     │   ├── filter.routes.ts       # /api/filters (+ admin cache invalidation)
     │   ├── parenti.routes.ts      # /api/parenti/:id
     │   ├── mestieri.routes.ts     # /api/mestieri (public API, not used by the frontend)
-    │   └── segnalazione.routes.ts # /api/segnalazioni (public, admin, moderation)
+    │   ├── segnalazione.routes.ts # /api/segnalazioni (public, admin, moderation)
+    │   └── mappa.routes.ts        # /api/mappa
     ├── controllers/
     │   ├── catasto.controller.ts  # households, advanced search, manifest, family members, occupations
     │   ├── filter.controller.ts   # filter options
-    │   └── segnalazione.controller.ts
+    │   ├── segnalazione.controller.ts
+    │   └── mappa.controller.ts    # map places (simple and advanced search)
     ├── services/
     │   ├── catasto.service.ts     # query orchestration + IIIF manifest proxy/caching
     │   ├── export.service.ts      # streaming CSV/XLSX export, row cap, metadata
     │   ├── stats.service.ts       # search statistics (with short-lived cache)
+    │   ├── mappa.service.ts       # per-place aggregates + coordinates (cached)
     │   ├── segnalazione.service.ts# creation, anti-abuse, transactional state changes
     │   └── notifica.service.ts    # email forwarding via FormSubmit with signed links
     ├── models/
@@ -72,6 +77,7 @@ backend-catasto/
     │   ├── common.model.ts        # lookups, filters (TTL cache), family members, occupations
     │   ├── traduzioni.model.ts    # language (`lang`), label translations (with cache)
     │   ├── stats.model.ts         # SQL aggregates: sums, quantiles with window functions, distributions
+    │   ├── mappa.model.ts         # aggregates per id_registrazione, places with coordinates
     │   └── segnalazione.model.ts
     ├── middlewares/
     │   ├── admin.middleware.ts    # Bearer ADMIN_TOKEN, timing-safe comparison, adminLimiter
@@ -173,6 +179,8 @@ Economic values (*fortune* (property), credit, credit in the Monte, taxable asse
 | POST | `/api/filters/cache/invalidate` | admin | Clears the filter options cache and the translations cache |
 | GET | `/api/parenti/:id` | public | Members of the household |
 | GET | `/api/mestieri` | public (API) | Raw list of occupations, for API users |
+| GET | `/api/mappa/luoghi` | public, 150 req/15 min | Map places with aggregates of the simple search |
+| POST | `/api/mappa/query` | public, 150 req/15 min | Map places for the advanced search |
 | POST | `/api/segnalazioni` | public, 5 req/hour | Submits a user report |
 | GET | `/api/segnalazioni` | admin | List of user reports |
 | PATCH | `/api/segnalazioni/:id` | admin | Changes the state of a user report |
@@ -188,6 +196,7 @@ Every read endpoint accepts `?lang=en` (including `POST /api/catasto/query`, in 
 | `apiLimiter` | all of `/api` | 300 requests / 15 min / IP |
 | manifest | `/api/catasto/manifest/:id` | 30 requests / 15 min / IP |
 | `statsLimiter` | `GET /api/catasto/stats`, `POST /api/catasto/query/stats` | 150 requests / 15 min / IP |
+| `mappaLimiter` | `GET /api/mappa/luoghi`, `POST /api/mappa/query` | 150 requests / 15 min / IP |
 | `exportLimiter` | `GET /api/catasto/export`, `POST /api/catasto/query/export` | 20 requests / 15 min / IP |
 | `createLimiter` | `POST /api/segnalazioni` | 5 / hour / IP, plus 10 / hour per IP hash stored in the DB |
 | `adminLimiter` | admin and moderation routes | 100 **failed** requests / 15 min / IP |
@@ -412,6 +421,31 @@ Raw rows of the `mestieri` table, sorted by name (by translated label with `lang
 ### 4.17 Service status: `GET /health`
 
 `200 {"status":"ok","db":"up"}` or `503 {"status":"error","db":"down"}`. Not subject to rate limiting: use it for health checks and monitoring.
+
+
+### 4.18 Map of places: `GET /api/mappa/luoghi`
+
+One point per place (`id_registrazione`) with aggregates of the search's households: it accepts the same filters as the simple search (`GET /api/mappa/luoghi?mestiere=3`); `POST /api/mappa/query` with `{ "ast": … }` does the same on the advanced search AST. Pagination and sorting are ignored. Coordinates come from the `luoghi_geo` table (migrations `005`–`006`, § 11.4).
+
+```json
+{
+  "luoghi": [
+    { "id": 969, "lat": 43.59933, "lng": 11.572767, "certezza": "sicura",
+      "nome": "Pop. S. Lorenzo a Persignano", "piviere": "Piv. di Gropina (I)",
+      "serie": "Contado Fiorentino", "nome_moderno": "PERSIGNANO",
+      "fuochi": 21, "imponibile_medio": 18.4286, "quota_mestiere": 0.2381,
+      "quota_migrazione": 0.1429, "ampiezza_media": 4 }
+  ],
+  "fuochi": 60976,
+  "non_localizzati": { "fuochi": 13534, "luoghi": 208 },
+  "disponibile": true
+}
+```
+
+- `quota_mestiere`: households with a trade other than "non specificato"; `quota_migrazione`: households with an immigration code other than "Non specificato" (origin or residence elsewhere); `ampiezza_media`: recorded members per household, households without members included.
+- Places without coordinates (`non_trovata`, or missing from `luoghi_geo`) are not in `luoghi` but are counted in `non_localizzati`.
+- Without the `luoghi_geo` table the response has `disponibile: false` and no places, instead of an error.
+- Cache: coordinates 10 minutes, per-search aggregates 60 seconds. Limit: 150 requests / 15 min / IP, like the statistics.
 
 ---
 
@@ -645,7 +679,7 @@ The CSV follows RFC 4180 (fields with commas or quotes enclosed in double quotes
 
 ## 8. Migrations
 
-The Archive dump (`init/Catasto.sql`) contains the historical data (source data). The application tables (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `schema_migrations`) are created by the runner in `src/scripts/migrate.ts`, which applies, in order, the `migrations/*.sql` files not yet recorded.
+The Archive dump (`init/Catasto.sql`) contains the historical data (source data). The application tables (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`, `schema_migrations`) are created by the runner in `src/scripts/migrate.ts`, which applies, in order, the `migrations/*.sql` files not yet recorded.
 
 The table search reads `fuoco_segnature`: without migrations it responds 500.
 
@@ -700,6 +734,7 @@ Full production example, with fictitious values: [`.env.prod.example`](../../.en
 | `npm run db:export-traduzioni [-- file.csv]` | CSV of lookup values without an English translation |
 | `npm run db:import-traduzioni -- file.csv` | imports the filled-in CSV into `traduzioni_lookup` |
 | `npm run db:export-luoghi [-- file.csv]` | CSV of places (`id_registrazione`) with unmerged names, original codes from `t_mappa_conversione` number of households and anomaly warnings (§ 11.1), for locating them on the map |
+| `npm run db:import-luoghi -- file.csv [--automatico] [--sql]` | Imports place coordinates into `luoghi_geo` (§ 11.4) |
 | `npm run repetti:luoghi -- <repetti_data folder> [file.csv]` | CSV of places from Repetti's Dictionary with attributes and coordinates, known or computed from the distance (§ 11.2); does not use the database |
 | `npm run repetti:abbina -- luoghi.csv repetti-luoghi.csv [file.csv]` | Matching of catasto places with Repetti entries, with proposed coordinates and certainty (§ 11.3); does not use the database |
 | `npm run lint` | ESLint, with the shared `eslint.config.base.mjs` configuration at the root |
@@ -802,6 +837,20 @@ Results on the February 2026 dump (60,976 households):
 
 In the Florentine countryside (series 3–6) `sicura` covers 44% of households and `non_trovata` 2%. The CSV lists for each place the chosen entry, the pieve, the distance from the pieve, alternative candidates with scores and the reason for the certainty: it must be reviewed by hand (step 5) before import.
 
+### 11.4 Coordinates in the database: `luoghi_geo`
+
+Migration `005` creates `luoghi_geo` (outside the dump, like the other application tables): one row per `id_registrazione` with `lat`, `lng`, `certezza`, `nome_moderno`, `fonte`, `chiave_nomi` (series|quarter|piviere|parish at matching time, to detect renumbering after a reimport), `note` and `revisionato`. Migration `006` fills it with the automatic matches of § 11.3, not reviewed: the map prototype works as soon as the migrations are applied.
+
+Reviews are imported from the matching CSV corrected by hand (columns `id_registrazione`, `lat`, `lng`, `certezza`, optional `nome_moderno`, `fonte`, `note`):
+
+```bash
+npm run db:import-luoghi -w catasto-backend -- reviewed-matches.csv          # revisionato = 1, overwrites
+npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv --automatico  # leaves reviewed rows alone
+npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv --sql > migrations/00N_….sql
+```
+
+The import is transactional and rejects the whole file if a row is inconsistent (unknown certainty, coordinates out of range or missing for a certainty that needs them), naming the row. A later automatic migration (like `006`) never overwrites reviewed rows.
+
 ---
 
 ## 12. References and sources
@@ -818,4 +867,4 @@ In the Florentine countryside (series 3–6) `sicura` covers 44% of households a
 |---|---|---|---|
 | 1.x | — | — | Earlier versions, no change log |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewritten according to CAT-DOC-00; English translation |
-| 2.1 | 2026-11-01 | Pasquale Ruotolo | Places for the map: `db:export-luoghi`, geographic data anomalies (§ 11.1), places from Repetti (§ 11.2) and matching (§ 11.3) |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | Places for the map: `db:export-luoghi`, geographic data anomalies (§ 11.1), places from Repetti (§ 11.2) and matching (§ 11.3), `luoghi_geo` table and map API (§ 4.18, § 11.4) |

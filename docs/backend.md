@@ -47,7 +47,9 @@ backend-catasto/
 │   ├── 001_segnalazioni.sql      # tabelle applicative (segnalazioni, fuoco_segnature)
 │   ├── 002_traduzioni_lookup.sql # traduzioni delle etichette di lookup
 │   ├── 003_traduzioni_lookup_seed.sql # traduzioni inglesi iniziali
-│   └── 004_traduzioni_lookup_dump.sql # traduzioni delle etichette reali del dump (da db:export-traduzioni)
+│   ├── 004_traduzioni_lookup_dump.sql # traduzioni delle etichette reali del dump (da db:export-traduzioni)
+│   ├── 005_luoghi_geo.sql        # coordinate dei luoghi per la mappa
+│   └── 006_luoghi_geo_automatici.sql # abbinamenti automatici con il Repetti (da db:import-luoghi --sql)
 └── src/
     ├── server.ts                  # bootstrap Express: helmet, CORS, rate limit, rotte, /health
     ├── config/db.ts               # pool mysql2 (connectionLimit 50, TLS opzionale)
@@ -56,15 +58,18 @@ backend-catasto/
     │   ├── filter.routes.ts       # /api/filters (+ invalidazione admin della cache)
     │   ├── parenti.routes.ts      # /api/parenti/:id
     │   ├── mestieri.routes.ts     # /api/mestieri (API pubblica, non usata dal frontend)
-    │   └── segnalazione.routes.ts # /api/segnalazioni (pubblica, admin, moderazione)
+    │   ├── segnalazione.routes.ts # /api/segnalazioni (pubblica, admin, moderazione)
+    │   └── mappa.routes.ts        # /api/mappa
     ├── controllers/
     │   ├── catasto.controller.ts  # fuochi, ricerca avanzata, manifest, parenti, mestieri
     │   ├── filter.controller.ts   # opzioni dei filtri
-    │   └── segnalazione.controller.ts
+    │   ├── segnalazione.controller.ts
+    │   └── mappa.controller.ts    # luoghi della mappa (ricerca semplice e avanzata)
     ├── services/
     │   ├── catasto.service.ts     # orchestrazione query + proxy/caching manifest IIIF
     │   ├── export.service.ts      # export CSV/XLSX in streaming, tetto di righe, metadati
     │   ├── stats.service.ts       # statistiche della ricerca (con cache breve)
+    │   ├── mappa.service.ts       # aggregati per luogo + coordinate (con cache)
     │   ├── segnalazione.service.ts# creazione, anti-abuso, cambi di stato transazionali
     │   └── notifica.service.ts    # inoltro email via FormSubmit con link firmati
     ├── models/
@@ -72,6 +77,7 @@ backend-catasto/
     │   ├── common.model.ts        # lookup, filtri (cache con TTL), parenti, mestieri
     │   ├── traduzioni.model.ts    # lingua (`lang`), traduzioni delle etichette (con cache)
     │   ├── stats.model.ts         # aggregati SQL: somme, quantili con window function, distribuzioni
+    │   ├── mappa.model.ts         # aggregati per id_registrazione, luoghi con coordinate
     │   └── segnalazione.model.ts
     ├── middlewares/
     │   ├── admin.middleware.ts    # Bearer ADMIN_TOKEN, confronto timing-safe, adminLimiter
@@ -173,6 +179,8 @@ I valori economici (fortune, credito, credito ai Monti, imponibile, deduzioni) s
 | POST | `/api/filters/cache/invalidate` | admin | Svuota la cache delle opzioni dei filtri e delle traduzioni |
 | GET | `/api/parenti/:id` | pubblico | Membri del fuoco |
 | GET | `/api/mestieri` | pubblico (API) | Elenco grezzo dei mestieri, per chi usa l'API |
+| GET | `/api/mappa/luoghi` | pubblico, 150 req/15 min | Luoghi della mappa con gli aggregati della ricerca semplice |
+| POST | `/api/mappa/query` | pubblico, 150 req/15 min | Luoghi della mappa sulla ricerca avanzata |
 | POST | `/api/segnalazioni` | pubblico, 5 req/ora | Invia una segnalazione |
 | GET | `/api/segnalazioni` | admin | Elenco segnalazioni |
 | PATCH | `/api/segnalazioni/:id` | admin | Cambia lo stato di una segnalazione |
@@ -188,6 +196,7 @@ Tutti gli endpoint di lettura accettano `?lang=en` (anche `POST /api/catasto/que
 | `apiLimiter` | tutto `/api` | 300 richieste / 15 min / IP |
 | manifest | `/api/catasto/manifest/:id` | 30 richieste / 15 min / IP |
 | `statsLimiter` | `GET /api/catasto/stats`, `POST /api/catasto/query/stats` | 150 richieste / 15 min / IP |
+| `mappaLimiter` | `GET /api/mappa/luoghi`, `POST /api/mappa/query` | 150 richieste / 15 min / IP |
 | `exportLimiter` | `GET /api/catasto/export`, `POST /api/catasto/query/export` | 20 richieste / 15 min / IP |
 | `createLimiter` | `POST /api/segnalazioni` | 5 / ora / IP, più 10 / ora per hash IP salvato nel DB |
 | `adminLimiter` | rotte admin e moderazione | 100 richieste **fallite** / 15 min / IP |
@@ -412,6 +421,30 @@ Righe grezze della tabella `mestieri`, ordinate per nome (per etichetta tradotta
 ### 4.17 Stato del servizio: `GET /health`
 
 `200 {"status":"ok","db":"up"}` oppure `503 {"status":"error","db":"down"}`. Non soggetto al rate limit: usarlo per healthcheck e monitoraggio.
+
+### 4.18 Mappa dei luoghi: `GET /api/mappa/luoghi`
+
+Un punto per luogo (`id_registrazione`) con gli aggregati dei fuochi della ricerca: accetta gli stessi filtri della ricerca semplice (`GET /api/mappa/luoghi?mestiere=3`); `POST /api/mappa/query` con `{ "ast": … }` fa lo stesso sull'AST della ricerca avanzata. Paginazione e ordinamento sono ignorati. Le coordinate vengono dalla tabella `luoghi_geo` (migrazioni `005`–`006`, § 11.4).
+
+```json
+{
+  "luoghi": [
+    { "id": 969, "lat": 43.59933, "lng": 11.572767, "certezza": "sicura",
+      "nome": "Pop. S. Lorenzo a Persignano", "piviere": "Piv. di Gropina (I)",
+      "serie": "Contado Fiorentino", "nome_moderno": "PERSIGNANO",
+      "fuochi": 21, "imponibile_medio": 18.4286, "quota_mestiere": 0.2381,
+      "quota_migrazione": 0.1429, "ampiezza_media": 4 }
+  ],
+  "fuochi": 60976,
+  "non_localizzati": { "fuochi": 13534, "luoghi": 208 },
+  "disponibile": true
+}
+```
+
+- `quota_mestiere`: fuochi con mestiere diverso da «non specificato»; `quota_migrazione`: fuochi con un codice di immigrazione diverso da «Non specificato» (provenienza o residenza altrove); `ampiezza_media`: membri registrati per fuoco, compresi i fuochi senza membri.
+- I luoghi senza coordinate (`non_trovata`, o assenti da `luoghi_geo`) non compaiono in `luoghi` ma sono contati in `non_localizzati`.
+- Senza la tabella `luoghi_geo` la risposta ha `disponibile: false` e nessun luogo, invece di un errore.
+- Cache: coordinate 10 minuti, aggregati per ricerca 60 secondi. Limite: 150 richieste / 15 min / IP, come le statistiche.
 
 ---
 
@@ -643,7 +676,7 @@ Il CSV segue RFC 4180 (campi con virgole o apici fra doppi apici). L'import è t
 
 ## 8. Migrazioni
 
-Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici (dati della fonte). Le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `schema_migrations`) sono create dal runner in `src/scripts/migrate.ts`, che applica in ordine i file `migrations/*.sql` non ancora registrati.
+Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici (dati della fonte). Le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`, `schema_migrations`) sono create dal runner in `src/scripts/migrate.ts`, che applica in ordine i file `migrations/*.sql` non ancora registrati.
 
 La ricerca in tabella legge `fuoco_segnature`: senza migrazioni risponde 500.
 
@@ -697,7 +730,8 @@ Esempio completo per la produzione, con valori fittizi: [`.env.prod.example`](..
 | `npm run db:migrate:prod` | migrazioni dalla build |
 | `npm run db:export-traduzioni [-- file.csv]` | CSV dei valori di lookup senza traduzione inglese |
 | `npm run db:import-traduzioni -- file.csv` | importa il CSV compilato in `traduzioni_lookup` |
-| `npm run db:export-luoghi [-- file.csv]` | CSV dei luoghi (`id_registrazione`) con nomi non uniti, codici originali di `t_mappa_conversione` numero di fuochi e avvisi sulle anomalie (§ 11.1), per la localizzazione sulla mappa |
+| `npm run db:export-luoghi [-- file.csv]` | CSV dei luoghi (`id_registrazione`) con nomi non uniti, codici originali di `t_mappa_conversione`, numero di fuochi e avvisi sulle anomalie (§ 11.1), per la localizzazione sulla mappa |
+| `npm run db:import-luoghi -- file.csv [--automatico] [--sql]` | Importa in `luoghi_geo` le coordinate dei luoghi (§ 11.4) |
 | `npm run repetti:luoghi -- <cartella repetti_data> [file.csv]` | CSV dei luoghi del Dizionario del Repetti con attributi e coordinate, note o calcolate dalla distanza (§ 11.2); non usa il database |
 | `npm run repetti:abbina -- luoghi.csv repetti-luoghi.csv [file.csv]` | Abbinamento fra luoghi del catasto e voci del Repetti, con coordinate proposte e certezza (§ 11.3); non usa il database |
 | `npm run lint` | ESLint, con la configurazione condivisa `eslint.config.base.mjs` della root |
@@ -800,6 +834,20 @@ Risultati sul dump di febbraio 2026 (60.976 fuochi):
 
 Nel contado fiorentino (serie 3–6) i fuochi `sicura` sono il 44% e quelli `non_trovata` il 2%. Il CSV elenca per ogni luogo la voce scelta, la pieve, la distanza dalla pieve, i candidati alternativi con punteggio e il motivo della certezza: va rivisto a mano (passo 5) prima dell'import.
 
+### 11.4 Coordinate nel database: `luoghi_geo`
+
+La migrazione `005` crea `luoghi_geo` (fuori dal dump, come le altre tabelle applicative): una riga per `id_registrazione` con `lat`, `lng`, `certezza`, `nome_moderno`, `fonte`, `chiave_nomi` (serie|quartiere|piviere|popolo al momento dell'abbinamento, per accorgersi di una rinumerazione dopo un reimport), `note` e `revisionato`. La `006` la riempie con gli abbinamenti automatici del § 11.3, non rivisti: il prototipo della mappa funziona appena applicate le migrazioni.
+
+Le revisioni si importano dal CSV degli abbinamenti corretto a mano (colonne `id_registrazione`, `lat`, `lng`, `certezza`, facoltative `nome_moderno`, `fonte`, `note`):
+
+```bash
+npm run db:import-luoghi -w catasto-backend -- abbinamenti-rivisti.csv        # revisionato = 1, sovrascrive
+npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv --automatico   # non tocca le righe revisionate
+npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv --sql > migrations/00N_….sql
+```
+
+L'import è transazionale e rifiuta il file intero se una riga è incoerente (certezza sconosciuta, coordinate fuori dominio o mancanti per una certezza che le richiede), indicando la riga. Una migrazione automatica successiva (come la `006`) non sovrascrive mai le righe revisionate.
+
 ---
 
 ## 12. Riferimenti e fonti
@@ -816,4 +864,4 @@ Nel contado fiorentino (serie 3–6) i fuochi `sicura` sono il 44% e quelli `non
 |---|---|---|---|
 | 1.x | — | — | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
-| 2.1 | 2026-11-01 | Pasquale Ruotolo | Luoghi per la mappa: `db:export-luoghi`, anomalie dei dati geografici (§ 11.1), luoghi del Repetti (§ 11.2) e abbinamento (§ 11.3) |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | Luoghi per la mappa: `db:export-luoghi`, anomalie dei dati geografici (§ 11.1), luoghi del Repetti (§ 11.2) e abbinamento (§ 11.3), tabella `luoghi_geo` e API della mappa (§ 4.18, § 11.4) |

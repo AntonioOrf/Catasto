@@ -51,7 +51,7 @@ A datum missing from the source stays missing in the interface too: it does not 
 | `/informazioni` | `pages/InfoPage.tsx` | Project description and credits (lazy-loaded) |
 | `/glossario` | `pages/GlossarioPage.tsx` | Terms of the *catasto* with their definitions, one anchor per entry (lazy) |
 | `/contatti` | `pages/ContattiPage.tsx` | Email addresses and link to the repository (lazy) |
-| `/mappa` | `pages/MappaPage.tsx` | "Under development" placeholder, not linked from the menu (lazy) |
+| `/mappa` | `pages/MappaPage.tsx` | Prototype of the household map: one circle per place (Leaflet, OpenStreetMap or Inghirami's map from the Regione Toscana WMS as background), coloured by position certainty or by indicator (average taxable assets, trade, migration, members per household), household threshold, place card, keyboard-accessible list of the main places. Reads the simple search filters from the query string (`/mappa?mestiere=3`); data from `GET /api/mappa/luoghi`. Not yet linked from the menu (lazy) |
 
 `FilterProvider` wraps the router: filters stay set when moving from one page to another. `CompareProvider` (the selection of *fuochi*) and the comparison view sit in `App.tsx` above the routes: a selection made in Browse also applies in the Workbench.
 

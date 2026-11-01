@@ -51,7 +51,7 @@ Un dato assente nella fonte resta assente anche nell'interfaccia: non diventa 0,
 | `/informazioni` | `pages/InfoPage.tsx` | Descrizione del progetto e crediti (caricata in lazy) |
 | `/glossario` | `pages/GlossarioPage.tsx` | Termini del catasto con le definizioni, un'ancora per voce (lazy) |
 | `/contatti` | `pages/ContattiPage.tsx` | Indirizzi email e link al repository (lazy) |
-| `/mappa` | `pages/MappaPage.tsx` | Segnaposto "in fase di sviluppo", non collegato dal menu (lazy) |
+| `/mappa` | `pages/MappaPage.tsx` | Prototipo della mappa dei fuochi: un cerchio per luogo (Leaflet, fondo OpenStreetMap o Carta dell'Inghirami dal WMS della Regione Toscana), colore per certezza della posizione o per indicatore (imponibile medio, mestiere, migrazione, membri per fuoco), soglia di fuochi, scheda del luogo, elenco accessibile da tastiera dei luoghi principali. Legge i filtri della ricerca semplice dalla query string (`/mappa?mestiere=3`); dati da `GET /api/mappa/luoghi`. Non ancora collegata dal menu (lazy) |
 
 `FilterProvider` avvolge il router: i filtri restano impostati anche passando da una pagina all'altra. `CompareProvider` (la selezione dei fuochi) e la vista di confronto stanno in `App.tsx` sopra le route: la selezione fatta in Consultazione vale anche nel Banco di lavoro.
 
