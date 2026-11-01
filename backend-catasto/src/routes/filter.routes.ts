@@ -8,6 +8,6 @@ const router = Router();
 router.get("/", asyncHandler(FilterController.getFilters));
 // Dopo un reimport del dump o un import di traduzioni: rende subito visibili
 // le nuove opzioni senza riavviare il backend né aspettare il TTL.
-router.post("/cache/invalidate", adminLimiter, requireAdmin, FilterController.invalidateCache);
+router.post("/cache/invalidate", adminLimiter, requireAdmin, asyncHandler(FilterController.invalidateCache));
 
 export default router;

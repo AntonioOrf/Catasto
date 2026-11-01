@@ -54,8 +54,11 @@ COPY --from=build /app/backend-catasto/migrations ./backend-catasto/migrations
 
 EXPOSE 3005
 
-# Utente non privilegiato gia' presente nell'immagine node
-USER node
+# Utente non privilegiato gia' presente nell'immagine node (node = 1000).
+# Numerico e non per nome: Kubernetes con runAsNonRoot verifica solo UID
+# numerici. OpenShift lo sostituisce con un UID casuale, e funziona lo
+# stesso: il processo legge soltanto, non scrive su disco.
+USER 1000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD wget -qO- http://127.0.0.1:3005/health >/dev/null || exit 1
