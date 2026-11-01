@@ -329,7 +329,9 @@ Docker image: SPA fallback to `index.html`, `/assets/` with a one-year immutable
 
 ### 9.5 Vercel
 
-`vercel.json`: same headers with `connect-src 'self' https:`; there is no proxy for `/api`, so `VITE_API_URL` must be set to point to the backend.
+`vercel.json`: same headers with `connect-src 'self' https:`. The backend runs in the same project as a Vercel Function (`api/index.ts`, which exports the Express app from `backend-catasto/src/app.ts`): rewrites send `/api/*` and `/health` to the function, everything else to `index.html`. Frontend and API share the domain, so `VITE_API_URL` must be left empty (or removed) and `CORS_ORIGIN` is not needed.
+
+Vercel project settings: Root Directory `frontend-catasto`, Vite framework, "Include files outside the Root Directory" enabled (the default). Environment variables (Production): `DB_HOST`, `DB_PORT` (4000 for TiDB Cloud), `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL=true`, `TRUST_PROXY=1`, `SEGNALAZIONI_SALT`, `ADMIN_TOKEN` and, if used, `FORMSUBMIT_EMAIL`, `FORMSUBMIT_ORIGIN`, `MODERAZIONE_SECRET`, `PUBLIC_API_URL` (the site URL). Each function instance opens at most 5 DB connections (`DB_CONNECTION_LIMIT` to change it). Rate limiting is in memory, so on Vercel it applies per instance.
 
 ---
 

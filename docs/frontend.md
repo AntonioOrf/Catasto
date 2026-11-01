@@ -329,7 +329,9 @@ Immagine Docker: SPA fallback su `index.html`, `/assets/` con cache immutabile d
 
 ### 9.5 Vercel
 
-`vercel.json`: stesse intestazioni con `connect-src 'self' https:`; non c'è proxy per `/api`, quindi va impostato `VITE_API_URL` verso il backend.
+`vercel.json`: stesse intestazioni con `connect-src 'self' https:`. Il backend gira nello stesso progetto come Vercel Function (`api/index.ts`, che esporta l'app Express di `backend-catasto/src/app.ts`): i rewrite mandano `/api/*` e `/health` alla funzione, tutto il resto a `index.html`. Frontend e API stanno sullo stesso dominio, quindi `VITE_API_URL` va lasciata vuota (o rimossa) e `CORS_ORIGIN` non serve.
+
+Impostazioni del progetto Vercel: Root Directory `frontend-catasto`, framework Vite, opzione "Include files outside the Root Directory" attiva (è il default). Variabili d'ambiente (Production): `DB_HOST`, `DB_PORT` (4000 per TiDB Cloud), `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL=true`, `TRUST_PROXY=1`, `SEGNALAZIONI_SALT`, `ADMIN_TOKEN` e, se usate, `FORMSUBMIT_EMAIL`, `FORMSUBMIT_ORIGIN`, `MODERAZIONE_SECRET`, `PUBLIC_API_URL` (l'URL del sito). Ogni istanza della funzione apre al massimo 5 connessioni al DB (`DB_CONNECTION_LIMIT` per cambiarlo). Il rate limit è in memoria, quindi su Vercel vale per singola istanza.
 
 ---
 

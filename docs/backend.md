@@ -663,6 +663,7 @@ docker compose exec backend node backend-catasto/dist/scripts/migrate.js
 | `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | — | Connessione MySQL |
 | `DB_PORT` | `3306` | |
 | `DB_SSL` | `false` | `true` attiva TLS ≥ 1.2 con verifica del certificato |
+| `DB_CONNECTION_LIMIT` | `50` (`5` su Vercel) | connessioni massime del pool per processo / istanza della funzione |
 | `CORS_ORIGIN` | vuota = tutte le origini | Origini ammesse, separate da virgola |
 | `TRUST_PROXY` | non impostata | Numero di proxy davanti al backend (`1` con nginx). Accetta anche `true`/`false` o nomi come `loopback`, ma `true` fa fidare di qualunque `X-Forwarded-For`: usare un numero |
 | `SEGNALAZIONI_SALT` | obbligatoria in produzione | Salt dell'hash degli IP |
