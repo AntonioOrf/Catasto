@@ -81,6 +81,7 @@ backend-catasto/
     │   ├── validation.ts          # paginazione, id numerici, liste di id, HttpError
     │   ├── csv.ts, traduzioni-csv.ts # CSV (export dei risultati, export/import delle traduzioni)
     │   ├── luoghi-csv.ts          # query e CSV dei luoghi per la mappa (db:export-luoghi)
+    │   ├── repetti.ts             # estrazione dei luoghi dal Dizionario del Repetti
     │   ├── export-columns.ts      # colonne e celle dei file esportati
     │   ├── export-writers.ts      # scrittura in streaming di CSV e XLSX
     │   ├── describe-filters.ts    # descrizione leggibile della ricerca semplice
@@ -92,7 +93,8 @@ backend-catasto/
         ├── migrate.ts             # runner delle migrazioni
         ├── export-traduzioni.ts   # CSV dei valori di lookup senza traduzione
         ├── import-traduzioni.ts   # import del CSV compilato dalla redazione
-        └── export-luoghi.ts       # CSV dei luoghi (id_registrazione) con il numero di fuochi
+        ├── export-luoghi.ts       # CSV dei luoghi (id_registrazione) con il numero di fuochi
+        └── repetti-luoghi.ts      # luoghi del Dizionario del Repetti (repetti:luoghi)
 ```
 
 ### 2.2 Pacchetto condiviso
@@ -694,6 +696,7 @@ Esempio completo per la produzione, con valori fittizi: [`.env.prod.example`](..
 | `npm run db:export-traduzioni [-- file.csv]` | CSV dei valori di lookup senza traduzione inglese |
 | `npm run db:import-traduzioni -- file.csv` | importa il CSV compilato in `traduzioni_lookup` |
 | `npm run db:export-luoghi [-- file.csv]` | CSV dei luoghi (`id_registrazione`) con nomi non uniti, codici originali di `t_mappa_conversione` numero di fuochi e avvisi sulle anomalie (§ 11.1), per la localizzazione sulla mappa |
+| `npm run repetti:luoghi -- <cartella repetti_data> [file.csv]` | CSV dei luoghi del Dizionario del Repetti con attributi e coordinate, note o calcolate dalla distanza (§ 11.2); non usa il database |
 | `npm run lint` | ESLint, con la configurazione condivisa `eslint.config.base.mjs` della root |
 | `npm test` | test unitari (`vitest run`, database simulato) |
 | `npm run test:integration` | test di integrazione su un MySQL vero (vedi sotto) |
@@ -742,6 +745,29 @@ La mappa usa come luogo l'`id_registrazione` (combinazione completa serie/quarti
 
 Altre anomalie note, senza avviso per riga: nella serie 1 manca il gonfalone **Scala** (presente nelle serie 2 e 7), da dichiarare nella nota metodologica; `t_quartieri` contiene doppioni (4 e 5 Santo Spirito, 2 e 6 Santa Maria Novella), irrilevanti per la mappa perché l'unità è `id_registrazione`.
 
+### 11.2 Luoghi del Dizionario del Repetti
+
+Per localizzare i luoghi del contado e del dominio si parte dal *Dizionario geografico fisico storico della Toscana* di Emanuele Repetti (1833–1846), nei dati CC0 di [joeyates/repetti_data](https://github.com/joeyates/repetti_data): cinque volumi di voci e `coordinates.json` con le coordinate di circa 2.000 luoghi, in gran parte inserite a mano.
+
+```bash
+git clone --depth 1 https://github.com/joeyates/repetti_data.git
+npm run repetti:luoghi -w catasto-backend -- repetti_data repetti-luoghi.csv
+```
+
+Lo script non usa il database (`utils/repetti.ts`, con test). Dall'intestazione di ogni voce ("Villata [...] nel piviere di S. Pietro in Bossolo, Comunità e circa 4 miglia toscane a grecale di Certaldo, Giurisdizione di Castel Fiorentino, Diocesi e Compartimento di Firenze") ricava tipo, dedicazione, piviere, comunità, giurisdizione, diocesi, compartimento e la distanza da un luogo di riferimento; esclude i rinvii ("Vedere ..."), che usa però come nomi alternativi della voce di destinazione.
+
+**Coordinate.** Quelle di `coordinates.json` (`fonte_coordinate` = `manual`, `text`), oppure, se mancano, calcolate dalla distanza (`distanza`): un miglio toscano = 1,6537 km, direzioni dalla rosa dei venti a otto punte, anche composte ("grecale-levante"). Fra omonimi del riferimento si sceglie per valle (contesto della voce), poi titolo identico, diocesi e lunghezza della voce; i nomi comuni ("del Borgo", "di questa città") non si risolvono.
+
+Risultati sui dati del 2026 (5.663 voci di luogo su 9.370):
+
+| | Voci |
+|---|---|
+| Con coordinate | 3.698 (1.940 da `coordinates.json`, 1.758 calcolate dalla distanza) |
+| Riferimento non trovato / ambiguo | 343 / 10 |
+| `coordinate_incoerenti` (coordinate note a più di 10 km dalla posizione calcolata dal testo) | 125 |
+
+**Precisione.** Dove le coordinate sono note, la posizione calcolata dal testo dista in mediana 2,4 km (75° percentile 4,8 km, 90° percentile 12 km). Le voci `coordinate_incoerenti` hanno un errore nelle coordinate di partenza (omonimo sbagliato, longitudine del testo convertita male) o nel testo: vanno riviste prima dell'uso. Le posizioni calcolate sono approssimate all'ordine del chilometro e vanno dichiarate come tali sulla mappa.
+
 ---
 
 ## 12. Riferimenti e fonti
@@ -758,4 +784,4 @@ Altre anomalie note, senza avviso per riga: nella serie 1 manca il gonfalone **S
 |---|---|---|---|
 | 1.x | — | — | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
-| 2.1 | 2026-11-01 | Pasquale Ruotolo | Luoghi per la mappa: `db:export-luoghi` e anomalie dei dati geografici (§ 11.1) |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | Luoghi per la mappa: `db:export-luoghi`, anomalie dei dati geografici (§ 11.1), luoghi del Repetti (§ 11.2) |

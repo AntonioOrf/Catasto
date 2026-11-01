@@ -81,6 +81,7 @@ backend-catasto/
     │   ├── validation.ts          # pagination, numeric ids, id lists, HttpError
     │   ├── csv.ts, traduzioni-csv.ts # CSV (results export, translations export/import)
     │   ├── luoghi-csv.ts          # query and CSV of places for the map (db:export-luoghi)
+    │   ├── repetti.ts             # extraction of places from Repetti's Dictionary
     │   ├── export-columns.ts      # columns and cells of exported files
     │   ├── export-writers.ts      # streaming writers for CSV and XLSX
     │   ├── describe-filters.ts    # human-readable description of a simple search
@@ -92,7 +93,8 @@ backend-catasto/
         ├── migrate.ts             # migration runner
         ├── export-traduzioni.ts   # CSV of lookup values without a translation
         ├── import-traduzioni.ts   # import of the CSV filled in by the editors
-        └── export-luoghi.ts       # CSV of places (id_registrazione) with the number of households
+        ├── export-luoghi.ts       # CSV of places (id_registrazione) with the number of households
+        └── repetti-luoghi.ts      # places from Repetti's Dictionary (repetti:luoghi)
 ```
 
 ### 2.2 Shared package
@@ -696,6 +698,7 @@ Full production example, with fictitious values: [`.env.prod.example`](../../.en
 | `npm run db:export-traduzioni [-- file.csv]` | CSV of lookup values without an English translation |
 | `npm run db:import-traduzioni -- file.csv` | imports the filled-in CSV into `traduzioni_lookup` |
 | `npm run db:export-luoghi [-- file.csv]` | CSV of places (`id_registrazione`) with unmerged names, original codes from `t_mappa_conversione` number of households and anomaly warnings (§ 11.1), for locating them on the map |
+| `npm run repetti:luoghi -- <repetti_data folder> [file.csv]` | CSV of places from Repetti's Dictionary with attributes and coordinates, known or computed from the distance (§ 11.2); does not use the database |
 | `npm run lint` | ESLint, with the shared `eslint.config.base.mjs` configuration at the root |
 | `npm test` | unit tests (`vitest run`, mocked database) |
 | `npm run test:integration` | integration tests on a real MySQL (see below) |
@@ -744,6 +747,29 @@ The map uses `id_registrazione` (the full series/quarter/piviere/parish combinat
 
 Other known anomalies, without a per-row warning: series 1 lacks the **Scala** gonfalone (present in series 2 and 7), to be stated in the methodological note; `t_quartieri` contains duplicates (4 and 5 Santo Spirito, 2 and 6 Santa Maria Novella), irrelevant to the map since the unit is `id_registrazione`.
 
+### 11.2 Places from Repetti's Dictionary
+
+Places in the countryside and the wider dominion are located starting from Emanuele Repetti's *Dizionario geografico fisico storico della Toscana* (1833–1846), in the CC0 data of [joeyates/repetti_data](https://github.com/joeyates/repetti_data): five volumes of entries and `coordinates.json` with coordinates for about 2,000 places, mostly entered by hand.
+
+```bash
+git clone --depth 1 https://github.com/joeyates/repetti_data.git
+npm run repetti:luoghi -w catasto-backend -- repetti_data repetti-luoghi.csv
+```
+
+The script does not use the database (`utils/repetti.ts`, with tests). From each entry's heading ("Villata [...] nel piviere di S. Pietro in Bossolo, Comunità e circa 4 miglia toscane a grecale di Certaldo, Giurisdizione di Castel Fiorentino, Diocesi e Compartimento di Firenze") it extracts type, dedication, piviere, community, jurisdiction, diocese, compartment and the distance from a reference place; it skips cross-references ("Vedere ..."), which it uses instead as alternative names of the target entry.
+
+**Coordinates.** Those of `coordinates.json` (`fonte_coordinate` = `manual`, `text`) or, when missing, computed from the distance (`distanza`): one Tuscan mile = 1.6537 km, directions from the eight-point wind rose, compound ones included ("grecale-levante"). Among homonymous reference places the choice goes by valley (the entry's context), then identical title, diocese and entry length; common nouns ("del Borgo", "di questa città") are not resolved.
+
+Results on the 2026 data (5,663 place entries out of 9,370):
+
+| | Entries |
+|---|---|
+| With coordinates | 3,698 (1,940 from `coordinates.json`, 1,758 computed from the distance) |
+| Reference not found / ambiguous | 343 / 10 |
+| `coordinate_incoerenti` (known coordinates more than 10 km from the position computed from the text) | 125 |
+
+**Accuracy.** Where coordinates are known, the position computed from the text is off by a median 2.4 km (75th percentile 4.8 km, 90th percentile 12 km). `coordinate_incoerenti` entries have an error in the starting coordinates (wrong homonym, badly converted longitude from the text) or in the text: review them before use. Computed positions are approximate to about a kilometre and must be shown as such on the map.
+
 ---
 
 ## 12. References and sources
@@ -760,4 +786,4 @@ Other known anomalies, without a per-row warning: series 1 lacks the **Scala** g
 |---|---|---|---|
 | 1.x | — | — | Earlier versions, no change log |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewritten according to CAT-DOC-00; English translation |
-| 2.1 | 2026-11-01 | Pasquale Ruotolo | Places for the map: `db:export-luoghi` and geographic data anomalies (§ 11.1) |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | Places for the map: `db:export-luoghi`, geographic data anomalies (§ 11.1), places from Repetti (§ 11.2) |
