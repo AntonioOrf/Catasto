@@ -5,7 +5,7 @@ import tseslint from 'typescript-eslint'
 import base from '../eslint.config.base.mjs'
 
 export default tseslint.config(
-  { ignores: ['dist', '.vercel'] },
+  { ignores: ['dist', '.vercel', 'server'] },
   ...base,
   {
     // Script classici serviti così come sono (es. theme-init.js), fuori dal bundle.

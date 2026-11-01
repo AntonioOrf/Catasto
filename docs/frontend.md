@@ -5,7 +5,7 @@
 | Campo | Valore |
 |---|---|
 | Identificativo | `CAT-DOC-04` |
-| Versione | 2.1 |
+| Versione | 2.2 |
 | Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
@@ -327,7 +327,7 @@ Immagine unica (`Dockerfile` nella radice): il backend serve anche la build del 
 
 ### 9.5 Vercel
 
-`vercel.json`: stesse intestazioni con `connect-src 'self' https:`. Il backend gira nello stesso progetto come Vercel Function (`api/index.ts`, che esporta l'app Express di `backend-catasto/src/app.ts`): i rewrite mandano `/api/*` e `/health` alla funzione, tutto il resto a `index.html`. Frontend e API stanno sullo stesso dominio, quindi `VITE_API_URL` va lasciata vuota (o rimossa) e `CORS_ORIGIN` non serve.
+`vercel.json`: stesse intestazioni con `connect-src 'self' https:`. Il backend gira nello stesso progetto come Vercel Function (`api/index.js`, che esporta l'app Express di `backend-catasto/src/app.ts`, compilata in `server/app.mjs` da `npm run build:api`): i rewrite mandano `/api/*` e `/health` alla funzione, tutto il resto a `index.html`. Frontend e API stanno sullo stesso dominio, quindi `VITE_API_URL` va lasciata vuota (o rimossa) e `CORS_ORIGIN` non serve.
 
 Impostazioni del progetto Vercel: Root Directory `frontend-catasto`, framework Vite, opzione "Include files outside the Root Directory" attiva (è il default). Variabili d'ambiente (Production): `DB_HOST`, `DB_PORT` (4000 per TiDB Cloud), `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL=true`, `TRUST_PROXY=1`, `SEGNALAZIONI_SALT`, `ADMIN_TOKEN` e, se usate, `FORMSUBMIT_EMAIL`, `FORMSUBMIT_ORIGIN`, `MODERAZIONE_SECRET`, `PUBLIC_API_URL` (l'URL del sito). Ogni istanza della funzione apre al massimo 5 connessioni al DB (`DB_CONNECTION_LIMIT` per cambiarlo). Il rate limit è in memoria, quindi su Vercel vale per singola istanza.
 
@@ -394,3 +394,4 @@ I problemi emersi dalla revisione di settembre 2026 sono stati corretti (storico
 | 1.x | — | — | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | nginx sostituito dal backend nell'immagine Docker; API su Vercel nello stesso progetto |
+| 2.2 | 2026-11-01 | Pasquale Ruotolo | Vercel Function: backend compilato in `server/app.mjs` (`build:api`) |
