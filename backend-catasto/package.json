@@ -13,6 +13,7 @@
     "db:import-traduzioni": "tsx src/scripts/import-traduzioni.ts",
     "db:export-luoghi": "tsx src/scripts/export-luoghi.ts",
     "repetti:luoghi": "tsx src/scripts/repetti-luoghi.ts",
+    "repetti:abbina": "tsx src/scripts/repetti-abbina.ts",
     "test": "vitest run",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "test:integration": "vitest run --config vitest.integration.config.ts"

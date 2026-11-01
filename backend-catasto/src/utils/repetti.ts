@@ -361,9 +361,9 @@ export function variantiTitolo(titolo: string): string[] {
   }
   const base = t.replace(/\([^)]*\)/g, " ").replace(/\s+(?:nella|nel|nello|in|sopra|sotto|presso|fra|tra)\s+.*$/i, "");
   const parti: string[] = [];
-  for (const parte of base.split(/\s*,\s*|\s+(?:o|ossia|ora|e|detto anche|detta anche|oggi)\s+/i)) {
+  for (const parte of base.split(/\s*,\s*|\s+(?:o|ossia|ora|e|oppure|altrimenti|oggi|dett[oa] (?:anche|ancora))\s+/i)) {
     // ", o MONTAGUTOLO": il connettivo dopo la virgola non fa parte del nome.
-    const p = parte.trim().replace(/^(?:o|ossia|ora|e|oggi|detto anche|detta anche)\s+/i, "");
+    const p = parte.trim().replace(/^(?:o|ossia|ora|e|oppure|altrimenti|oggi|dett[oa] (?:anche|ancora))\s+/i, "");
     if (p && /[A-ZÀ-Ý]/.test(p[0])) parti.push(normalizzaNome(p));
   }
   // Prima il nome principale del titolo, poi le varianti.

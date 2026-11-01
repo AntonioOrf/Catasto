@@ -82,6 +82,7 @@ backend-catasto/
     │   ├── csv.ts, traduzioni-csv.ts # CSV (results export, translations export/import)
     │   ├── luoghi-csv.ts          # query and CSV of places for the map (db:export-luoghi)
     │   ├── repetti.ts             # extraction of places from Repetti's Dictionary
+    │   ├── abbina-luoghi.ts       # matching of catasto places with Repetti entries
     │   ├── export-columns.ts      # columns and cells of exported files
     │   ├── export-writers.ts      # streaming writers for CSV and XLSX
     │   ├── describe-filters.ts    # human-readable description of a simple search
@@ -94,7 +95,8 @@ backend-catasto/
         ├── export-traduzioni.ts   # CSV of lookup values without a translation
         ├── import-traduzioni.ts   # import of the CSV filled in by the editors
         ├── export-luoghi.ts       # CSV of places (id_registrazione) with the number of households
-        └── repetti-luoghi.ts      # places from Repetti's Dictionary (repetti:luoghi)
+        ├── repetti-luoghi.ts      # places from Repetti's Dictionary (repetti:luoghi)
+        └── repetti-abbina.ts      # catasto-Repetti matching (repetti:abbina)
 ```
 
 ### 2.2 Shared package
@@ -699,6 +701,7 @@ Full production example, with fictitious values: [`.env.prod.example`](../../.en
 | `npm run db:import-traduzioni -- file.csv` | imports the filled-in CSV into `traduzioni_lookup` |
 | `npm run db:export-luoghi [-- file.csv]` | CSV of places (`id_registrazione`) with unmerged names, original codes from `t_mappa_conversione` number of households and anomaly warnings (§ 11.1), for locating them on the map |
 | `npm run repetti:luoghi -- <repetti_data folder> [file.csv]` | CSV of places from Repetti's Dictionary with attributes and coordinates, known or computed from the distance (§ 11.2); does not use the database |
+| `npm run repetti:abbina -- luoghi.csv repetti-luoghi.csv [file.csv]` | Matching of catasto places with Repetti entries, with proposed coordinates and certainty (§ 11.3); does not use the database |
 | `npm run lint` | ESLint, with the shared `eslint.config.base.mjs` configuration at the root |
 | `npm test` | unit tests (`vitest run`, mocked database) |
 | `npm run test:integration` | integration tests on a real MySQL (see below) |
@@ -764,11 +767,40 @@ Results on the 2026 data (5,663 place entries out of 9,370):
 
 | | Entries |
 |---|---|
-| With coordinates | 3,698 (1,940 from `coordinates.json`, 1,758 computed from the distance) |
-| Reference not found / ambiguous | 343 / 10 |
-| `coordinate_incoerenti` (known coordinates more than 10 km from the position computed from the text) | 125 |
+| With coordinates | 3,708 (1,940 from `coordinates.json`, 1,768 computed from the distance) |
+| Reference not found / ambiguous | 331 / 10 |
+| `coordinate_incoerenti` (known coordinates more than 10 km from the position computed from the text) | 127 |
 
 **Accuracy.** Where coordinates are known, the position computed from the text is off by a median 2.4 km (75th percentile 4.8 km, 90th percentile 12 km). `coordinate_incoerenti` entries have an error in the starting coordinates (wrong homonym, badly converted longitude from the text) or in the text: review them before use. Computed positions are approximate to about a kilometre and must be shown as such on the map.
+
+### 11.3 Matching the catasto with Repetti
+
+```bash
+npm run db:export-luoghi -w catasto-backend -- luoghi.csv
+npm run repetti:abbina -w catasto-backend -- luoghi.csv repetti-luoghi.csv abbinamenti.csv
+```
+
+The script (`utils/abbina-luoghi.ts`, with tests; it does not use the database) proposes for each catasto place a Repetti entry and its coordinates, with a **certainty** level:
+
+| Certainty | Meaning |
+|---|---|
+| `sicura` | Entry with known coordinates (`coordinates.json`), confirmed by the piviere or by proximity to the pieve (15 km; 30 km for communes and podesterie), with no tied candidates |
+| `approssimata` | Entry found but with coordinates computed from the distance, no piviere confirmation, tied with others, inconsistent coordinates or far from the pieve (up to 40 km) |
+| `solo_piviere` | Place not located: coordinates of the pieve, of the higher unit or of the town (urban chapels and contrade) |
+| `non_trovata` | Neither the place nor the higher unit; Florence's gonfaloni (`gonfalone_firenze`) wait for the polygons |
+
+**Method.** The parish name is split into dedication and locality ("Pop. S. Donato a Legnone e Bagnolo" → S. Donato; Legnone, Bagnolo); candidates are entries carrying that name in the title, its variants, cross-references or as a cited parish. Comparison ignores case, accents, `J`/`I`, inner spaces and articulated prepositions, and treats saints' spellings as equal (Piero/Pietro, Agnolo/Angelo, Iacopo/Giacomo...). The catasto pieve acts as a constraint; ties are broken by piviere, dedication, series name (e.g. "Val di Nievole") and known coordinates. Urban chapels are searched only within 4 km of the town.
+
+Results on the February 2026 dump (60,976 households):
+
+| Certainty | Places | Households | Households excluding the city of Florence |
+|---|---|---|---|
+| `sicura` | 467 | 20,484 | 40% |
+| `approssimata` | 546 | 12,427 | 24% |
+| `solo_piviere` | 524 | 14,531 | 29% |
+| `non_trovata` | 216 (47 gonfaloni) | 13,534 (10,004 in Florence) | 7% |
+
+In the Florentine countryside (series 3–6) `sicura` covers 44% of households and `non_trovata` 2%. The CSV lists for each place the chosen entry, the pieve, the distance from the pieve, alternative candidates with scores and the reason for the certainty: it must be reviewed by hand (step 5) before import.
 
 ---
 
@@ -786,4 +818,4 @@ Results on the 2026 data (5,663 place entries out of 9,370):
 |---|---|---|---|
 | 1.x | — | — | Earlier versions, no change log |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewritten according to CAT-DOC-00; English translation |
-| 2.1 | 2026-11-01 | Pasquale Ruotolo | Places for the map: `db:export-luoghi`, geographic data anomalies (§ 11.1), places from Repetti (§ 11.2) |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | Places for the map: `db:export-luoghi`, geographic data anomalies (§ 11.1), places from Repetti (§ 11.2) and matching (§ 11.3) |

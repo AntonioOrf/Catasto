@@ -82,6 +82,7 @@ backend-catasto/
     │   ├── csv.ts, traduzioni-csv.ts # CSV (export dei risultati, export/import delle traduzioni)
     │   ├── luoghi-csv.ts          # query e CSV dei luoghi per la mappa (db:export-luoghi)
     │   ├── repetti.ts             # estrazione dei luoghi dal Dizionario del Repetti
+    │   ├── abbina-luoghi.ts       # abbinamento fra luoghi del catasto e voci del Repetti
     │   ├── export-columns.ts      # colonne e celle dei file esportati
     │   ├── export-writers.ts      # scrittura in streaming di CSV e XLSX
     │   ├── describe-filters.ts    # descrizione leggibile della ricerca semplice
@@ -94,7 +95,8 @@ backend-catasto/
         ├── export-traduzioni.ts   # CSV dei valori di lookup senza traduzione
         ├── import-traduzioni.ts   # import del CSV compilato dalla redazione
         ├── export-luoghi.ts       # CSV dei luoghi (id_registrazione) con il numero di fuochi
-        └── repetti-luoghi.ts      # luoghi del Dizionario del Repetti (repetti:luoghi)
+        ├── repetti-luoghi.ts      # luoghi del Dizionario del Repetti (repetti:luoghi)
+        └── repetti-abbina.ts      # abbinamento catasto-Repetti (repetti:abbina)
 ```
 
 ### 2.2 Pacchetto condiviso
@@ -697,6 +699,7 @@ Esempio completo per la produzione, con valori fittizi: [`.env.prod.example`](..
 | `npm run db:import-traduzioni -- file.csv` | importa il CSV compilato in `traduzioni_lookup` |
 | `npm run db:export-luoghi [-- file.csv]` | CSV dei luoghi (`id_registrazione`) con nomi non uniti, codici originali di `t_mappa_conversione` numero di fuochi e avvisi sulle anomalie (§ 11.1), per la localizzazione sulla mappa |
 | `npm run repetti:luoghi -- <cartella repetti_data> [file.csv]` | CSV dei luoghi del Dizionario del Repetti con attributi e coordinate, note o calcolate dalla distanza (§ 11.2); non usa il database |
+| `npm run repetti:abbina -- luoghi.csv repetti-luoghi.csv [file.csv]` | Abbinamento fra luoghi del catasto e voci del Repetti, con coordinate proposte e certezza (§ 11.3); non usa il database |
 | `npm run lint` | ESLint, con la configurazione condivisa `eslint.config.base.mjs` della root |
 | `npm test` | test unitari (`vitest run`, database simulato) |
 | `npm run test:integration` | test di integrazione su un MySQL vero (vedi sotto) |
@@ -762,11 +765,40 @@ Risultati sui dati del 2026 (5.663 voci di luogo su 9.370):
 
 | | Voci |
 |---|---|
-| Con coordinate | 3.698 (1.940 da `coordinates.json`, 1.758 calcolate dalla distanza) |
-| Riferimento non trovato / ambiguo | 343 / 10 |
-| `coordinate_incoerenti` (coordinate note a più di 10 km dalla posizione calcolata dal testo) | 125 |
+| Con coordinate | 3.708 (1.940 da `coordinates.json`, 1.768 calcolate dalla distanza) |
+| Riferimento non trovato / ambiguo | 331 / 10 |
+| `coordinate_incoerenti` (coordinate note a più di 10 km dalla posizione calcolata dal testo) | 127 |
 
 **Precisione.** Dove le coordinate sono note, la posizione calcolata dal testo dista in mediana 2,4 km (75° percentile 4,8 km, 90° percentile 12 km). Le voci `coordinate_incoerenti` hanno un errore nelle coordinate di partenza (omonimo sbagliato, longitudine del testo convertita male) o nel testo: vanno riviste prima dell'uso. Le posizioni calcolate sono approssimate all'ordine del chilometro e vanno dichiarate come tali sulla mappa.
+
+### 11.3 Abbinamento fra catasto e Repetti
+
+```bash
+npm run db:export-luoghi -w catasto-backend -- luoghi.csv
+npm run repetti:abbina -w catasto-backend -- luoghi.csv repetti-luoghi.csv abbinamenti.csv
+```
+
+Lo script (`utils/abbina-luoghi.ts`, con test; non usa il database) propone per ogni luogo del catasto una voce del Repetti e le sue coordinate, con un livello di **certezza**:
+
+| Certezza | Significato |
+|---|---|
+| `sicura` | Voce con coordinate note (`coordinates.json`), confermata dal piviere o dalla vicinanza alla pieve (15 km; 30 km per comuni e podesterie), senza candidati a pari merito |
+| `approssimata` | Voce trovata ma con coordinate calcolate dalla distanza, senza conferma del piviere, a pari merito con altre, con coordinate incoerenti o lontana dalla pieve (fino a 40 km) |
+| `solo_piviere` | Luogo non localizzato: coordinate della pieve, dell'unità superiore o della città (cappelle e contrade) |
+| `non_trovata` | Né il luogo né l'unità superiore; i gonfaloni di Firenze (`gonfalone_firenze`) aspettano i poligoni |
+
+**Metodo.** Il nome del popolo si scompone in dedicazione e località ("Pop. S. Donato a Legnone e Bagnolo" → S. Donato; Legnone, Bagnolo); i candidati sono le voci con quel nome nel titolo, nelle varianti, nei rinvii o come popolo citato. Il confronto ignora maiuscole, accenti, `J`/`I`, spazi interni e preposizioni articolate e rende equivalenti le grafie dei santi (Piero/Pietro, Agnolo/Angelo, Iacopo/Giacomo...). La pieve del catasto fa da vincolo; a parità contano piviere, dedicazione, nome della serie (es. "Val di Nievole"), coordinate note. Le cappelle delle città si cercano solo entro 4 km dalla città.
+
+Risultati sul dump di febbraio 2026 (60.976 fuochi):
+
+| Certezza | Luoghi | Fuochi | Fuochi esclusa Firenze città |
+|---|---|---|---|
+| `sicura` | 467 | 20.484 | 40% |
+| `approssimata` | 546 | 12.427 | 24% |
+| `solo_piviere` | 524 | 14.531 | 29% |
+| `non_trovata` | 216 (di cui 47 gonfaloni) | 13.534 (di cui 10.004 di Firenze) | 7% |
+
+Nel contado fiorentino (serie 3–6) i fuochi `sicura` sono il 44% e quelli `non_trovata` il 2%. Il CSV elenca per ogni luogo la voce scelta, la pieve, la distanza dalla pieve, i candidati alternativi con punteggio e il motivo della certezza: va rivisto a mano (passo 5) prima dell'import.
 
 ---
 
@@ -784,4 +816,4 @@ Risultati sui dati del 2026 (5.663 voci di luogo su 9.370):
 |---|---|---|---|
 | 1.x | — | — | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
-| 2.1 | 2026-11-01 | Pasquale Ruotolo | Luoghi per la mappa: `db:export-luoghi`, anomalie dei dati geografici (§ 11.1), luoghi del Repetti (§ 11.2) |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | Luoghi per la mappa: `db:export-luoghi`, anomalie dei dati geografici (§ 11.1), luoghi del Repetti (§ 11.2) e abbinamento (§ 11.3) |
