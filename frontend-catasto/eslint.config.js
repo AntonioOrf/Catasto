@@ -13,6 +13,11 @@ export default tseslint.config(
     languageOptions: { globals: globals.browser, sourceType: 'script' },
   },
   {
+    // Codice eseguito da Node: la Vercel Function e gli script di build.
+    files: ['api/**/*.js', 'scripts/**/*.mjs'],
+    languageOptions: { globals: globals.node, sourceType: 'module' },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     extends: [reactHooks.configs['recommended-latest'], reactRefresh.configs.vite],
     languageOptions: {

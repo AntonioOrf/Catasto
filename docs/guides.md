@@ -6,7 +6,7 @@
 |---|---|
 | Identificativo | `CAT-DOC-01` |
 | Titolo | Installazione e deployment del portale Catasto fiorentino del 1427/30 |
-| Versione | 2.3 |
+| Versione | 2.4 |
 | Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
@@ -249,6 +249,8 @@ Le variabili vanno impostate per l'ambiente Production e, se si vogliono antepri
 
 `https://<dominio>/health` deve rispondere `{"status":"ok","db":"up"}`. Ogni richiesta dura al massimo 60 secondi (export molto grandi compresi); il rate limit è in memoria, quindi vale per singola istanza della funzione.
 
+Il comando di build è fissato in `vercel.json` (`"buildCommand": "npm run build"`), così un valore diverso nelle impostazioni del progetto non salta la compilazione del backend. Se il backend non si avvia (bundle mancante, variabile d'ambiente non valida come `SHARED_STATE`, dipendenza assente), `api/index.js` non lascia andare in crash la funzione: ogni rotta risponde `503` con `{"error": "Avvio del backend non riuscito", "dettaglio": "…"}` e l'errore completo finisce nei log della funzione.
+
 ---
 
 ## 5. Immagini Docker automatiche
@@ -318,3 +320,4 @@ docker compose up -d         # reimporta init/Catasto.sql, poi il backend riappl
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | Immagine Docker unica (`app`), produzione su Vercel (§4), allineamento del database da TiDB (§3.7), `TRUST_PROXY` secondo il caso |
 | 2.2 | 2026-11-01 | Pasquale Ruotolo | Rimando a CAT-DOC-07 per le altre piattaforme |
 | 2.3 | 2026-11-01 | Pasquale Ruotolo | Vercel: il backend della funzione è compilato in un solo file con `@catasto/shared` (§4) |
+| 2.4 | 2026-11-01 | Pasquale Ruotolo | Vercel: comando di build in `vercel.json`, errore di avvio del backend in risposta (503) e nei log (§4.3) |
