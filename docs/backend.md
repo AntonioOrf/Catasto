@@ -5,8 +5,8 @@
 | Campo | Valore |
 |---|---|
 | Identificativo | `CAT-DOC-03` |
-| Versione | 2.0 |
-| Data | 2026-10-29 |
+| Versione | 2.1 |
+| Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
 | Responsabili | Antonio Orfitelli, Pasquale Ruotolo |
@@ -742,3 +742,4 @@ I problemi emersi dalla revisione del codice di settembre 2026 sono stati corret
 |---|---|---|---|
 | 1.x | — | — | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | `app.ts` separato da `server.ts`, Vercel Function, `static.ts` per servire il frontend, variabili `STATIC_DIR` e `DB_CONNECTION_LIMIT` |

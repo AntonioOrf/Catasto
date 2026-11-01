@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Identifier | `CAT-DOC-02` |
-| Version | 2.0 |
-| Date | 2026-10-29 |
+| Version | 2.1 |
+| Date | 2026-11-01 |
 | Status | Approved |
 | Classification | Public |
 | Owners | Antonio Orfitelli, Pasquale Ruotolo |
@@ -235,3 +235,4 @@ flowchart LR
 |---|---|---|---|
 | 1.x | — | — | Earlier versions, no change log |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewritten according to CAT-DOC-00; English translation |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | Single Docker image (`catasto-app`) replacing backend and nginx; backend also as a Vercel Function |

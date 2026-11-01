@@ -5,8 +5,8 @@
 | Campo | Valore |
 |---|---|
 | Identificativo | `CAT-DOC-05` |
-| Versione | 2.0 |
-| Data | 2026-10-29 |
+| Versione | 2.1 |
+| Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
 | Responsabili | Antonio Orfitelli, Pasquale Ruotolo |
@@ -435,7 +435,7 @@ done
 2. Mette il dump in `init/Catasto.sql`.
 3. `docker compose up -d`: MySQL importa il dump al primo avvio (può richiedere diversi minuti); il backend parte quando il DB è sano.
 4. Il backend applica da solo le migrazioni all'avvio: in `docker compose logs app` compaiono le righe `✅ 001_segnalazioni.sql`.
-5. Verifica: `curl http://127.0.0.1:3005/health` → `{"status":"ok","db":"up"}`; il sito risponde su `:1427`.
+5. Verifica: `curl http://127.0.0.1:1427/health` → `{"status":"ok","db":"up"}`; il sito risponde su `:1427`.
 6. Configura il terminatore TLS (reverse proxy o CDN) davanti alla porta 1427.
 7. Invia una segnalazione di prova e conferma l'email di attivazione di FormSubmit.
 
@@ -477,3 +477,4 @@ flowchart LR
 |---|---|---|---|
 | 1.x | — | — | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | UC-8 aggiornato all'immagine Docker unica (servizio `app`) |

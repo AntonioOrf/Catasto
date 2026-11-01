@@ -5,8 +5,8 @@
 | Campo | Valore |
 |---|---|
 | Identificativo | `CAT-DOC-02` |
-| Versione | 2.0 |
-| Data | 2026-10-29 |
+| Versione | 2.1 |
+| Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
 | Responsabili | Antonio Orfitelli, Pasquale Ruotolo |
@@ -235,3 +235,4 @@ flowchart LR
 |---|---|---|---|
 | 1.x | — | — | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | Immagine Docker unica (`catasto-app`) al posto di backend e nginx; backend anche come Vercel Function |
