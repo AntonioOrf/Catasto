@@ -34,8 +34,7 @@ flowchart LR
 
     subgraph Server["Server (docker compose)"]
       direction LR
-      N["catasto-frontend<br/>nginx :80 → host :1427"]
-      A["catasto-backend<br/>Node 20 / Express :3005<br/>(127.0.0.1 only)"]
+      A["catasto-app<br/>Node 20 / Express :3005 → host :1427<br/>static site + API"]
       D[("catasto-db<br/>MySQL 8 :3306<br/>(127.0.0.1 only)")]
     end
 
@@ -44,18 +43,17 @@ flowchart LR
       F["FormSubmit<br/>email to the editors"]
     end
 
-    B -- "HTML, JS, CSS" --> N
-    B -- "/api/*" --> N
-    N -- "proxy_pass" --> A
+    B -- "HTML, JS, CSS" --> A
+    B -- "/api/*" --> A
     A -- "parameterised SQL" --> D
     A -- "manifest.json (24 h cache)" --> I
     B -- "IIIF images (img-src https:)" --> I
     A -. "user report notification" .-> F
 ```
 
-- The browser talks **only to nginx**: site and API share the same origin, so the CSP is `connect-src 'self'` and there are no CORS issues.
+- A single image: the same Express process serves the frontend build and the API. Site and API share the same origin, so the CSP is `connect-src 'self'` and there are no CORS issues.
 - The backend downloads only the volume **manifest** from the Archivio di Stato di Firenze (ASFi, the State Archive of Florence); the browser loads the folio **images** directly from the IIIF server.
-- Backend and database are exposed on loopback only: from outside, only port 1427 is reachable, to be placed behind a TLS terminator.
+- The database is exposed on loopback only: from outside, only port 1427 is reachable, to be placed behind a TLS terminator.
 
 ### 2.2 Monorepo
 
@@ -202,7 +200,7 @@ The Italian version of this table is the source of the definitions shown in the 
 flowchart LR
     Dev[Push / PR] --> CI["GitHub Actions: CI<br/>npm ci · build · lint · tsc · test"]
     CI -- "push to main, CI green" --> DK["Docker images<br/>backend/frontend build matrix"]
-    DK --> HUB[("Docker Hub<br/>ipavon/catasto1427-*:latest and :sha")]
+    DK --> HUB[("Docker Hub<br/>ipavon/catasto1427:latest and :sha")]
     HUB -- "pull (manual or polling)" --> SRV["Server<br/>docker compose"]
 ```
 
@@ -211,8 +209,7 @@ flowchart LR
 | Service | Image | Host port | Notes |
 |---|---|---|---|
 | `catasto-db` | `mysql:8.0` | `127.0.0.1:3306` | Data in `./mysql_data` (bind mount), initial import from `./init/Catasto.sql` |
-| `catasto-backend` | `ipavon/catasto1427-backend` | `127.0.0.1:3005` | Starts when the DB is `healthy` |
-| `catasto-frontend` | `ipavon/catasto1427-frontend` | `1427` | nginx: static site and `/api` proxy |
+| `catasto-app` | `ipavon/catasto1427` | `1427` | Starts when the DB is `healthy`; static site and API from the same process |
 
 ### 4.3 Security at a glance
 

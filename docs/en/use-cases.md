@@ -434,7 +434,7 @@ done
 1. Copy `docker-compose.yml` to the server and create `.env` from `.env.prod.example` (MySQL password, `SEGNALAZIONI_SALT`, `ADMIN_TOKEN`, `MODERAZIONE_SECRET`, `FORMSUBMIT_*`, `CORS_ORIGIN`).
 2. Put the dump in `init/Catasto.sql`.
 3. `docker compose up -d`: MySQL imports the dump on first start (this can take several minutes); the backend starts once the DB is healthy.
-4. The backend applies the migrations by itself at startup: `docker compose logs backend` shows the lines `✅ 001_segnalazioni.sql`.
+4. The backend applies the migrations by itself at startup: `docker compose logs app` shows the lines `✅ 001_segnalazioni.sql`.
 5. Check: `curl http://127.0.0.1:3005/health` → `{"status":"ok","db":"up"}`; the site answers on `:1427`.
 6. Configure the TLS terminator (reverse proxy or CDN) in front of port 1427.
 7. Send a test user report and confirm the FormSubmit activation email.
@@ -446,13 +446,13 @@ flowchart LR
     A[Merge to main] --> B[CI green]
     B --> C[Images :latest and :sha on Docker Hub]
     C --> D{Update}
-    D -->|manual| E["docker compose pull backend frontend<br/>docker compose up -d backend frontend"]
+    D -->|manual| E["docker compose pull app<br/>docker compose up -d app"]
     D -->|automatic| F[Registry polling<br/>e.g. Watchtower]
     E --> G[Backend startup:<br/>missing migrations applied]
     F --> G
     G --> H{/health ok?}
     H -->|yes| I[Done]
-    H -->|no| L[docker compose logs backend]
+    H -->|no| L[docker compose logs app]
 ```
 
 ### 10.3 Variants

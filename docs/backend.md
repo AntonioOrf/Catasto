@@ -112,8 +112,7 @@ Il pacchetto **`packages/shared`** contiene ciò che frontend e backend devono v
 
 ```mermaid
 flowchart LR
-    C[Browser] -->|/api/...| N[nginx<br/>frontend container]
-    N -->|proxy_pass| H[helmet · CORS · compression<br/>express.json 64kb]
+    C[Browser] -->|/api/...| H[helmet · CORS · compression<br/>express.json 64kb]
     H --> RL[apiLimiter<br/>300 req / 15 min / IP]
     RL --> R[Route]
     R --> V[Controller<br/>validazione zod]
@@ -134,7 +133,7 @@ flowchart LR
 
 ### 4.1 Base URL e provenienza dei dati
 
-Base URL: stessa origine del sito (`/api`, proxato da nginx) oppure `http://localhost:3005` in sviluppo.
+Base URL: stessa origine del sito (`/api`, servito dallo stesso processo) oppure `http://localhost:3005` in sviluppo.
 
 Le risposte mescolano i tre livelli di provenienza dello [standard documentale](standard-documentale.md#56-provenienza-e-integrità-del-dato--provenance-and-data-integrity):
 
@@ -641,7 +640,7 @@ Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici (dati della f
 
 La ricerca in tabella legge `fuoco_segnature`: senza migrazioni risponde 500.
 
-- **Docker**: il container del backend applica le migrazioni mancanti a ogni avvio, prima di far partire il server. Se una migrazione fallisce il container si ferma (e il compose lo riavvia): l'errore è in `docker compose logs backend`.
+- **Docker**: il container del backend applica le migrazioni mancanti a ogni avvio, prima di far partire il server. Se una migrazione fallisce il container si ferma (e il compose lo riavvia): l'errore è in `docker compose logs app`.
 - **Sviluppo**: vanno eseguite a mano.
 
 ```bash
@@ -649,7 +648,7 @@ La ricerca in tabella legge `fuoco_segnature`: senza migrazioni risponde 500.
 npm run db:migrate -w catasto-backend
 
 # container, a mano (di norma non serve)
-docker compose exec backend node backend-catasto/dist/scripts/migrate.js
+docker compose exec app node backend-catasto/dist/scripts/migrate.js
 ```
 
 ---
@@ -664,8 +663,9 @@ docker compose exec backend node backend-catasto/dist/scripts/migrate.js
 | `DB_PORT` | `3306` | |
 | `DB_SSL` | `false` | `true` attiva TLS ≥ 1.2 con verifica del certificato |
 | `DB_CONNECTION_LIMIT` | `50` (`5` su Vercel) | connessioni massime del pool per processo / istanza della funzione |
+| `STATIC_DIR` | non impostata | Cartella della build del frontend da servire insieme all'API (impostata nell'immagine Docker; vuota in sviluppo e su Vercel) |
 | `CORS_ORIGIN` | vuota = tutte le origini | Origini ammesse, separate da virgola |
-| `TRUST_PROXY` | non impostata | Numero di proxy davanti al backend (`1` con nginx). Accetta anche `true`/`false` o nomi come `loopback`, ma `true` fa fidare di qualunque `X-Forwarded-For`: usare un numero |
+| `TRUST_PROXY` | non impostata | Numero di reverse proxy davanti al backend (vuota se la porta è esposta direttamente, di solito `1` dietro un proxy, `1` su Vercel). Accetta anche `true`/`false` o nomi come `loopback`, ma `true` fa fidare di qualunque `X-Forwarded-For`: usare un numero |
 | `SEGNALAZIONI_SALT` | obbligatoria in produzione | Salt dell'hash degli IP |
 | `ADMIN_TOKEN` | vuota = area admin chiusa | Token Bearer della moderazione via API |
 | `FORMSUBMIT_EMAIL` | vuota = nessuna email | Destinatario delle segnalazioni |

@@ -77,8 +77,7 @@ Data missing from the source stay missing: the portal neither estimates nor reco
 
 ```mermaid
 flowchart LR
-    B[Browser<br/>React SPA] -->|/ and /api| N[nginx]
-    N -->|proxy /api| A[Express API]
+    B[Browser<br/>React SPA] -->|/ and /api| A[Express<br/>site + API]
     A --> D[(MySQL)]
     A -->|IIIF manifest| I[ICAR digital archive]
     B -->|images| I

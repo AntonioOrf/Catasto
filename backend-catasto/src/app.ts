@@ -12,6 +12,7 @@ import parentiRoutes from "./routes/parenti.routes.js";
 import mestieriRoutes from "./routes/mestieri.routes.js";
 import segnalazioneRoutes from "./routes/segnalazione.routes.js";
 import { parseTrustProxy } from "./utils/trust-proxy.js";
+import { serveFrontend } from "./static.js";
 
 dotenv.config({ quiet: true });
 
@@ -60,10 +61,17 @@ const apiLimiter = rateLimit({
 });
 app.use("/api", apiLimiter);
 
+// STATIC_DIR = cartella della build del frontend. Impostata nell'immagine
+// Docker unica, dove lo stesso processo serve sito e API; vuota in sviluppo
+// e su Vercel (lì il frontend lo serve la piattaforma).
+const staticDir = process.env.STATIC_DIR || undefined;
+
 // Routes
-app.get("/", (_req, res) => {
-  res.send("Catasto API is running! 🚀");
-});
+if (!staticDir) {
+  app.get("/", (_req, res) => {
+    res.send("Catasto API is running! 🚀");
+  });
+}
 
 app.get("/health", async (_req, res) => {
   try {
@@ -79,6 +87,8 @@ app.use("/api/filters", filterRoutes);
 app.use("/api/parenti", parentiRoutes);
 app.use("/api/mestieri", mestieriRoutes);
 app.use("/api/segnalazioni", segnalazioneRoutes);
+
+if (staticDir) serveFrontend(app, staticDir);
 
 // Error Handling: 404 in JSON anche per le rotte inesistenti, non la pagina
 // HTML di default di Express.
