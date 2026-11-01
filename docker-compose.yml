@@ -52,6 +52,9 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-}
       - FILTERS_CACHE_TTL=${FILTERS_CACHE_TTL:-}
       - EXPORT_MAX_ROWS=${EXPORT_MAX_ROWS:-}
+      # Vuota con un solo container. "mysql" se piu' istanze servono il
+      # portale dietro un bilanciatore: vedi docs/portabilita.md.
+      - SHARED_STATE=${SHARED_STATE:-}
     depends_on:
       db:
         condition: service_healthy

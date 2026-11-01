@@ -1,0 +1,22 @@
+# Configurazione non segreta. Valori di esempio: dominio e host sono fittizi.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catasto-config
+data:
+  DB_HOST: mysql.example.internal
+  DB_PORT: "3306"
+  DB_NAME: catasto
+  # true se il DB richiede TLS (obbligatorio con TiDB Cloud)
+  DB_SSL: "false"
+  # Più repliche: rate limit e invalidazione delle cache passano dal DB
+  SHARED_STATE: mysql
+  # Davanti ai pod c'è l'ingress controller (o il router di OpenShift) e i pod
+  # non sono raggiungibili da fuori: un solo proxy fidato.
+  TRUST_PROXY: "1"
+  FORMSUBMIT_ORIGIN: https://catasto.example.org
+  PUBLIC_API_URL: ""
+  FORMSUBMIT_EMAIL: ""
+  CORS_ORIGIN: ""
+  FILTERS_CACHE_TTL: ""
+  EXPORT_MAX_ROWS: ""

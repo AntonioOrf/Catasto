@@ -27,6 +27,10 @@ tsup.config.ts.timestamp-*
 # --- Docker ---
 # docker-compose.yml  <-- Tracciamo la configurazione dello stack
 docker-compose.override.yml
+
+# --- Deploy ---
+# Il secret vero si crea da secret.example.yaml e non va mai committato
+deploy/kubernetes/secret.yaml
 *.dockerignore
 
 # --- Scripts Personalizzati (Ignorati come richiesto) ---

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
+import { createLimiter } from "../utils/rate-limit.js";
 import { CatastoController } from "../controllers/catasto.controller.js";
 import { asyncHandler } from "../middlewares/async-handler.js";
 
@@ -7,40 +7,28 @@ const router = Router();
 
 // The manifest endpoint proxies an external government service - keep it
 // stricter than general API traffic to avoid hammering the upstream.
-const manifestLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+const manifestLimiter = createLimiter("manifest", {
   limit: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
 });
 
 // L'export legge tutte le righe della ricerca: limite molto più stretto del
 // traffico normale, e separato per non consumare la quota della tabella.
-const exportLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+const exportLimiter = createLimiter("export", {
   limit: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
   message: { error: "Troppi export in poco tempo. Riprova tra qualche minuto." },
 });
 
 // Una decina di query aggregate per richiesta (con cache breve): limite
 // separato, più largo dell'export perché il pannello segue i filtri.
-const statsLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+const statsLimiter = createLimiter("stats", {
   limit: 150,
-  standardHeaders: true,
-  legacyHeaders: false,
   message: { error: "Troppe richieste di statistiche. Riprova tra qualche minuto." },
 });
 
 // Una richiesta a ogni parola scritta nella casella (dopo una breve pausa):
 // limite proprio, largo, per non consumare la quota della tabella.
-const suggestLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+const suggestLimiter = createLimiter("suggest", {
   limit: 600,
-  standardHeaders: true,
-  legacyHeaders: false,
   message: { error: "Troppe ricerche in poco tempo. Riprova tra qualche minuto." },
 });
 

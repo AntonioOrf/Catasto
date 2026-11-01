@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Identifier | `CAT-DOC-03` |
-| Version | 2.1 |
+| Version | 2.2 |
 | Date | 2026-11-01 |
 | Status | Approved |
 | Classification | Public |
@@ -47,10 +47,12 @@ backend-catasto/
 │   ├── 001_segnalazioni.sql      # application tables (segnalazioni, fuoco_segnature)
 │   ├── 002_traduzioni_lookup.sql # translations of lookup labels
 │   ├── 003_traduzioni_lookup_seed.sql # initial English translations
-│   └── 004_traduzioni_lookup_dump.sql # translations of the dump's actual labels (from db:export-traduzioni)
+│   ├── 004_traduzioni_lookup_dump.sql # translations of the dump's actual labels (from db:export-traduzioni)
+│   └── 005_stato_condiviso.sql   # rate limiting and cache generation with several instances (SHARED_STATE=mysql)
 └── src/
     ├── server.ts                  # Express bootstrap: helmet, CORS, rate limit, routes, /health
     ├── config/db.ts               # mysql2 pool (connectionLimit 50, optional TLS)
+    ├── config/shared-state.ts     # SHARED_STATE: state in memory or on MySQL
     ├── routes/
     │   ├── catasto.routes.ts      # /api/catasto (+ dedicated limiter for the manifest)
     │   ├── filter.routes.ts       # /api/filters (+ admin cache invalidation)
@@ -66,7 +68,8 @@ backend-catasto/
     │   ├── export.service.ts      # streaming CSV/XLSX export, row cap, metadata
     │   ├── stats.service.ts       # search statistics (with short-lived cache)
     │   ├── segnalazione.service.ts# creation, anti-abuse, transactional state changes
-    │   └── notifica.service.ts    # email forwarding via FormSubmit with signed links
+    │   ├── notifica.service.ts    # email forwarding via FormSubmit with signed links
+    │   └── cache-sync.service.ts  # cache invalidation propagated to the other instances
     ├── models/
     │   ├── fuoco.model.ts         # SELECTs on households, joins, portata shelfmark
     │   ├── common.model.ts        # lookups, filters (TTL cache), family members, occupations
@@ -79,6 +82,8 @@ backend-catasto/
     │   └── error.middleware.ts    # 404 + error handling (masks 5xx in production)
     ├── utils/
     │   ├── validation.ts          # pagination, numeric ids, id lists, HttpError
+    │   ├── rate-limit.ts          # createLimiter: shared options, shared store if SHARED_STATE=mysql
+    │   ├── mysql-rate-limit-store.ts # express-rate-limit store on the rate_limit_hits table
     │   ├── csv.ts, traduzioni-csv.ts # CSV (results export, translations export/import)
     │   ├── export-columns.ts      # columns and cells of exported files
     │   ├── export-writers.ts      # streaming writers for CSV and XLSX
@@ -88,7 +93,7 @@ backend-catasto/
     │   └── moderazione-token.ts   # HMAC tokens for the Accept/Reject links
     ├── views/moderazione.page.ts  # HTML confirmation/outcome pages for moderation
     └── scripts/
-        ├── migrate.ts             # migration runner
+        ├── migrate.ts             # migration runner (with a MySQL lock across instances)
         ├── export-traduzioni.ts   # CSV of lookup values without a translation
         └── import-traduzioni.ts   # import of the CSV filled in by the editors
 ```
@@ -151,7 +156,8 @@ Economic values (*fortune* (property), credit, credit in the Monte, taxable asse
 
 | Method | Path | Access | Description |
 |---|---|---|---|
-| GET | `/health` | public | Service and database status |
+| GET | `/health`, `/health/ready` | public | Service and database status (readiness) |
+| GET | `/health/live` | public | The process responds, without querying the database (liveness) |
 | GET | `/api/catasto` | public | Simple search, table view (paginated) |
 | GET | `/api/catasto/fuochi?ids=` | public | Up to 50 households by id, for selection and comparison |
 | GET | `/api/catasto/suggest?q=` | public (600/15 min) | Up to 8 households for the workbench's "Find and add" |
@@ -182,10 +188,10 @@ Every read endpoint accepts `?lang=en` (including `POST /api/catasto/query`, in 
 | manifest | `/api/catasto/manifest/:id` | 30 requests / 15 min / IP |
 | `statsLimiter` | `GET /api/catasto/stats`, `POST /api/catasto/query/stats` | 150 requests / 15 min / IP |
 | `exportLimiter` | `GET /api/catasto/export`, `POST /api/catasto/query/export` | 20 requests / 15 min / IP |
-| `createLimiter` | `POST /api/segnalazioni` | 5 / hour / IP, plus 10 / hour per IP hash stored in the DB |
+| `segnalazioneLimiter` | `POST /api/segnalazioni` | 5 / hour / IP, plus 10 / hour per IP hash stored in the DB |
 | `adminLimiter` | admin and moderation routes | 100 **failed** requests / 15 min / IP |
 
-Counters are kept in memory: they apply per process and reset on restart. Behind a proxy, set `TRUST_PROXY` (see [variables](#9-environment-variables)), otherwise all requests appear to come from the same IP.
+All limiters are created by `createLimiter` (`src/utils/rate-limit.ts`). With `SHARED_STATE` empty, counters are kept in memory: they apply per process and reset on restart. With `SHARED_STATE=mysql` they live in the `rate_limit_hits` table (migration 005) and apply across all backend instances, with time computed by the database; if the database does not respond, the request goes through uncounted. Behind a proxy, set `TRUST_PROXY` (see [variables](#9-environment-variables)), otherwise all requests appear to come from the same IP.
 
 ### 4.4 Pagination and sorting
 
@@ -393,6 +399,8 @@ A non-existent household returns `[]`.
 
 Admin route (header `Authorization: Bearer <ADMIN_TOKEN>`, same `adminLimiter` as the others). Clears the filter options cache and the translations cache: the next request reloads them from the DB. Use it after re-importing the dump or importing translations, so as not to wait for expiry (`FILTERS_CACHE_TTL`, one hour by default) or restart the backend.
 
+With `SHARED_STATE=mysql` the request reaches a single instance, which increments the generation in `cache_generazioni`; the others re-read it at most every 30 seconds, on the first `/api` request, and clear their own caches if it has changed (`src/services/cache-sync.service.ts`). The check is driven by requests rather than a timer, so it also works on Vercel.
+
 ```bash
 curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://catasto.example.org/api/filters/cache/invalidate
 # {"ok":true}
@@ -402,9 +410,14 @@ curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://catasto.example.org
 
 Raw rows of the `mestieri` table, sorted by name (by translated label with `lang=en`). The frontend does not use it (it takes occupations from `/api/filters`): it remains as a **public API** for those extracting the data, with the same shape as the dump's columns. Consider it stable: changing it breaks external clients.
 
-### 4.17 Service status: `GET /health`
+### 4.17 Service status: `GET /health`, `/health/ready`, `/health/live`
 
-`200 {"status":"ok","db":"up"}` or `503 {"status":"error","db":"down"}`. Not subject to rate limiting: use it for health checks and monitoring.
+| Route | Response | Use |
+|---|---|---|
+| `/health`, `/health/ready` | `200 {"status":"ok","db":"up"}` or `503 {"status":"error","db":"down"}` | Readiness: the instance can serve requests. Dockerfile `HEALTHCHECK`, Kubernetes `readinessProbe`, monitoring |
+| `/health/live` | always `200 {"status":"ok"}` | Liveness: the process responds. Kubernetes `livenessProbe` and `startupProbe`. It does not query the database, so an unreachable database does not make every instance restart in a loop |
+
+None of the three is subject to rate limiting.
 
 ---
 
@@ -643,6 +656,7 @@ The Archive dump (`init/Catasto.sql`) contains the historical data (source data)
 The table search reads `fuoco_segnature`: without migrations it responds 500.
 
 - **Docker**: the backend container applies any missing migrations at every start, before launching the server. If a migration fails the container stops (and compose restarts it): the error is in `docker compose logs app`.
+- **Several instances**: the runner takes the MySQL lock `catasto_migrations` (`GET_LOCK`) before reading `schema_migrations`. If several instances start together, one applies the migrations and the others wait, then find them already recorded. The maximum wait is `MIGRATION_LOCK_TIMEOUT` seconds (default 300); beyond that, the runner exits with an error.
 - **Development**: run them by hand.
 
 ```bash
@@ -676,6 +690,8 @@ docker compose exec app node backend-catasto/dist/scripts/migrate.js
 | `PUBLIC_API_URL` | site origin | Base of `/api` in links, if different from the site |
 | `EXPORT_MAX_ROWS` | `100000` | Maximum number of households in an export; above it, `400` with a message |
 | `FILTERS_CACHE_TTL` | `3600` | Lifetime in seconds of the filter options cache; `0` = no expiry. To clear it at once: `POST /api/filters/cache/invalidate` |
+| `SHARED_STATE` | empty = `memory` | `mysql` when several instances serve the portal: rate limiting and cache invalidation go through the database (§4.3, §4.15). Any value other than `memory`/`mysql` stops the startup |
+| `MIGRATION_LOCK_TIMEOUT` | `300` | Seconds to wait for the migration lock (§8) |
 
 Full production example, with fictitious values: [`.env.prod.example`](../../.env.prod.example).
 
@@ -726,7 +742,7 @@ The issues raised by the September 2026 code review have been fixed; the history
 
 | Area | Description |
 |---|---|
-| Rate limit | Counters are in memory and per process: with several backend instances, the limits apply per instance. |
+| Several instances | With `SHARED_STATE` empty, rate limiting and caches are per process: with several instances the limits apply per instance and cache invalidation only reaches the instance that receives it. Set `SHARED_STATE=mysql` (§9). The statistics (60 s) and IIIF manifest caches remain per instance anyway: they expire on their own. |
 
 ---
 
@@ -745,3 +761,4 @@ The issues raised by the September 2026 code review have been fixed; the history
 | 1.x | — | — | Earlier versions, no change log |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewritten according to CAT-DOC-00; English translation |
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | `app.ts` split from `server.ts`, Vercel Function, `static.ts` to serve the frontend, `STATIC_DIR` and `DB_CONNECTION_LIMIT` variables |
+| 2.2 | 2026-11-01 | Pasquale Ruotolo | Several instances: `SHARED_STATE`, rate limiting and cache invalidation on MySQL, migration lock, `/health/live` and `/health/ready` |

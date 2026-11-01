@@ -6,20 +6,20 @@
 |---|---|
 | Identifier | `CAT-DOC-01` |
 | Title | Installation and deployment of the Florentine Catasto of 1427/30 portal |
-| Version | 2.1 |
+| Version | 2.2 |
 | Date | 2026-11-01 |
 | Status | Approved |
 | Classification | Public |
 | Owners | Antonio Orfitelli, Pasquale Ruotolo |
 | Language | English (translation; the Italian text prevails) |
 | Original | [Italiano](../guides.md) |
-| Related documents | [Documentation standard](../standard-documentale.md) (`CAT-DOC-00`) · [Architecture and data model](architecture.md) (`CAT-DOC-02`) · [Backend and API](backend.md) (`CAT-DOC-03`) · [Frontend](frontend.md) (`CAT-DOC-04`) · [Use cases](use-cases.md) (`CAT-DOC-05`) · [Code review](code-review.md) (`CAT-DOC-06`) · [Repository readme](../../README.en.md) |
+| Related documents | [Documentation standard](../standard-documentale.md) (`CAT-DOC-00`) · [Architecture and data model](architecture.md) (`CAT-DOC-02`) · [Backend and API](backend.md) (`CAT-DOC-03`) · [Frontend](frontend.md) (`CAT-DOC-04`) · [Use cases](use-cases.md) (`CAT-DOC-05`) · [Code review](code-review.md) (`CAT-DOC-06`) · [Portability](portability.md) (`CAT-DOC-07`) · [Repository readme](../../README.en.md) |
 
 ---
 
 ## 1. Purpose and audience
 
-This document is for developers and system administrators. It describes how to set up the portal of the **Florentine Catasto of 1427/30** (*catasto*: the Florentine tax survey) for local development (§2) and for production with Docker (§3) and on Vercel (§4), how the Docker image is published automatically (§5) and how to solve the most frequent problems (§6). Environment variables are described in detail in [Backend and API](backend.md), section "Environment variables"; the procedure corresponds to use case UC-8 "Install and update the portal" in [Use cases](use-cases.md). For the overall structure see [Architecture and data model](architecture.md).
+This document is for developers and system administrators. It describes how to set up the portal of the **Florentine Catasto of 1427/30** (*catasto*: the Florentine tax survey) for local development (§2) and for production with Docker (§3) and on Vercel (§4), how the Docker image is published automatically (§5) and how to solve the most frequent problems (§6). Other platforms (Kubernetes, OpenShift, Podman, machines without containers) and the transfer to a university's servers are covered in [Portability and transfer to a university](portability.md). Environment variables are described in detail in [Backend and API](backend.md), section "Environment variables"; the procedure corresponds to use case UC-8 "Install and update the portal" in [Use cases](use-cases.md). For the overall structure see [Architecture and data model](architecture.md).
 
 The portal database holds data at three levels of provenance (standard `CAT-DOC-00`, §5.6):
 
@@ -314,3 +314,4 @@ docker compose up -d         # reimports init/Catasto.sql, then the backend reap
 | 1.x | — | — | Previous versions, no change log |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewritten according to CAT-DOC-00 and English translation |
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | Single Docker image (`app`), production on Vercel (§4), database alignment from TiDB (§3.7), `TRUST_PROXY` depending on the setup |
+| 2.2 | 2026-11-01 | Pasquale Ruotolo | Reference to CAT-DOC-07 for other platforms |

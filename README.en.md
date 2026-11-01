@@ -21,8 +21,8 @@
 | Field | Value |
 |---|---|
 | Identifier | `CAT-README` |
-| Version | 2.0 |
-| Date | 2026-10-29 |
+| Version | 2.1 |
+| Date | 2026-11-01 |
 | Status | Approved |
 | Classification | Public |
 | Owners | Antonio Orfitelli, Pasquale Ruotolo |
@@ -106,7 +106,7 @@ npm run db:migrate -w catasto-backend                  # application tables
 npm run dev                                            # frontend :5173, API :3005
 ```
 
-For production with Docker (port `1427`) follow the [installation guide](docs/en/installation.md).
+For production with Docker (port `1427`) follow the [installation guide](docs/en/installation.md). For Kubernetes, OpenShift, Podman or a machine without containers, and for the transfer to a university's servers, see [Portability](docs/en/portability.md).
 
 ## 5. Documentation
 
@@ -121,6 +121,7 @@ All documents follow the [CAT-DOC-00 documentation standard](docs/standard-docum
 | CAT-DOC-04 | [Frontend](docs/en/frontend.md) | [IT](docs/frontend.md) | Pages, components, data flow, viewer, user reports, build |
 | CAT-DOC-05 | [Use cases](docs/en/use-cases.md) | [IT](docs/casi-d-uso.md) | Eight real scenarios with sequence, state and flow diagrams |
 | CAT-DOC-06 | [Code review](docs/en/code-review.md) | [IT](docs/revisione-codice.md) | Known issues by priority, test status |
+| CAT-DOC-07 | [Portability and transfer to a university](docs/en/portability.md) | [IT](docs/portabilita.md) | Requirements, Kubernetes/OpenShift, Podman, systemd, several instances, questions for the IT service |
 | — | — | [Product brief](frontend-catasto/PRODUCT.md) | Users, principles and constraints of the product (Italian only) |
 
 ## 6. Contributing
@@ -149,3 +150,4 @@ A project by **Antonio Orfitelli** and **Pasquale Ruotolo**. Copyright © 2025-2
 |---|---|---|---|
 | 1.x | — | Antonio Orfitelli, Pasquale Ruotolo | Earlier versions, without log |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewrite according to CAT-DOC-00, source section, English translation |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | CAT-DOC-07 document on portability |

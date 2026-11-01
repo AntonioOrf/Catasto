@@ -1,0 +1,24 @@
+# Ingress generico. Su OpenShift viene convertito in una Route; in alternativa:
+#   oc create route edge catasto --service=catasto --hostname=catasto.example.org
+# Il certificato (secret catasto-tls) di solito lo fornisce l'ateneo oppure
+# cert-manager: chiedere al servizio informatico quale dei due.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: catasto
+spec:
+  # ingressClassName: nginx   # se il cluster ne ha più di una
+  tls:
+    - hosts: [catasto.example.org]
+      secretName: catasto-tls
+  rules:
+    - host: catasto.example.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: catasto
+                port:
+                  name: http
