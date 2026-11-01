@@ -27,6 +27,39 @@
   }
 }
 
+/* Indicatore di caricamento (Spinner): le righe della carta si scrivono una
+   dopo l'altra, restano un momento e svaniscono insieme prima di ricominciare.
+   pathLength=1 sulle righe rende i trattini indipendenti dalla lunghezza. */
+.writing-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: 2.4s ease-in-out infinite;
+}
+.writing-line-1 { animation-name: writing-line-1; }
+.writing-line-2 { animation-name: writing-line-2; }
+.writing-line-3 { animation-name: writing-line-3; }
+@keyframes writing-line-1 {
+  0% { stroke-dashoffset: 1; opacity: 1; }
+  22%, 85% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes writing-line-2 {
+  0%, 22% { stroke-dashoffset: 1; opacity: 1; }
+  44%, 85% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes writing-line-3 {
+  0%, 44% { stroke-dashoffset: 1; opacity: 1; }
+  60%, 85% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .writing-line {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
 /* Frecce native degli input number nascoste: CustomNumberInput ha le sue. */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
