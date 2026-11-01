@@ -6,7 +6,7 @@
 |---|---|
 | Identificativo | `CAT-DOC-01` |
 | Titolo | Installazione e deployment del portale Catasto fiorentino del 1427/30 |
-| Versione | 2.2 |
+| Versione | 2.3 |
 | Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
@@ -216,7 +216,9 @@ In alternativa il container può usare direttamente TiDB (in `.env`: `DB_HOST` e
 
 ## 4. Produzione su Vercel
 
-Su Vercel un solo progetto serve sito e API: il frontend come sito statico, il backend come Vercel Function (`frontend-catasto/api/index.ts`, che esporta l'app Express). Il database è esterno, per esempio TiDB Cloud.
+Su Vercel un solo progetto serve sito e API: il frontend come sito statico, il backend come Vercel Function (`frontend-catasto/api/index.js`, che esporta l'app Express). Il database è esterno, per esempio TiDB Cloud.
+
+La funzione non importa i sorgenti del backend: `npm run build` del frontend, dopo `vite build`, compila `backend-catasto/src/app.ts` in un solo file, `frontend-catasto/server/app.mjs` (`scripts/build-api.mjs`, esbuild), con dentro il pacchetto condiviso `@catasto/shared`. Le altre dipendenze restano esterne e Vercel le copia da `node_modules`. Senza questo passo la funzione non trova `@catasto/shared`, perché Vercel non copia il collegamento che npm crea per i workspace, e ogni rotta risponde `500 FUNCTION_INVOCATION_FAILED`.
 
 ### 4.1 Impostazioni del progetto
 
@@ -315,3 +317,4 @@ docker compose up -d         # reimporta init/Catasto.sql, poi il backend riappl
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | Immagine Docker unica (`app`), produzione su Vercel (§4), allineamento del database da TiDB (§3.7), `TRUST_PROXY` secondo il caso |
 | 2.2 | 2026-11-01 | Pasquale Ruotolo | Rimando a CAT-DOC-07 per le altre piattaforme |
+| 2.3 | 2026-11-01 | Pasquale Ruotolo | Vercel: il backend della funzione è compilato in un solo file con `@catasto/shared` (§4) |

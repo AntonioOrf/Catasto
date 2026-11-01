@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Identifier | `CAT-DOC-04` |
-| Version | 2.2 |
+| Version | 2.3 |
 | Date | 2026-11-01 |
 | Status | Approved |
 | Classification | Public |
@@ -333,7 +333,7 @@ Single image (`Dockerfile` at the root): the backend also serves the frontend bu
 
 ### 9.5 Vercel
 
-`vercel.json`: same headers with `connect-src 'self' https:`. The backend runs in the same project as a Vercel Function (`api/index.ts`, which exports the Express app from `backend-catasto/src/app.ts`): rewrites send `/api/*` and `/health` to the function, everything else to `index.html`. Frontend and API share the domain, so `VITE_API_URL` must be left empty (or removed) and `CORS_ORIGIN` is not needed.
+`vercel.json`: same headers with `connect-src 'self' https:`. The backend runs in the same project as a Vercel Function (`api/index.js`, which exports the Express app from `backend-catasto/src/app.ts`, compiled into `server/app.mjs` by `npm run build:api`): rewrites send `/api/*` and `/health` to the function, everything else to `index.html`. Frontend and API share the domain, so `VITE_API_URL` must be left empty (or removed) and `CORS_ORIGIN` is not needed.
 
 Vercel project settings: Root Directory `frontend-catasto`, Vite framework, "Include files outside the Root Directory" enabled (the default). Environment variables (Production): `DB_HOST`, `DB_PORT` (4000 for TiDB Cloud), `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL=true`, `TRUST_PROXY=1`, `SEGNALAZIONI_SALT`, `ADMIN_TOKEN` and, if used, `FORMSUBMIT_EMAIL`, `FORMSUBMIT_ORIGIN`, `MODERAZIONE_SECRET`, `PUBLIC_API_URL` (the site URL). Each function instance opens at most 5 DB connections (`DB_CONNECTION_LIMIT` to change it). Rate limiting is in memory, so on Vercel it applies per instance.
 
@@ -400,4 +400,5 @@ The issues raised by the September 2026 review have been fixed (history in [Code
 | 1.x | — | — | Earlier versions, without a change log |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewrite according to CAT-DOC-00 and English translation |
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | nginx replaced by the backend in the Docker image; API on Vercel in the same project |
-| 2.2 | 2026-11-01 | Pasquale Ruotolo | Map page in the menu, advanced search and place from the URL, links from Browse and the household card, wrong-location report |
+| 2.2 | 2026-11-01 | Pasquale Ruotolo | Vercel Function: backend compiled into `server/app.mjs` (`build:api`) |
+| 2.3 | 2026-11-01 | Pasquale Ruotolo | Map page in the menu, advanced search and place from the URL, links from Browse and the household card, wrong-location report |
