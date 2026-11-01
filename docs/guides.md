@@ -6,7 +6,7 @@
 |---|---|
 | Identificativo | `CAT-DOC-01` |
 | Titolo | Installazione e deployment del portale Catasto fiorentino del 1427/30 |
-| Versione | 2.4 |
+| Versione | 2.5 |
 | Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
@@ -218,7 +218,7 @@ In alternativa il container può usare direttamente TiDB (in `.env`: `DB_HOST` e
 
 Su Vercel un solo progetto serve sito e API: il frontend come sito statico, il backend come Vercel Function (`frontend-catasto/api/index.js`, che esporta l'app Express). Il database è esterno, per esempio TiDB Cloud.
 
-La funzione non importa i sorgenti del backend: `npm run build` del frontend, dopo `vite build`, compila `backend-catasto/src/app.ts` in un solo file, `frontend-catasto/server/app.mjs` (`scripts/build-api.mjs`, esbuild), con dentro il pacchetto condiviso `@catasto/shared`. Le altre dipendenze restano esterne e Vercel le copia da `node_modules`. Senza questo passo la funzione non trova `@catasto/shared`, perché Vercel non copia il collegamento che npm crea per i workspace, e ogni rotta risponde `500 FUNCTION_INVOCATION_FAILED`.
+La funzione non importa i sorgenti del backend: `npm run build` del frontend, dopo `vite build`, compila `backend-catasto/src/app.ts` in un solo file, `frontend-catasto/server/app.mjs` (`scripts/build-api.mjs`, esbuild), con dentro il pacchetto condiviso `@catasto/shared` e tutte le dipendenze npm del backend (express, mysql2, exceljs...): il file usa solo i moduli di Node. Su Vercel la radice del progetto è `frontend-catasto`, e la funzione non riceve né il collegamento dei workspace a `@catasto/shared` né le dipendenze del backend: con import esterni ogni rotta falliva con `ERR_MODULE_NOT_FOUND`.
 
 ### 4.1 Impostazioni del progetto
 
@@ -321,3 +321,4 @@ docker compose up -d         # reimporta init/Catasto.sql, poi il backend riappl
 | 2.2 | 2026-11-01 | Pasquale Ruotolo | Rimando a CAT-DOC-07 per le altre piattaforme |
 | 2.3 | 2026-11-01 | Pasquale Ruotolo | Vercel: il backend della funzione è compilato in un solo file con `@catasto/shared` (§4) |
 | 2.4 | 2026-11-01 | Pasquale Ruotolo | Vercel: comando di build in `vercel.json`, errore di avvio del backend in risposta (503) e nei log (§4.3) |
+| 2.5 | 2026-11-01 | Pasquale Ruotolo | Vercel: anche le dipendenze npm del backend nel bundle della funzione (§4) |

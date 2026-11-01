@@ -6,7 +6,7 @@
 |---|---|
 | Identifier | `CAT-DOC-01` |
 | Title | Installation and deployment of the Florentine Catasto of 1427/30 portal |
-| Version | 2.4 |
+| Version | 2.5 |
 | Date | 2026-11-01 |
 | Status | Approved |
 | Classification | Public |
@@ -218,7 +218,7 @@ Alternatively the container can use TiDB directly (in `.env`: TiDB `DB_HOST` and
 
 On Vercel a single project serves site and API: the frontend as a static site, the backend as a Vercel Function (`frontend-catasto/api/index.js`, which exports the Express app). The database is external, for example TiDB Cloud.
 
-The function does not import the backend sources: the frontend's `npm run build`, after `vite build`, compiles `backend-catasto/src/app.ts` into a single file, `frontend-catasto/server/app.mjs` (`scripts/build-api.mjs`, esbuild), with the shared package `@catasto/shared` inside. The other dependencies stay external and Vercel copies them from `node_modules`. Without this step the function cannot find `@catasto/shared`, because Vercel does not copy the link npm creates for workspaces, and every route answers `500 FUNCTION_INVOCATION_FAILED`.
+The function does not import the backend sources: the frontend's `npm run build`, after `vite build`, compiles `backend-catasto/src/app.ts` into a single file, `frontend-catasto/server/app.mjs` (`scripts/build-api.mjs`, esbuild), with the shared package `@catasto/shared` and all the backend's npm dependencies (express, mysql2, exceljs...) inside: the file only uses Node's built-in modules. On Vercel the project root is `frontend-catasto`, and the function receives neither the workspace link to `@catasto/shared` nor the backend's dependencies: with external imports every route failed with `ERR_MODULE_NOT_FOUND`.
 
 ### 4.1 Project settings
 
@@ -321,3 +321,4 @@ docker compose up -d         # reimports init/Catasto.sql, then the backend reap
 | 2.2 | 2026-11-01 | Pasquale Ruotolo | Reference to CAT-DOC-07 for other platforms |
 | 2.3 | 2026-11-01 | Pasquale Ruotolo | Vercel: the function's backend is compiled into a single file with `@catasto/shared` (§4) |
 | 2.4 | 2026-11-01 | Pasquale Ruotolo | Vercel: build command in `vercel.json`, backend startup error in the response (503) and in the logs (§4.3) |
+| 2.5 | 2026-11-01 | Pasquale Ruotolo | Vercel: the backend's npm dependencies also in the function bundle (§4) |
