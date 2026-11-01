@@ -256,7 +256,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
         <div className="flex-1 relative bg-neutral-900 overflow-hidden flex items-center justify-center">
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10 gap-4">
-              <Spinner className="h-12 w-12" />
+              <Spinner className="h-12 w-12" inverted />
               <p className="font-mono text-sm text-white/80" role="status">{t('loadingManifest')}</p>
             </div>
           )}
@@ -296,7 +296,7 @@ const ArchivioViewerModal: React.FC<ArchivioViewerModalProps> = ({ isOpen, onClo
             >
               {imageLoading && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none gap-2">
-                  <Spinner className="h-10 w-10" />
+                  <Spinner className="h-10 w-10" inverted />
                   <p className="text-xs text-white/80 font-mono drop-shadow-md">{t('loadingImage')}</p>
                 </div>
               )}
