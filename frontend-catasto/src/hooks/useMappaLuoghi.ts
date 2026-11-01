@@ -2,13 +2,17 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { fetchMappaLuoghi } from "../api/catastoService";
 import { ApiError, userMessage } from "../api/client";
 import { useLanguage } from "../i18n";
+import type { RicercaMappa } from "../features/mappa/lib/ricerca";
 
-/** Luoghi della mappa per i filtri dati; i dati restano visibili mentre arrivano i nuovi. */
-export function useMappaLuoghi(filtri: Record<string, string>, fallback: string) {
+/**
+ * Luoghi della mappa per la ricerca data (filtri semplici o AST); i dati
+ * restano visibili mentre arrivano i nuovi. Il luogo selezionato non conta.
+ */
+export function useMappaLuoghi({ filtri, ast }: Pick<RicercaMappa, "filtri" | "ast">, fallback: string) {
   const { lang } = useLanguage();
   const query = useQuery({
-    queryKey: ["mappaLuoghi", filtri],
-    queryFn: ({ signal }) => fetchMappaLuoghi(filtri, signal),
+    queryKey: ["mappaLuoghi", filtri, ast],
+    queryFn: ({ signal }) => fetchMappaLuoghi({ filtri, ast }, signal),
     placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000,
   });

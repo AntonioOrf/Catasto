@@ -1,4 +1,5 @@
 import type { CertezzaLuogo, LuogoMappa } from "@catasto/shared";
+import { SIMPLE_FILTER_PARAMS } from "../../catasto/lib/simple-filters";
 
 /**
  * Logica pura della mappa: raggio dei cerchi, colori per certezza e per
@@ -63,12 +64,17 @@ export function mescola(a: string, b: string, peso: number): string {
   return `#${x.map((v, i) => Math.round(v * p + y[i] * (1 - p)).toString(16).padStart(2, "0")).join("")}`;
 }
 
-/** Filtri della ricerca semplice dalla query string (/mappa?mestiere=3&serie=4). */
+const PARAMETRI_FILTRO: ReadonlySet<string> = new Set(Object.values(SIMPLE_FILTER_PARAMS));
+
+/**
+ * Filtri della ricerca semplice dalla query string (/mappa?mestiere=3&serie=4):
+ * solo i parametri dell'API della ricerca semplice, gli altri si ignorano.
+ */
 export function filtriDaQuery(search: string): Record<string, string> {
   const params = new URLSearchParams(search);
   const filtri: Record<string, string> = {};
   for (const [k, v] of params) {
-    if (v.trim() !== "" && /^[a-z_]+$/.test(k)) filtri[k] = v;
+    if (v.trim() !== "" && PARAMETRI_FILTRO.has(k)) filtri[k] = v;
   }
   return filtri;
 }

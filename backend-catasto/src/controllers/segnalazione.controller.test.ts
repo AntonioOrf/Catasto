@@ -42,4 +42,35 @@ describe("SegnalazioneController.create", () => {
     await create({ tipo: "altro", note: "Pagina non caricata" });
     expect(service.create).toHaveBeenCalledOnce();
   });
+
+  it("richiede il luogo per una localizzazione", async () => {
+    await expect(create({ tipo: "localizzazione", note: "È a Lastra a Signa" })).rejects.toThrow(/luogo/);
+    expect(service.create).not.toHaveBeenCalled();
+  });
+
+  it("rifiuta una localizzazione legata a un fuoco", async () => {
+    await expect(
+      create({ tipo: "localizzazione", id_registrazione: 12, id_fuoco: 42, note: "È a Lastra a Signa" }),
+    ).rejects.toThrow(/luogo, non un fuoco/);
+    expect(service.create).not.toHaveBeenCalled();
+  });
+
+  it("rifiuta una localizzazione senza proposta né note", async () => {
+    await expect(create({ tipo: "localizzazione", id_registrazione: 12 })).rejects.toThrow(ValidationError);
+    expect(service.create).not.toHaveBeenCalled();
+  });
+
+  it("rifiuta il luogo sugli altri tipi", async () => {
+    await expect(create({ tipo: "altro", id_registrazione: 12, note: "x" })).rejects.toThrow(/solo nelle segnalazioni di localizzazione/);
+    expect(service.create).not.toHaveBeenCalled();
+  });
+
+  it("accetta una localizzazione con luogo e proposta", async () => {
+    service.create.mockResolvedValue(1);
+    await create({ tipo: "localizzazione", id_registrazione: 12, valore_proposto: "Lastra a Signa — 43.77, 11.105" });
+    expect(service.create).toHaveBeenCalledWith(
+      expect.objectContaining({ tipo: "localizzazione", id_registrazione: 12, id_fuoco: null }),
+      "127.0.0.1",
+    );
+  });
 });

@@ -35,7 +35,8 @@ describe("mappa: scale e colori", () => {
   });
 
   it("legge i filtri dalla query string e scarta chiavi e valori vuoti o strani", () => {
-    expect(filtriDaQuery("?mestiere=3&serie=&nome=Rossi&X-evil=1")).toEqual({ mestiere: "3", nome: "Rossi" });
+    expect(filtriDaQuery("?mestiere=3&serie=&q_persona=Rossi&X-evil=1&luogo=4")).toEqual({ mestiere: "3", q_persona: "Rossi" });
+    expect(filtriDaQuery("?creditoM_min=10")).toEqual({ creditoM_min: "10" });
     expect(filtriDaQuery("")).toEqual({});
   });
 });

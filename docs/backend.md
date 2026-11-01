@@ -5,8 +5,8 @@
 | Campo | Valore |
 |---|---|
 | Identificativo | `CAT-DOC-03` |
-| Versione | 2.0 |
-| Data | 2026-10-29 |
+| Versione | 2.2 |
+| Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
 | Responsabili | Antonio Orfitelli, Pasquale Ruotolo |
@@ -49,7 +49,8 @@ backend-catasto/
 │   ├── 003_traduzioni_lookup_seed.sql # traduzioni inglesi iniziali
 │   ├── 004_traduzioni_lookup_dump.sql # traduzioni delle etichette reali del dump (da db:export-traduzioni)
 │   ├── 005_luoghi_geo.sql        # coordinate dei luoghi per la mappa
-│   └── 006_luoghi_geo_automatici.sql # abbinamenti automatici con il Repetti (da db:import-luoghi --sql)
+│   ├── 006_luoghi_geo_automatici.sql # abbinamenti automatici con il Repetti (da db:import-luoghi --sql)
+│   └── 007_segnalazioni_luoghi.sql # segnalazioni sui luoghi: tipo `localizzazione`, colonna `id_registrazione`
 └── src/
     ├── server.ts                  # bootstrap Express: helmet, CORS, rate limit, rotte, /health
     ├── config/db.ts               # pool mysql2 (connectionLimit 50, TLS opzionale)
@@ -115,7 +116,7 @@ Il pacchetto **`packages/shared`** contiene ciò che frontend e backend devono v
 | `query-ast.ts` | Tipi `QueryGroup` / `QueryCondition` e limiti (`AST_MAX_DEPTH`, `AST_MAX_CONDITIONS`, …) |
 | `index.ts` | Tipi delle risposte (`Fuoco`, `FilterOptions`, `CatastoStats`, …) |
 | `labels.ts` | Etichette inglesi di campi e operatori, `describeQuery` (descrizione leggibile di una query, usata dall'anteprima e dagli export) |
-| `segnalazioni.ts` | Tipi e stati delle segnalazioni |
+| `segnalazioni.ts` | Tipi e stati delle segnalazioni (`TIPI_SEGNALAZIONE`; `TIPI_SEGNALAZIONE_FUOCO` per quelli della scheda del fuoco) |
 | `segnatura.ts` | Parser della segnatura della portata (`ASFi, Catasto 81, c. 245r`) |
 
 ---
@@ -240,7 +241,7 @@ GET /api/catasto?q_persona=nardo&quartiere=3,7&fortune_min=500&sort_by=fortune&o
   "data": [
     {
       "id": 1234,
-      "nome": "NUTO NARDO",
+      "nome": "NUTO NARDO", "id_registrazione": 969,
       "imponibile": 120, "credito": 45, "credito_m": 0, "fortune": 800, "deduzioni": 200,
       "volume": "81", "foglio": "245",
       "particolarita_fuoco": null, "bestiame": "Bue", "immigrazione": null,
@@ -255,6 +256,7 @@ GET /api/catasto?q_persona=nardo&quartiere=3,7&fortune_min=500&sort_by=fortune&o
 }
 ```
 
+- `id_registrazione` è il luogo del fuoco, lo stesso identificativo dei luoghi della mappa (§ 4.18). Compare nella vista tabella (`GET /api/catasto`, `POST /api/catasto/query`) e il frontend lo usa per il link «Luogo sulla mappa». Le colonne dell'export non cambiano: sono un elenco esplicito in `src/utils/export-columns.ts`.
 - `volume` e `foglio` sono l'unità (volume) e la componente (carta) del **campione** in cui è registrato il fuoco (dato della fonte).
 - `codice_archivio` identifica il volume digitalizzato del **campione** (da `t_archivio_volumi`): se presente, il visore delle carte può aprire la carta.
 - `segnatura_portata` è la segnatura della **portata** pubblicata dalla redazione (da `fuoco_segnature`, dato contribuito); `codice_archivio_portata` è il volume corrispondente, se digitalizzato. La segnatura è restituita come è stata registrata: la forma di citazione normalizzata è `ASFi, Catasto, <volume>, c. <n><r|v>` (vedi lo [standard documentale](standard-documentale.md#53-segnature--shelfmarks)).
@@ -542,15 +544,18 @@ Le segnalazioni sono il canale dei **dati contribuiti**: una proposta dell'utent
 
 | Campo | Regole |
 |---|---|
-| `id_fuoco` | intero > 0 o `null` (obbligatorio per `segnatura`); se presente deve esistere |
-| `tipo` | `dato_errato` · `segnatura` · `altro` |
-| `campo` | chiave di un campo segnalabile (obbligatorio per `dato_errato`) |
-| `valore_attuale`, `valore_proposto` | max 500 caratteri (`valore_proposto` obbligatorio per `segnatura`) |
-| `note` | max 2000 caratteri (per `altro` serve `valore_proposto` o `note`) |
+| `id_fuoco` | intero > 0 o `null` (obbligatorio per `segnatura`, vietato per `localizzazione`); se presente deve esistere |
+| `id_registrazione` | intero > 0 o `null`: il luogo della mappa. Obbligatorio per `localizzazione`, vietato per gli altri tipi; il luogo deve esistere (altrimenti `400`) |
+| `tipo` | `dato_errato` · `segnatura` · `altro` · `localizzazione` |
+| `campo` | chiave di un campo segnalabile (obbligatorio per `dato_errato`, vietato per `localizzazione`) |
+| `valore_attuale`, `valore_proposto` | max 500 caratteri (`valore_proposto` obbligatorio per `segnatura`); per `localizzazione` il `valore_attuale` inviato dal client è ignorato (§ 6.5) |
+| `note` | max 2000 caratteri (per `altro` e `localizzazione` serve `valore_proposto` o `note`) |
 | `email` | email valida o `null` (non stringa vuota) |
 | `website` | honeypot: se compilato la richiesta viene scartata in silenzio |
 
 Risposta: `201 {"id": 57, "stato": "nuova"}`. L'IP non viene salvato in chiaro ma come hash con `SEGNALAZIONI_SALT`.
+
+Le regole sono nello schema zod di `segnalazione.controller.ts`. Per i tipi `dato_errato` e `altro` anche `id_registrazione` è vietato: il luogo si indica solo con `localizzazione`.
 
 ### 6.2 Ciclo di vita
 
@@ -572,6 +577,7 @@ stateDiagram-v2
 - La **PATCH admin** accetta qualunque transizione.
 - Effetti per `tipo = segnatura`: diventando `accettata` la segnatura della portata è pubblicata in `fuoco_segnature`. Lasciando `accettata`, se era quella pubblicata, torna visibile l'ultima altra segnatura ancora accettata per lo stesso fuoco; se non ce ne sono, il fuoco resta senza. Tutto in transazione con `SELECT … FOR UPDATE`.
 - Per `dato_errato` e `altro` cambia solo lo stato: la correzione del dato resta manuale.
+- Per `localizzazione` cambia solo lo stato: le coordinate in `luoghi_geo` non si modificano (§ 6.5).
 
 ### 6.3 Flusso email (FormSubmit)
 
@@ -623,6 +629,24 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" \
 curl -X PATCH -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
   -d '{"stato":"accettata"}' https://catasto.example.org/api/segnalazioni/57
 ```
+
+L'elenco (`GET /api/segnalazioni`) e il dettaglio restituiscono anche `id_registrazione` e `nome_luogo` (serie › quartiere › piviere › popolo, ricavato da `t_struttura_catastale`).
+
+### 6.5 Segnalazioni di localizzazione
+
+Il tipo `localizzazione` («Localizzazione errata») segnala che un luogo della mappa è nel posto sbagliato. Riguarda un luogo (`id_registrazione`), non un fuoco: `id_fuoco` resta `NULL`. La migrazione `007` aggiunge il valore all'enum `tipo`, la colonna `id_registrazione` e l'indice `idx_segnalazioni_luogo`. Non c'è una chiave esterna verso le tabelle del dump, che un reimport ricrea: l'esistenza del luogo la verifica il service.
+
+**Validazione.** Per `localizzazione` servono `id_registrazione` e almeno uno fra `valore_proposto` e `note`; `id_fuoco` e `campo` sono vietati. Per gli altri tipi `id_registrazione` è vietato. Un luogo inesistente dà `400` e non scrive nulla.
+
+**Posizione attuale.** La scrive il server in `valore_attuale`, leggendola da `luoghi_geo`: il client non può indicarla. Il formato è `43.770100, 11.105200 (approssimata; Lastra a Signa)`, cioè latitudine e longitudine con sei decimali, poi certezza (`sicura`, `approssimata`, `solo piviere`, `non trovata`) e nome moderno, se presenti. Un luogo senza coordinate dà `non localizzato`, con gli stessi dettagli fra parentesi. Se la tabella `luoghi_geo` non esiste (migrazioni `005`–`006` non applicate) il luogo risulta non localizzato e la segnalazione non fallisce. `valore_proposto` è il testo libero dell'utente.
+
+**Moderazione.** L'email alla redazione e la pagina di conferma mostrano **Luogo** (nome e `id_registrazione`), **Posizione attuale** e **Posizione proposta** al posto di Fuoco e Campo. Accettare o respingere cambia solo lo stato. Accettando, la pagina avverte che le coordinate non cambiano da sole.
+
+**Correzione.** Il flusso completo:
+
+1. L'utente segnala il luogo dalla mappa.
+2. La redazione riceve l'email e decide con i link, o con la PATCH admin.
+3. Se la proposta è corretta, la redazione porta la correzione in `luoghi_geo` con `db:import-luoghi` (§ 11.4): la riga diventa `revisionato = 1` e una migrazione automatica successiva non la sovrascrive.
 
 ---
 
@@ -676,7 +700,7 @@ Il CSV segue RFC 4180 (campi con virgole o apici fra doppi apici). L'import è t
 
 ## 8. Migrazioni
 
-Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici (dati della fonte). Le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`, `schema_migrations`) sono create dal runner in `src/scripts/migrate.ts`, che applica in ordine i file `migrations/*.sql` non ancora registrati.
+Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici (dati della fonte). Le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`, `schema_migrations`) sono create dal runner in `src/scripts/migrate.ts`, che applica in ordine i file `migrations/*.sql` non ancora registrati. La migrazione `007` modifica `segnalazioni` (§ 6.5).
 
 La ricerca in tabella legge `fuoco_segnature`: senza migrazioni risponde 500.
 
@@ -740,7 +764,7 @@ Esempio completo per la produzione, con valori fittizi: [`.env.prod.example`](..
 
 ### 10.2 Test unitari
 
-I **test unitari** (vitest, database sempre simulato) coprono query builder semplice e AST (compresi liste geografiche, ordinamento stabile e AST troppo annidati), controller di ricerca, middleware (admin, errori), `validation.ts`, cache delle opzioni dei filtri, token di moderazione, servizio di notifica, cambi di stato delle segnalazioni (con il ripristino della segnatura precedente), validazione della creazione, rotte di moderazione, `TRUST_PROXY`, `toPages` del manifest, l'associazione portata→volume e le traduzioni (parsing di `lang`, normalizzazione, fallback, cache, CSV di export/import).
+I **test unitari** (vitest, database sempre simulato) coprono query builder semplice e AST (compresi liste geografiche, ordinamento stabile e AST troppo annidati), controller di ricerca, middleware (admin, errori), `validation.ts`, cache delle opzioni dei filtri, token di moderazione, servizio di notifica, cambi di stato delle segnalazioni (con il ripristino della segnatura precedente), validazione della creazione (comprese le regole di `localizzazione`), creazione di una segnalazione di localizzazione con la posizione attuale (`segnalazione.create.test.ts`), pagina di moderazione (`moderazione.page.test.ts`), rotte di moderazione, `TRUST_PROXY`, `toPages` del manifest, l'associazione portata→volume e le traduzioni (parsing di `lang`, normalizzazione, fallback, cache, CSV di export/import).
 
 ### 10.3 Test di integrazione
 
@@ -755,6 +779,8 @@ TEST_DB_NAME=catasto_test
 
 npm run test:integration -w catasto-backend
 ```
+
+I test di `segnalazioni.test.ts` creano una segnalazione di localizzazione su un luogo del dump di prova, controllano la posizione attuale salvata e che accettarla non cambi `luoghi_geo`, e che un luogo inesistente dia `400`.
 
 In CI girano in un job dedicato con il servizio `mysql:8.0` di GitHub Actions.
 
@@ -838,6 +864,8 @@ Nel contado fiorentino (serie 3–6) i fuochi `sicura` sono il 44% e quelli `non
 
 La migrazione `005` crea `luoghi_geo` (fuori dal dump, come le altre tabelle applicative): una riga per `id_registrazione` con `lat`, `lng`, `certezza`, `nome_moderno`, `fonte`, `chiave_nomi` (serie|quartiere|piviere|popolo al momento dell'abbinamento, per accorgersi di una rinumerazione dopo un reimport), `note` e `revisionato`. La `006` la riempie con gli abbinamenti automatici del § 11.3, non rivisti: il prototipo della mappa funziona appena applicate le migrazioni.
 
+Le coordinate si correggono anche a partire dalle segnalazioni di localizzazione accettate (§ 6.5): la redazione le verifica e le importa con lo stesso comando.
+
 Le revisioni si importano dal CSV degli abbinamenti corretto a mano (colonne `id_registrazione`, `lat`, `lng`, `certezza`, facoltative `nome_moderno`, `fonte`, `note`):
 
 ```bash
@@ -865,3 +893,4 @@ L'import è transazionale e rifiuta il file intero se una riga è incoerente (ce
 | 1.x | — | — | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | Luoghi per la mappa: `db:export-luoghi`, anomalie dei dati geografici (§ 11.1), luoghi del Repetti (§ 11.2) e abbinamento (§ 11.3), tabella `luoghi_geo` e API della mappa (§ 4.18, § 11.4) |
+| 2.2 | 2026-11-01 | Pasquale Ruotolo | Segnalazioni di localizzazione sui luoghi della mappa: tipo `localizzazione` e campo `id_registrazione` (§ 6.1, § 6.5), migrazione `007`, moderazione e flusso di correzione con `db:import-luoghi`, `id_registrazione` nella vista tabella (§ 4.5), test (§ 10) |

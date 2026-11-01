@@ -4,9 +4,10 @@ import {
   FIELD_REGISTRY,
   SEGNALAZIONE_LIMITS,
   SEGNATURA_PREFISSO,
-  TIPI_SEGNALAZIONE,
+  TIPI_SEGNALAZIONE_FUOCO,
   type Fuoco,
   type TipoSegnalazione,
+  type TipoSegnalazioneFuoco,
 } from "@catasto/shared";
 import { useCreateSegnalazione } from "../api/create-segnalazione";
 import { useModal } from "../../../hooks/useModal";
@@ -30,7 +31,7 @@ const TIPO_MESSAGE_KEY = {
   dato_errato: "typeDatoErrato",
   segnatura: "typeSegnatura",
   altro: "typeAltro",
-} as const satisfies Record<TipoSegnalazione, keyof typeof messages.it>;
+} as const satisfies Record<TipoSegnalazioneFuoco, keyof typeof messages.it>;
 
 /**
  * Segnatura completa da inviare: il prefisso del fondo è implicito, a meno che
@@ -172,7 +173,7 @@ export default function SegnalazioneModal({
                   vederli tutti costa un clic in meno. Radio native nascoste: la
                   navigazione con le frecce viene gratis. */}
               <div className="grid grid-cols-3 gap-2">
-                {TIPI_SEGNALAZIONE.map((tipoOption) => (
+                {TIPI_SEGNALAZIONE_FUOCO.map((tipoOption) => (
                   <label key={tipoOption} className="cursor-pointer">
                     <input
                       type="radio"

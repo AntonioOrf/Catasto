@@ -25,6 +25,8 @@ export interface Fuoco {
   popolo?: string;
   piviere?: string;
   serie?: string;
+  /** Luogo del fuoco (t_struttura_catastale): chiave dei punti della mappa. */
+  id_registrazione?: number | null;
   codice_archivio?: string;
   /**
    * Dato redazionale assente nel dump dell'Archivio: valorizzato solo dalle

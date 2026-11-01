@@ -9,6 +9,7 @@ import type {
   IiifPage,
   MappaLuoghi,
   Parenti,
+  QueryGroup,
   SidebarItem,
   SuggestResponse,
 } from "@catasto/shared";
@@ -154,11 +155,26 @@ export const fetchStats = (search: SearchParams, signal?: AbortSignal) => {
   return apiRequest<CatastoStats>(`/api/catasto/stats${query}`, fallback, { signal });
 };
 
-/** Luoghi della mappa con gli aggregati dei fuochi: filtri della ricerca semplice come parametri dell'API. */
-export const fetchMappaLuoghi = (filtri: Record<string, string>, signal?: AbortSignal) => {
-  const params = new URLSearchParams(filtri);
+/**
+ * Luoghi della mappa con gli aggregati dei fuochi: i filtri della ricerca
+ * semplice come parametri, oppure l'AST della ricerca avanzata.
+ */
+export const fetchMappaLuoghi = (
+  ricerca: { filtri: Record<string, string>; ast: QueryGroup | null },
+  signal?: AbortSignal,
+) => {
+  const fallback = translate(messages, "mappaFailed");
+  if (ricerca.ast) {
+    return apiRequest<MappaLuoghi>("/api/mappa/query", fallback, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ast: ricerca.ast }),
+      signal,
+    });
+  }
+  const params = new URLSearchParams(ricerca.filtri);
   const query = params.toString() ? `?${params}` : "";
-  return apiRequest<MappaLuoghi>(`/api/mappa/luoghi${query}`, translate(messages, "mappaFailed"), { signal });
+  return apiRequest<MappaLuoghi>(`/api/mappa/luoghi${query}`, fallback, { signal });
 };
 
 /** Fuochi per id (selezione e confronto), nell'ordine dato; gli inesistenti mancano. Al massimo FUOCHI_BY_IDS_MAX. */

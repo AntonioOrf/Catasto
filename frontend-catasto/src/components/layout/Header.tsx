@@ -58,6 +58,9 @@ export default function Header({ isSidebarOpen = false, setIsSidebarOpen, showHo
       <NavLink to="/banco" onClick={onNavigate} className={({ isActive }) => `min-h-11 inline-flex items-center ${activeText(isActive)}`}>
         {t("banco")}
       </NavLink>
+      <NavLink to="/mappa" onClick={onNavigate} className={({ isActive }) => `min-h-11 inline-flex items-center ${activeText(isActive)}`}>
+        {t("mappa")}
+      </NavLink>
     </>
   );
 

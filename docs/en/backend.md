@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Identifier | `CAT-DOC-03` |
-| Version | 2.0 |
-| Date | 2026-10-29 |
+| Version | 2.2 |
+| Date | 2026-11-01 |
 | Status | Approved |
 | Classification | Public |
 | Owners | Antonio Orfitelli, Pasquale Ruotolo |
@@ -49,7 +49,8 @@ backend-catasto/
 │   ├── 003_traduzioni_lookup_seed.sql # initial English translations
 │   ├── 004_traduzioni_lookup_dump.sql # translations of the dump's actual labels (from db:export-traduzioni)
 │   ├── 005_luoghi_geo.sql        # place coordinates for the map
-│   └── 006_luoghi_geo_automatici.sql # automatic matches with Repetti (from db:import-luoghi --sql)
+│   ├── 006_luoghi_geo_automatici.sql # automatic matches with Repetti (from db:import-luoghi --sql)
+│   └── 007_segnalazioni_luoghi.sql # reports on places: `localizzazione` type, `id_registrazione` column
 └── src/
     ├── server.ts                  # Express bootstrap: helmet, CORS, rate limit, routes, /health
     ├── config/db.ts               # mysql2 pool (connectionLimit 50, optional TLS)
@@ -115,7 +116,7 @@ The **`packages/shared`** package holds what frontend and backend must see in th
 | `query-ast.ts` | `QueryGroup` / `QueryCondition` types and limits (`AST_MAX_DEPTH`, `AST_MAX_CONDITIONS`, …) |
 | `index.ts` | Response types (`Fuoco`, `FilterOptions`, `CatastoStats`, …) |
 | `labels.ts` | English labels of fields and operators, `describeQuery` (human-readable description of a query, used by the preview and by exports) |
-| `segnalazioni.ts` | User report types and states |
+| `segnalazioni.ts` | User report types and states (`TIPI_SEGNALAZIONE`; `TIPI_SEGNALAZIONE_FUOCO` for those of the household record) |
 | `segnatura.ts` | Parser for the *portata* (declaration) shelfmark (`ASFi, Catasto 81, c. 245r`) |
 
 ---
@@ -240,7 +241,7 @@ GET /api/catasto?q_persona=nardo&quartiere=3,7&fortune_min=500&sort_by=fortune&o
   "data": [
     {
       "id": 1234,
-      "nome": "NUTO NARDO",
+      "nome": "NUTO NARDO", "id_registrazione": 969,
       "imponibile": 120, "credito": 45, "credito_m": 0, "fortune": 800, "deduzioni": 200,
       "volume": "81", "foglio": "245",
       "particolarita_fuoco": null, "bestiame": "Bue", "immigrazione": null,
@@ -255,6 +256,7 @@ GET /api/catasto?q_persona=nardo&quartiere=3,7&fortune_min=500&sort_by=fortune&o
 }
 ```
 
+- `id_registrazione` is the household's place, the same identifier as the map places (§ 4.18). It appears in the table view (`GET /api/catasto`, `POST /api/catasto/query`) and the frontend uses it for the "Luogo sulla mappa" link. The export columns do not change: they are an explicit list in `src/utils/export-columns.ts`.
 - `volume` and `foglio` are the file (volume) and item (folio) of the **campione** in which the household is recorded (source datum).
 - `codice_archivio` identifies the digitised volume of the **campione** (from `t_archivio_volumi`): when present, the folio viewer can open the folio.
 - `segnatura_portata` is the shelfmark of the **portata** published by the editors (from `fuoco_segnature`, contributed datum); `codice_archivio_portata` is the matching volume, if digitised. The shelfmark is returned as recorded: the normalised citation form is `ASFi, Catasto, <volume>, c. <n><r|v>` (see the [documentation standard](../standard-documentale.md#53-segnature--shelfmarks)).
@@ -543,15 +545,18 @@ User reports are the channel for **contributed data**: a user's proposal becomes
 
 | Field | Rules |
 |---|---|
-| `id_fuoco` | integer > 0 or `null` (required for `segnatura`); if present it must exist |
-| `tipo` | `dato_errato` · `segnatura` · `altro` |
-| `campo` | key of a reportable field (required for `dato_errato`) |
-| `valore_attuale`, `valore_proposto` | max 500 characters (`valore_proposto` required for `segnatura`) |
-| `note` | max 2000 characters (for `altro`, `valore_proposto` or `note` is required) |
+| `id_fuoco` | integer > 0 or `null` (required for `segnatura`, forbidden for `localizzazione`); if present it must exist |
+| `id_registrazione` | integer > 0 or `null`: the map place. Required for `localizzazione`, forbidden for the other types; the place must exist (otherwise `400`) |
+| `tipo` | `dato_errato` · `segnatura` · `altro` · `localizzazione` |
+| `campo` | key of a reportable field (required for `dato_errato`, forbidden for `localizzazione`) |
+| `valore_attuale`, `valore_proposto` | max 500 characters (`valore_proposto` required for `segnatura`); for `localizzazione` the `valore_attuale` sent by the client is ignored (§ 6.5) |
+| `note` | max 2000 characters (for `altro` and `localizzazione`, `valore_proposto` or `note` is required) |
 | `email` | valid email or `null` (not an empty string) |
 | `website` | honeypot: if filled in, the request is silently discarded |
 
 Response: `201 {"id": 57, "stato": "nuova"}`. The IP is not stored in clear but as a hash with `SEGNALAZIONI_SALT`.
+
+The rules are in the zod schema of `segnalazione.controller.ts`. For the types `dato_errato` and `altro`, `id_registrazione` is forbidden too: a place is given only with `localizzazione`.
 
 ### 6.2 Lifecycle
 
@@ -575,6 +580,7 @@ State values: `nuova` (new), `in_esame` (under review), `accettata` (accepted), 
 - The **admin PATCH** accepts any transition.
 - Effects for `tipo = segnatura`: on becoming `accettata`, the *portata* shelfmark is published in `fuoco_segnature`. On leaving `accettata`, if it was the published one, the latest other shelfmark still accepted for the same household becomes visible again; if there is none, the household is left without one. All of this runs in a transaction with `SELECT … FOR UPDATE`.
 - For `dato_errato` and `altro` only the state changes: correcting the datum remains a manual task.
+- For `localizzazione` only the state changes: the coordinates in `luoghi_geo` are not modified (§ 6.5).
 
 ### 6.3 Email flow (FormSubmit)
 
@@ -626,6 +632,24 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" \
 curl -X PATCH -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
   -d '{"stato":"accettata"}' https://catasto.example.org/api/segnalazioni/57
 ```
+
+The list (`GET /api/segnalazioni`) and the detail also return `id_registrazione` and `nome_luogo` (series › quarter › piviere › parish, taken from `t_struttura_catastale`).
+
+### 6.5 Location reports
+
+The `localizzazione` type ("Localizzazione errata", wrong location) reports that a map place is in the wrong spot. It concerns a place (`id_registrazione`), not a household: `id_fuoco` stays `NULL`. Migration `007` adds the value to the `tipo` enum, the `id_registrazione` column and the `idx_segnalazioni_luogo` index. There is no foreign key to the dump tables, which a reimport recreates: the service checks that the place exists.
+
+**Validation.** For `localizzazione`, `id_registrazione` and at least one of `valore_proposto` and `note` are required; `id_fuoco` and `campo` are forbidden. For the other types `id_registrazione` is forbidden. A place that does not exist gives `400` and nothing is written.
+
+**Current position.** The server writes it in `valore_attuale`, reading it from `luoghi_geo`: the client cannot supply it. The format is `43.770100, 11.105200 (approssimata; Lastra a Signa)`: latitude and longitude with six decimals, then certainty (`sicura`, `approssimata`, `solo piviere`, `non trovata`) and modern name, when present. A place without coordinates gives `non localizzato`, with the same details in brackets. If the `luoghi_geo` table does not exist (migrations `005`–`006` not applied) the place counts as not located and the report does not fail. `valore_proposto` is the user's free text.
+
+**Moderation.** The email to the editors and the confirmation page show **Luogo** (name and `id_registrazione`), **Posizione attuale** and **Posizione proposta** instead of Fuoco and Campo. Accepting or rejecting changes only the state. When accepting, the page warns that the coordinates do not change on their own.
+
+**Correction.** The complete flow:
+
+1. The user reports the place from the map.
+2. The editors receive the email and decide with the links, or with the admin PATCH.
+3. If the proposal is right, the editors bring the correction into `luoghi_geo` with `db:import-luoghi` (§ 11.4): the row becomes `revisionato = 1` and a later automatic migration does not overwrite it.
 
 ---
 
@@ -679,7 +703,7 @@ The CSV follows RFC 4180 (fields with commas or quotes enclosed in double quotes
 
 ## 8. Migrations
 
-The Archive dump (`init/Catasto.sql`) contains the historical data (source data). The application tables (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`, `schema_migrations`) are created by the runner in `src/scripts/migrate.ts`, which applies, in order, the `migrations/*.sql` files not yet recorded.
+The Archive dump (`init/Catasto.sql`) contains the historical data (source data). The application tables (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`, `schema_migrations`) are created by the runner in `src/scripts/migrate.ts`, which applies, in order, the `migrations/*.sql` files not yet recorded. Migration `007` alters `segnalazioni` (§ 6.5).
 
 The table search reads `fuoco_segnature`: without migrations it responds 500.
 
@@ -743,7 +767,7 @@ Full production example, with fictitious values: [`.env.prod.example`](../../.en
 
 ### 10.2 Unit tests
 
-The **unit tests** (vitest, database always mocked) cover the simple and AST query builders (including geographical lists, stable sorting and over-nested ASTs), search controllers, middleware (admin, errors), `validation.ts`, the filter options cache, moderation tokens, the notification service, user report state changes (with restoration of the previous shelfmark), creation validation, moderation routes, `TRUST_PROXY`, the manifest's `toPages`, the *portata*→volume association and translations (`lang` parsing, normalisation, fallback, cache, export/import CSV).
+The **unit tests** (vitest, database always mocked) cover the simple and AST query builders (including geographical lists, stable sorting and over-nested ASTs), search controllers, middleware (admin, errors), `validation.ts`, the filter options cache, moderation tokens, the notification service, user report state changes (with restoration of the previous shelfmark), creation validation (including the `localizzazione` rules), creation of a location report with the current position (`segnalazione.create.test.ts`), the moderation page (`moderazione.page.test.ts`), moderation routes, `TRUST_PROXY`, the manifest's `toPages`, the *portata*→volume association and translations (`lang` parsing, normalisation, fallback, cache, export/import CSV).
 
 ### 10.3 Integration tests
 
@@ -758,6 +782,8 @@ TEST_DB_NAME=catasto_test
 
 npm run test:integration -w catasto-backend
 ```
+
+The tests in `segnalazioni.test.ts` create a location report on a place of the test dump, check the stored current position and that accepting it leaves `luoghi_geo` unchanged, and that a non-existent place gives `400`.
 
 In CI they run in a dedicated job with the GitHub Actions `mysql:8.0` service.
 
@@ -841,6 +867,8 @@ In the Florentine countryside (series 3–6) `sicura` covers 44% of households a
 
 Migration `005` creates `luoghi_geo` (outside the dump, like the other application tables): one row per `id_registrazione` with `lat`, `lng`, `certezza`, `nome_moderno`, `fonte`, `chiave_nomi` (series|quarter|piviere|parish at matching time, to detect renumbering after a reimport), `note` and `revisionato`. Migration `006` fills it with the automatic matches of § 11.3, not reviewed: the map prototype works as soon as the migrations are applied.
 
+Coordinates are also corrected starting from accepted location reports (§ 6.5): the editors check them and import them with the same command.
+
 Reviews are imported from the matching CSV corrected by hand (columns `id_registrazione`, `lat`, `lng`, `certezza`, optional `nome_moderno`, `fonte`, `note`):
 
 ```bash
@@ -868,3 +896,4 @@ The import is transactional and rejects the whole file if a row is inconsistent 
 | 1.x | — | — | Earlier versions, no change log |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewritten according to CAT-DOC-00; English translation |
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | Places for the map: `db:export-luoghi`, geographic data anomalies (§ 11.1), places from Repetti (§ 11.2) and matching (§ 11.3), `luoghi_geo` table and map API (§ 4.18, § 11.4) |
+| 2.2 | 2026-11-01 | Pasquale Ruotolo | Location reports on map places: `localizzazione` type and `id_registrazione` field (§ 6.1, § 6.5), migration `007`, moderation and correction flow with `db:import-luoghi`, `id_registrazione` in the table view (§ 4.5), tests (§ 10) |

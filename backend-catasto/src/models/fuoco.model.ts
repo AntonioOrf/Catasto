@@ -30,7 +30,7 @@ const TABLE_VIEW_ALIASES = JOINS.map((j) => j.alias);
 /** Colonne della vista tabella, condivise dalla pagina e dall'export. */
 const TABLE_SELECT = `
       SELECT
-        f.ID_Fuochi as id, f.Nome_Fuoco as nome,
+        f.ID_Fuochi as id, f.Nome_Fuoco as nome, f.id_registrazione,
         f.Imponibile_Fuoco as imponibile, f.Credito_Fuoco as credito,
         f.CreditoM_Fuoco as credito_m, f.Fortune_Fuoco as fortune, f.Deduzioni_Fuoco as deduzioni,
         f.Volume_Fuoco as volume, f.Foglio_Fuoco as foglio,

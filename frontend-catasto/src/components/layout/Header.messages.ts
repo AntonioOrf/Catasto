@@ -17,6 +17,7 @@ export const headerMessages = defineMessages({
     sections: "Sezioni del sito",
     consultazione: "Consultazione",
     banco: "Banco di lavoro",
+    mappa: "Mappa",
     menu: "Menu",
   },
   en: {
@@ -35,6 +36,7 @@ export const headerMessages = defineMessages({
     sections: "Site sections",
     consultazione: "Browse",
     banco: "Workbench",
+    mappa: "Map",
     menu: "Menu",
   },
 });

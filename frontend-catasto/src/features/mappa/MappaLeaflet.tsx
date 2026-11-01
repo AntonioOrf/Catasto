@@ -23,14 +23,19 @@ interface Props {
   /** Colore del bordo del luogo selezionato. */
   coloreSelezione: string;
   etichetta: string;
+  /** Se presente, centra la mappa su questo punto (ogni nuovo oggetto è una nuova richiesta). */
+  centraSu?: { lat: number; lng: number; zoom?: number } | null;
 }
+
+/** Zoom con cui la mappa si centra su un luogo. */
+export const ZOOM_LUOGO = 12;
 
 /**
  * Mappa Leaflet: cerchi su canvas (migliaia di luoghi restano fluidi), fondo
  * OpenStreetMap o Inghirami. La mappa si crea una volta; luoghi, colori e
  * fondo si aggiornano senza ricrearla.
  */
-export default function MappaLeaflet({ luoghi, colore, sfondo, selezionato, onSeleziona, coloreSelezione, etichetta }: Props) {
+export default function MappaLeaflet({ luoghi, colore, sfondo, selezionato, onSeleziona, coloreSelezione, etichetta, centraSu }: Props) {
   const contenitore = useRef<HTMLDivElement>(null);
   const mappa = useRef<L.Map | null>(null);
   const strati = useRef<{ osm: L.TileLayer; inghirami: L.TileLayer.WMS; cerchi: L.LayerGroup } | null>(null);
@@ -74,6 +79,10 @@ export default function MappaLeaflet({ luoghi, colore, sfondo, selezionato, onSe
     if (sfondo === "inghirami") s.inghirami.addTo(m);
     else m.removeLayer(s.inghirami);
   }, [sfondo]);
+
+  useEffect(() => {
+    if (centraSu) mappa.current?.setView([centraSu.lat, centraSu.lng], centraSu.zoom ?? ZOOM_LUOGO);
+  }, [centraSu]);
 
   useEffect(() => {
     const s = strati.current;

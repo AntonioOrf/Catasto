@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { LuogoMappa } from "@catasto/shared";
 import Header from "../components/layout/Header";
@@ -6,18 +6,19 @@ import Footer from "../components/layout/Footer";
 import { useLanguage, useT } from "../i18n";
 import { useMappaLuoghi } from "../hooks/useMappaLuoghi";
 import MappaLeaflet, { type Sfondo } from "../features/mappa/MappaLeaflet";
+import SegnalazioneLuogoModal from "../features/segnalazioni/components/SegnalazioneLuogoModal";
 import {
   CERTEZZE_MAPPA,
   COLORE_CERTEZZA,
   INDICATORI,
   classe,
-  filtriDaQuery,
   mescola,
   pesoClasse,
   soglieQuantili,
   type CertezzaMappa,
   type Indicatore,
 } from "../features/mappa/lib/mappa";
+import { ricercaDaUrl } from "../features/mappa/lib/ricerca";
 import { mappaPageMessages } from "./MappaPage.messages";
 
 /** Colori del tema letti dalle variabili CSS; si rileggono quando cambia il tema (classe `dark`). */
@@ -47,8 +48,9 @@ export default function MappaPage() {
   const t = useT(mappaPageMessages);
   const { lang } = useLanguage();
   const location = useLocation();
-  const filtri = useMemo(() => filtriDaQuery(location.search), [location.search]);
-  const { dati, loading, error, unavailable, retry } = useMappaLuoghi(filtri, t("loading"));
+  const ricerca = useMemo(() => ricercaDaUrl(location.search, location.hash), [location.search, location.hash]);
+  const { filtri } = ricerca;
+  const { dati, loading, error, unavailable, retry } = useMappaLuoghi(ricerca, t("loading"));
   const colori = useColoriTema();
 
   const [indicatore, setIndicatore] = useState<Indicatore>("certezza");
@@ -56,6 +58,8 @@ export default function MappaPage() {
   const [sfondo, setSfondo] = useState<Sfondo>("osm");
   const [soglia, setSoglia] = useState(1);
   const [selezionato, setSelezionato] = useState<number | null>(null);
+  const [centra, setCentra] = useState<{ lat: number; lng: number } | null>(null);
+  const [segnalaAperta, setSegnalaAperta] = useState(false);
 
   const fmt = useCallback(
     (n: number, cifre = 0) => n.toLocaleString(lang === "en" ? "en-GB" : "it-IT", { maximumFractionDigits: cifre }),
@@ -106,6 +110,20 @@ export default function MappaPage() {
     return conti;
   }, [tutti]);
 
+  // `?luogo=`: una volta per URL si apre la scheda e si centra la mappa, poi l'utente è libero.
+  const luogoFatto = useRef<string | null>(null);
+  const chiaveUrl = location.search + location.hash;
+  const luogoRichiesto = ricerca.luogo;
+  useEffect(() => {
+    if (!dati || luogoRichiesto === null || luogoFatto.current === chiaveUrl) return;
+    luogoFatto.current = chiaveUrl;
+    const l = tutti.find((x) => x.id === luogoRichiesto);
+    if (!l) return;
+    setSelezionato(l.id);
+    setCentra({ lat: l.lat, lng: l.lng });
+  }, [dati, tutti, luogoRichiesto, chiaveUrl]);
+  const luogoMancante = !!dati && luogoRichiesto !== null && !tutti.some((l) => l.id === luogoRichiesto);
+
   const scelto = tutti.find((l) => l.id === selezionato) ?? null;
   const nFiltri = Object.keys(filtri).length;
   const inMappa = dati ? dati.fuochi - dati.non_localizzati.fuochi : 0;
@@ -131,9 +149,9 @@ export default function MappaPage() {
             <p className="text-sm border border-border-base rounded-ui px-3 py-2">{t("prototype")}</p>
           </div>
 
-          {nFiltri > 0 && (
+          {(nFiltri > 0 || ricerca.ast) && (
             <div className="text-sm flex flex-col gap-1">
-              <p>{t("filtersActive", { n: nFiltri })}</p>
+              <p>{ricerca.ast ? t("advancedActive") : t("filtersActive", { n: nFiltri })}</p>
               <Link to="/mappa" className="text-primary underline self-start">
                 {t("filtersClear")}
               </Link>
@@ -239,6 +257,12 @@ export default function MappaPage() {
             </div>
           )}
 
+          {luogoMancante && (
+            <p role="status" className="text-sm border border-border-base rounded-ui px-3 py-2">
+              {t("placeMissing")}
+            </p>
+          )}
+
           <section className="flex flex-col gap-2 border-t border-border-base pt-3" aria-live="polite">
             <h3 className="font-semibold">{t("selected")}</h3>
             {scelto ? (
@@ -274,6 +298,13 @@ export default function MappaPage() {
                     </span>
                   ))}
                 </dl>
+                <button
+                  type="button"
+                  onClick={() => setSegnalaAperta(true)}
+                  className="mt-2 min-h-11 self-start px-3 border border-border-base rounded-ui text-sm hover:bg-item-hover"
+                >
+                  {t("reportLocation")}
+                </button>
               </div>
             ) : (
               <p className="text-sm text-text-accent">{t("selectHint")}</p>
@@ -328,10 +359,18 @@ export default function MappaPage() {
               onSeleziona={setSelezionato}
               coloreSelezione={colori.testo}
               etichetta={t("mapLabel")}
+              centraSu={centra}
             />
           </div>
         </div>
       </main>
+
+      <SegnalazioneLuogoModal
+        isOpen={segnalaAperta}
+        onClose={() => setSegnalaAperta(false)}
+        luogo={scelto}
+        certezzaLabel={scelto ? t(`cert_${scelto.certezza}`) : ""}
+      />
 
       <Footer />
     </div>

@@ -23,6 +23,7 @@ const trimmedText = (max: number) =>
 const createSchema = z
   .object({
     id_fuoco: z.number().int().positive().nullable().default(null),
+    id_registrazione: z.number().int().positive().nullable().default(null),
     tipo: z.enum(TIPI_SEGNALAZIONE),
     // `campo` non è testo libero: deve essere una chiave del registry, così la
     // moderazione sa esattamente quale colonna è contestata.
@@ -50,6 +51,29 @@ const createSchema = z
         code: z.ZodIssueCode.custom,
         path: ["id_fuoco"],
         message: "Indica il fuoco a cui si riferisce la segnatura",
+      });
+    }
+    // La localizzazione riguarda un luogo della mappa, gli altri tipi un fuoco.
+    if (data.tipo === "localizzazione") {
+      if (data.id_registrazione === null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["id_registrazione"],
+          message: "Indica il luogo a cui si riferisce la segnalazione",
+        });
+      }
+      if (data.id_fuoco !== null || data.campo) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["id_fuoco"],
+          message: "Una segnalazione di localizzazione riguarda un luogo, non un fuoco",
+        });
+      }
+    } else if (data.id_registrazione !== null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["id_registrazione"],
+        message: "Il luogo si indica solo nelle segnalazioni di localizzazione",
       });
     }
     if (data.tipo === "segnatura" && !data.valore_proposto) {

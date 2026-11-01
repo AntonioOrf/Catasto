@@ -1,9 +1,32 @@
 import { createHash } from "node:crypto";
-import { SegnalazioneModel } from "../models/segnalazione.model.js";
+import { SegnalazioneModel, type LuogoRiepilogo } from "../models/segnalazione.model.js";
 import { NotificaService } from "./notifica.service.js";
 import { HttpError, ValidationError } from "../utils/validation.js";
 import { STATO_SEGNALAZIONE_LABELS } from "@catasto/shared";
 import type { SegnalazioneInput, Segnalazione, StatoSegnalazione } from "@catasto/shared";
+
+const CERTEZZA_LABEL: Record<string, string> = {
+  sicura: "sicura",
+  approssimata: "approssimata",
+  solo_piviere: "solo piviere",
+  non_trovata: "non trovata",
+};
+
+/**
+ * Posizione del luogo com'è sulla mappa al momento della segnalazione:
+ * "43.770100, 11.105200 (approssimata; Lastra a Signa)" o "non localizzato".
+ * La scrive il server, non il client: è il dato contro cui la redazione
+ * confronta la proposta.
+ */
+export function descriviPosizione(luogo: LuogoRiepilogo): string {
+  const dettagli = [luogo.certezza ? (CERTEZZA_LABEL[luogo.certezza] ?? luogo.certezza) : null, luogo.nome_moderno]
+    .filter(Boolean)
+    .join("; ");
+  if (luogo.lat === null || luogo.lng === null) {
+    return dettagli ? `non localizzato (${dettagli})` : "non localizzato";
+  }
+  return `${luogo.lat.toFixed(6)}, ${luogo.lng.toFixed(6)}${dettagli ? ` (${dettagli})` : ""}`;
+}
 
 /** Finestra e soglia del limite applicativo (il rate limit HTTP è la prima barriera). */
 const ABUSE_WINDOW_MINUTES = 60;
@@ -44,6 +67,16 @@ export class SegnalazioneService {
       }
     }
 
+    const idRegistrazione = input.id_registrazione ?? null;
+    let valoreAttuale = input.valore_attuale ?? null;
+    if (idRegistrazione !== null) {
+      const luogo = await SegnalazioneModel.findLuogoRiepilogo(idRegistrazione);
+      if (!luogo) {
+        throw new ValidationError(`Il luogo ${idRegistrazione} non esiste`);
+      }
+      valoreAttuale = descriviPosizione(luogo);
+    }
+
     const ipHash = this.hashIp(ip);
     if (ipHash) {
       const recent = await SegnalazioneModel.countRecentByIp(ipHash, ABUSE_WINDOW_MINUTES);
@@ -54,9 +87,10 @@ export class SegnalazioneService {
 
     const id = await SegnalazioneModel.create({
       id_fuoco: input.id_fuoco,
+      id_registrazione: idRegistrazione,
       tipo: input.tipo,
       campo: input.campo ?? null,
-      valore_attuale: input.valore_attuale ?? null,
+      valore_attuale: valoreAttuale,
       valore_proposto: input.valore_proposto ?? null,
       note: input.note ?? null,
       email: input.email ?? null,
@@ -65,7 +99,7 @@ export class SegnalazioneService {
 
     // Avviso email alla redazione per ogni segnalazione. Non atteso: l'utente
     // non deve aspettare (né vedere fallire) un servizio esterno.
-    void NotificaService.invia(id, input);
+    void NotificaService.invia(id, { ...input, id_registrazione: idRegistrazione, valore_attuale: valoreAttuale });
 
     return id;
   }
