@@ -4,8 +4,8 @@
 |---|---|
 | Identificativo · Identifier | `CAT-DOC-00` |
 | Titolo · Title | Standard documentale del progetto Catasto Fiorentino 1427/30 · Documentation standard of the Catasto Fiorentino 1427/30 project |
-| Versione · Version | 1.0 |
-| Data · Date | 2026-10-29 |
+| Versione · Version | 1.1 |
+| Data · Date | 2026-11-01 |
 | Stato · Status | Approvato · Approved |
 | Classificazione · Classification | Pubblico · Public |
 | Responsabili · Owners | Antonio Orfitelli, Pasquale Ruotolo |
@@ -59,6 +59,7 @@ The documents draw on the following references, adapted to the nature of the pro
 | CAT-DOC-04 | [Frontend](frontend.md) | [Frontend](en/frontend.md) | Pubblico · Public |
 | CAT-DOC-05 | [Casi d'uso](casi-d-uso.md) | [Use cases](en/use-cases.md) | Pubblico · Public |
 | CAT-DOC-06 | [Revisione del codice](revisione-codice.md) | [Code review](en/code-review.md) | Interno · Internal |
+| CAT-DOC-07 | [Portabilità e trasferimento all'ateneo](portabilita.md) | [Portability and transfer to a university](en/portability.md) | Pubblico · Public |
 
 **IT.** Il testo italiano è il **testo di riferimento**: in caso di divergenza prevale. Ogni modifica a un documento va riportata nella traduzione nello stesso commit, con lo stesso numero di versione.
 
@@ -235,3 +236,4 @@ A datum missing from the source stays missing: it is neither estimated nor recon
 | Versione · Version | Data · Date | Autore · Author | Descrizione · Description |
 |---|---|---|---|
 | 1.0 | 2026-10-29 | Pasquale Ruotolo | Prima emissione · First issue |
+| 1.1 | 2026-11-01 | Pasquale Ruotolo | CAT-DOC-07 nel registro dei documenti · CAT-DOC-07 added to the document register |

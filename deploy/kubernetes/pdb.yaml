@@ -1,0 +1,10 @@
+# Durante la manutenzione dei nodi resta sempre almeno un pod attivo.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: catasto
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: web
