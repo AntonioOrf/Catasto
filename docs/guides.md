@@ -117,10 +117,9 @@ npm test
 | Container | Immagine | Porta host | Ruolo |
 |---|---|---|---|
 | `catasto-db` | `mysql:8.0` | `127.0.0.1:3306` | database; dati in `./mysql_data` |
-| `catasto-backend` | `ipavon/catasto1427-backend:latest` | `127.0.0.1:3005` | API Node.js |
-| `catasto-frontend` | `ipavon/catasto1427-frontend:latest` | **`1427`** | nginx: sito statico e proxy di `/api` verso il backend |
+| `catasto-app` | `ipavon/catasto1427:latest` | **`1427`** | sito statico e API Node.js nello stesso processo |
 
-Il `docker-compose.yml` **scarica le immagini da Docker Hub**: non compila il codice locale. Backend e database sono raggiungibili solo dal server stesso (loopback); dall'esterno si espone solo la porta 1427, da mettere dietro un terminatore TLS (reverse proxy o CDN).
+Il `docker-compose.yml` **scarica le immagini da Docker Hub**: non compila il codice locale. Il database è raggiungibile solo dal server stesso (loopback); dall'esterno si espone solo la porta 1427, da mettere dietro un terminatore TLS (reverse proxy o CDN).
 
 ### 3.2 Prima installazione
 
@@ -148,12 +147,12 @@ Variabili da impostare in `.env` (il file di esempio le commenta tutte):
 
 ### 3.3 Migrazioni
 
-Il container del backend applica le migrazioni **da solo a ogni avvio**, prima di far partire il server: il runner esegue solo i file di `backend-catasto/migrations/` non ancora registrati. Nei log (`docker compose logs backend`) compaiono le righe `✅ …` o `↩️ … (già applicata)`.
+Il container del backend applica le migrazioni **da solo a ogni avvio**, prima di far partire il server: il runner esegue solo i file di `backend-catasto/migrations/` non ancora registrati. Nei log (`docker compose logs app`) compaiono le righe `✅ …` o `↩️ … (già applicata)`.
 
 Se una migrazione fallisce, il backend non parte e il compose lo riavvia. Per rilanciare le migrazioni a mano:
 
 ```bash
-docker compose exec backend node backend-catasto/dist/scripts/migrate.js
+docker compose exec app node backend-catasto/dist/scripts/migrate.js
 ```
 
 ### 3.4 Verifica
@@ -169,21 +168,22 @@ Infine inviare una segnalazione di prova dal sito e confermare l'email di attiva
 ### 3.5 Aggiornamento
 
 ```bash
-docker compose pull backend frontend
-docker compose up -d backend frontend   # le nuove migrazioni si applicano all'avvio
+docker compose pull app
+docker compose up -d app   # le nuove migrazioni si applicano all'avvio
 ```
+
+Passaggio dalla vecchia configurazione a due immagini (`catasto-backend` + `catasto-frontend` con nginx): aggiornare `docker-compose.yml` e `.env`, poi `docker compose pull app && docker compose up -d --remove-orphans`, che ferma e rimuove i due container vecchi. Se davanti alla porta 1427 c'è un reverse proxy, rivedere `TRUST_PROXY` (vedi `.env.prod.example`).
 
 In alternativa il server può controllare periodicamente Docker Hub (ad esempio con Watchtower) e aggiornare i container da solo; anche in questo caso le migrazioni si applicano all'avvio del backend.
 
-Per tornare a una versione precedente, sostituire `:latest` con il tag dello SHA corto (es. `ipavon/catasto1427-backend:1a2b3c4`, illustrativo) e rieseguire `docker compose up -d`.
+Per tornare a una versione precedente, sostituire `:latest` con il tag dello SHA corto (es. `ipavon/catasto1427:1a2b3c4`, illustrativo) e rieseguire `docker compose up -d`.
 
-### 3.6 Compilare le immagini in locale
+### 3.6 Compilare l'immagine in locale
 
 Utile per provare modifiche non ancora pubblicate. Il contesto di build è la root del monorepo:
 
 ```bash
-docker build -f backend-catasto/Dockerfile  -t ipavon/catasto1427-backend:latest  .
-docker build -f frontend-catasto/Dockerfile -t ipavon/catasto1427-frontend:latest .
+docker build -t ipavon/catasto1427:latest .
 docker compose up -d
 ```
 
@@ -193,7 +193,7 @@ docker compose up -d
 
 ### 4.1 Pubblicazione
 
-`.github/workflows/docker.yml` costruisce e pubblica su Docker Hub `ipavon/catasto1427-backend` e `ipavon/catasto1427-frontend` a ogni push su `main`, **dopo** che la CI (`ci.yml`) è passata. Ogni immagine ha due tag: `latest` e lo SHA corto del commit.
+`.github/workflows/docker.yml` costruisce e pubblica su Docker Hub `ipavon/catasto1427` (sito e API in un'unica immagine) a ogni push su `main`, **dopo** che la CI (`ci.yml`) è passata. L'immagine ha due tag: `latest` e lo SHA corto del commit.
 
 ### 4.2 Configurazione dei segreti
 
@@ -215,12 +215,12 @@ Il workflow si può lanciare anche a mano da Actions → Docker images → Run w
 | Sintomo | Causa probabile | Soluzione |
 |---|---|---|
 | La ricerca risponde "Internal Server Error" (sviluppo) | migrazioni non eseguite (`fuoco_segnature` mancante) | `npm run db:migrate -w catasto-backend` |
-| Il container del backend si riavvia di continuo | una migrazione fallisce all'avvio | `docker compose logs backend`, riga `❌ … fallita` |
+| Il container del backend si riavvia di continuo | una migrazione fallisce all'avvio | `docker compose logs app`, riga `❌ … fallita` |
 | `/health` risponde `503` | il backend non raggiunge MySQL | controllare le variabili `DB_*` / `MYSQL_*` e `docker compose logs db` |
 | Porta già occupata | un altro servizio usa 1427, 3005 o 3306 | liberare la porta o cambiarla in `docker-compose.yml` |
 | Le segnalazioni rispondono 500 | manca `SEGNALAZIONI_SALT` | impostarla in `.env` e riavviare il backend |
 | Le email non arrivano | vedi i log del backend | diagnosi FormSubmit in [Backend e API](backend.md), sezione «Flusso email (FormSubmit)» |
-| I filtri mostrano valori vecchi dopo un reimport | opzioni in cache nel backend (dato derivato, fino a `FILTERS_CACHE_TTL`, di default un'ora) | `POST /api/filters/cache/invalidate` con `ADMIN_TOKEN` (vedi `docs/backend.md`), oppure `docker compose restart backend` |
+| I filtri mostrano valori vecchi dopo un reimport | opzioni in cache nel backend (dato derivato, fino a `FILTERS_CACHE_TTL`, di default un'ora) | `POST /api/filters/cache/invalidate` con `ADMIN_TOKEN` (vedi `docs/backend.md`), oppure `docker compose restart app` |
 | Il visore delle carte non carica le carte (errore) | il servizio ICAR non risponde (502 nei log del backend) | riprovare più tardi; resta il link al sito originale |
 | Troppe richieste (`429`) | rate limit per IP | con un proxy davanti, verificare `TRUST_PROXY` |
 | Errori di tipo in build | `@catasto/shared` non ricompilato | `npm run build -w @catasto/shared` |

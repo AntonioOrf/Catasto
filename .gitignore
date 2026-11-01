@@ -49,3 +49,5 @@ codemap.html
 graphify-out/
 graphify-build.py
 TODO.md
+# --- Vercel ---
+.vercel/

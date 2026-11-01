@@ -63,8 +63,6 @@ A datum missing from the source stays missing in the interface too: it does not 
 frontend-catasto/
 ├── index.html                 # lang="it", loads public/theme-init.js before paint
 ├── public/theme-init.js       # applies the saved theme (separate file: the CSP forbids inline scripts)
-├── nginx.conf                 # SPA + proxy /api → backend:3005
-├── security-headers.conf      # CSP and security headers
 ├── vercel.json                # static deployment alternative
 └── src/
     ├── main.tsx · App.tsx     # bootstrap, routes, lazy loading
@@ -169,7 +167,7 @@ flowchart TD
 | `fetchStats(search)` | `GET /api/catasto/stats` or `POST /api/catasto/query/stats` | **Statistics** tab open |
 | `downloadExport(search, opzioni)` | `GET /api/catasto/export` or `POST /api/catasto/query/export` | **Export** button |
 
-`api/client.ts` uses `VITE_API_URL`; if it is missing, in production it calls the same origin (`/api`, proxied by nginx), in development `http://localhost:3005`. 4xx errors show the backend's message, all others a generic message in Italian.
+`api/client.ts` uses `VITE_API_URL`; if it is missing, in production it calls the same origin (`/api`, served by the same process as the site), in development `http://localhost:3005`. 4xx errors show the backend's message, all others a generic message in Italian.
 
 ---
 
@@ -319,17 +317,19 @@ The **EN/IT** button in the header switches the site language; the choice is kep
 
 Only `VITE_API_URL` (optional, read at build time).
 
-### 9.3 nginx
+### 9.3 Docker
 
-Docker image: SPA fallback to `index.html`, `/assets/` with a one-year immutable cache, `/api` proxied to `http://backend:3005` with `X-Forwarded-For` set to the client IP, gzip, body max 128 kB.
+Single image (`Dockerfile` at the root): the backend also serves the frontend build (`backend-catasto/src/static.ts`, active when `STATIC_DIR` is set). SPA fallback to `index.html` for every GET outside `/api` and `/health`; `/assets/` with a one-year immutable cache (a missing asset is a 404); `index.html` and the other static files with `no-cache`; compression and the body limit are already applied by Express.
 
 ### 9.4 Security headers
 
-`security-headers.conf`: CSP `default-src 'self'; script-src 'self'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'…`, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP. HSTS must be configured on the TLS terminator.
+`FRONTEND_SECURITY_HEADERS` in `backend-catasto/src/static.ts` (the same as `vercel.json`): CSP `default-src 'self'; script-src 'self'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'…`, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP. On frontend responses they replace helmet's, whose default CSP contains `upgrade-insecure-requests`. HSTS must be configured on the TLS terminator.
 
 ### 9.5 Vercel
 
-`vercel.json`: same headers with `connect-src 'self' https:`; there is no proxy for `/api`, so `VITE_API_URL` must be set to point to the backend.
+`vercel.json`: same headers with `connect-src 'self' https:`. The backend runs in the same project as a Vercel Function (`api/index.ts`, which exports the Express app from `backend-catasto/src/app.ts`): rewrites send `/api/*` and `/health` to the function, everything else to `index.html`. Frontend and API share the domain, so `VITE_API_URL` must be left empty (or removed) and `CORS_ORIGIN` is not needed.
+
+Vercel project settings: Root Directory `frontend-catasto`, Vite framework, "Include files outside the Root Directory" enabled (the default). Environment variables (Production): `DB_HOST`, `DB_PORT` (4000 for TiDB Cloud), `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL=true`, `TRUST_PROXY=1`, `SEGNALAZIONI_SALT`, `ADMIN_TOKEN` and, if used, `FORMSUBMIT_EMAIL`, `FORMSUBMIT_ORIGIN`, `MODERAZIONE_SECRET`, `PUBLIC_API_URL` (the site URL). Each function instance opens at most 5 DB connections (`DB_CONNECTION_LIMIT` to change it). Rate limiting is in memory, so on Vercel it applies per instance.
 
 ---
 

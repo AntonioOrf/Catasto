@@ -77,8 +77,7 @@ I dati assenti nella fonte restano assenti: il portale non li stima né li ricos
 
 ```mermaid
 flowchart LR
-    B[Browser<br/>React SPA] -->|/ e /api| N[nginx]
-    N -->|proxy /api| A[API Express]
+    B[Browser<br/>React SPA] -->|/ e /api| A[Express<br/>sito + API]
     A --> D[(MySQL)]
     A -->|manifest IIIF| I[Archivio digitale ICAR]
     B -->|immagini| I

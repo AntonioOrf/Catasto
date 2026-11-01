@@ -112,8 +112,7 @@ The **`packages/shared`** package holds what frontend and backend must see in th
 
 ```mermaid
 flowchart LR
-    C[Browser] -->|/api/...| N[nginx<br/>frontend container]
-    N -->|proxy_pass| H[helmet · CORS · compression<br/>express.json 64kb]
+    C[Browser] -->|/api/...| H[helmet · CORS · compression<br/>express.json 64kb]
     H --> RL[apiLimiter<br/>300 req / 15 min / IP]
     RL --> R[Route]
     R --> V[Controller<br/>zod validation]
@@ -134,7 +133,7 @@ flowchart LR
 
 ### 4.1 Base URL and data provenance
 
-Base URL: same origin as the site (`/api`, proxied by nginx), or `http://localhost:3005` in development.
+Base URL: same origin as the site (`/api`, served by the same process), or `http://localhost:3005` in development.
 
 Responses mix the three provenance levels of the [documentation standard](../standard-documentale.md#56-provenienza-e-integrità-del-dato--provenance-and-data-integrity):
 
@@ -643,7 +642,7 @@ The Archive dump (`init/Catasto.sql`) contains the historical data (source data)
 
 The table search reads `fuoco_segnature`: without migrations it responds 500.
 
-- **Docker**: the backend container applies any missing migrations at every start, before launching the server. If a migration fails the container stops (and compose restarts it): the error is in `docker compose logs backend`.
+- **Docker**: the backend container applies any missing migrations at every start, before launching the server. If a migration fails the container stops (and compose restarts it): the error is in `docker compose logs app`.
 - **Development**: run them by hand.
 
 ```bash
@@ -651,7 +650,7 @@ The table search reads `fuoco_segnature`: without migrations it responds 500.
 npm run db:migrate -w catasto-backend
 
 # container, by hand (not normally needed)
-docker compose exec backend node backend-catasto/dist/scripts/migrate.js
+docker compose exec app node backend-catasto/dist/scripts/migrate.js
 ```
 
 ---
@@ -665,8 +664,10 @@ docker compose exec backend node backend-catasto/dist/scripts/migrate.js
 | `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | — | MySQL connection |
 | `DB_PORT` | `3306` | |
 | `DB_SSL` | `false` | `true` enables TLS ≥ 1.2 with certificate verification |
+| `DB_CONNECTION_LIMIT` | `50` (`5` on Vercel) | max pool connections per process / function instance |
+| `STATIC_DIR` | not set | Frontend build folder to serve alongside the API (set in the Docker image; empty in development and on Vercel) |
 | `CORS_ORIGIN` | empty = all origins | Allowed origins, comma-separated |
-| `TRUST_PROXY` | not set | Number of proxies in front of the backend (`1` with nginx). Also accepts `true`/`false` or names such as `loopback`, but `true` trusts any `X-Forwarded-For`: use a number |
+| `TRUST_PROXY` | not set | Number of reverse proxies in front of the backend (empty if the port is exposed directly, usually `1` behind a proxy, `1` on Vercel). Also accepts `true`/`false` or names such as `loopback`, but `true` trusts any `X-Forwarded-For`: use a number |
 | `SEGNALAZIONI_SALT` | mandatory in production | Salt for the IP hash |
 | `ADMIN_TOKEN` | empty = admin area closed | Bearer token for moderation via API |
 | `FORMSUBMIT_EMAIL` | empty = no email | Recipient of user reports |

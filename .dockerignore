@@ -7,9 +7,9 @@ dist
 .gitignore
 .github
 docker-compose.yml
-# Il contesto di build delle due immagini è la root: questo è l'unico
-# .dockerignore che Docker legge, anche per le regole dei workspace. I
-# Dockerfile servono solo al builder, non dentro le immagini.
+# Il contesto di build è la root: questo è l'unico .dockerignore che Docker
+# legge, anche per le regole dei workspace. Il Dockerfile serve solo al
+# builder, non dentro l'immagine.
 **/Dockerfile
 **/.dockerignore
 # Segreti e dati: il contesto di build non deve mai includerli, nemmeno

@@ -434,7 +434,7 @@ done
 1. Copia `docker-compose.yml` sul server e crea `.env` a partire da `.env.prod.example` (password MySQL, `SEGNALAZIONI_SALT`, `ADMIN_TOKEN`, `MODERAZIONE_SECRET`, `FORMSUBMIT_*`, `CORS_ORIGIN`).
 2. Mette il dump in `init/Catasto.sql`.
 3. `docker compose up -d`: MySQL importa il dump al primo avvio (può richiedere diversi minuti); il backend parte quando il DB è sano.
-4. Il backend applica da solo le migrazioni all'avvio: in `docker compose logs backend` compaiono le righe `✅ 001_segnalazioni.sql`.
+4. Il backend applica da solo le migrazioni all'avvio: in `docker compose logs app` compaiono le righe `✅ 001_segnalazioni.sql`.
 5. Verifica: `curl http://127.0.0.1:3005/health` → `{"status":"ok","db":"up"}`; il sito risponde su `:1427`.
 6. Configura il terminatore TLS (reverse proxy o CDN) davanti alla porta 1427.
 7. Invia una segnalazione di prova e conferma l'email di attivazione di FormSubmit.
@@ -446,13 +446,13 @@ flowchart LR
     A[Merge su main] --> B[CI verde]
     B --> C[Immagini :latest e :sha su Docker Hub]
     C --> D{Aggiornamento}
-    D -->|manuale| E["docker compose pull backend frontend<br/>docker compose up -d backend frontend"]
+    D -->|manuale| E["docker compose pull app<br/>docker compose up -d app"]
     D -->|automatico| F[Polling del registro<br/>es. Watchtower]
     E --> G[Avvio del backend:<br/>migrazioni mancanti applicate]
     F --> G
     G --> H{/health ok?}
     H -->|sì| I[Fine]
-    H -->|no| L[docker compose logs backend]
+    H -->|no| L[docker compose logs app]
 ```
 
 ### 10.3 Varianti
