@@ -80,6 +80,7 @@ backend-catasto/
     ├── utils/
     │   ├── validation.ts          # pagination, numeric ids, id lists, HttpError
     │   ├── csv.ts, traduzioni-csv.ts # CSV (results export, translations export/import)
+    │   ├── luoghi-csv.ts          # query and CSV of places for the map (db:export-luoghi)
     │   ├── export-columns.ts      # columns and cells of exported files
     │   ├── export-writers.ts      # streaming writers for CSV and XLSX
     │   ├── describe-filters.ts    # human-readable description of a simple search
@@ -90,7 +91,8 @@ backend-catasto/
     └── scripts/
         ├── migrate.ts             # migration runner
         ├── export-traduzioni.ts   # CSV of lookup values without a translation
-        └── import-traduzioni.ts   # import of the CSV filled in by the editors
+        ├── import-traduzioni.ts   # import of the CSV filled in by the editors
+        └── export-luoghi.ts       # CSV of places (id_registrazione) with the number of households
 ```
 
 ### 2.2 Shared package
@@ -687,12 +689,13 @@ Full production example, with fictitious values: [`.env.prod.example`](../../.en
 | Command (in `backend-catasto/`) | Effect |
 |---|---|
 | `npm run dev` | `tsx watch src/server.ts` |
-| `npm run build` | `tsup` → `dist/server.js` and `dist/scripts/*.js` (migrations, translations export/import) |
+| `npm run build` | `tsup` → `dist/server.js` and `dist/scripts/*.js` (migrations, translations export/import, places export) |
 | `npm start` | starts `dist/server.js` |
 | `npm run db:migrate` | migrations from source (`tsx`) |
 | `npm run db:migrate:prod` | migrations from the build |
 | `npm run db:export-traduzioni [-- file.csv]` | CSV of lookup values without an English translation |
 | `npm run db:import-traduzioni -- file.csv` | imports the filled-in CSV into `traduzioni_lookup` |
+| `npm run db:export-luoghi [-- file.csv]` | CSV of places (`id_registrazione`) with unmerged names, original codes from `t_mappa_conversione` and number of households, for locating them on the map |
 | `npm run lint` | ESLint, with the shared `eslint.config.base.mjs` configuration at the root |
 | `npm test` | unit tests (`vitest run`, mocked database) |
 | `npm run test:integration` | integration tests on a real MySQL (see below) |
