@@ -141,7 +141,7 @@ On every merge into `main` the CI publishes the Docker images automatically.
 
 ## 8. Authors and licence
 
-A project by **Antonio Orfitelli** and **Pasquale Ruotolo**. Code released under the [MIT licence](LICENSE). The catasto data and the archival images remain subject to the terms of their respective sources.
+A project by **Antonio Orfitelli** and **Pasquale Ruotolo**. Copyright © 2025-2026 Antonio Orfitelli and Pasquale Ruotolo. Code released under the [GNU GPL v3 or later](LICENSE). The catasto data and the archival images remain subject to the terms of their respective sources.
 
 ## 9. Change log
 
