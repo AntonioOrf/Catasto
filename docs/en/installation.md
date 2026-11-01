@@ -6,8 +6,8 @@
 |---|---|
 | Identifier | `CAT-DOC-01` |
 | Title | Installation and deployment of the Florentine Catasto of 1427/30 portal |
-| Version | 2.0 |
-| Date | 2026-10-29 |
+| Version | 2.1 |
+| Date | 2026-11-01 |
 | Status | Approved |
 | Classification | Public |
 | Owners | Antonio Orfitelli, Pasquale Ruotolo |
@@ -19,7 +19,7 @@
 
 ## 1. Purpose and audience
 
-This document is for developers and system administrators. It describes how to set up the portal of the **Florentine Catasto of 1427/30** (*catasto*: the Florentine tax survey) for local development (§2) and for production with Docker (§3), how the Docker images are published automatically (§4) and how to solve the most frequent problems (§5). Environment variables are described in detail in [Backend and API](backend.md), section "Environment variables"; the procedure corresponds to use case UC-8 "Install and update the portal" in [Use cases](use-cases.md). For the overall structure see [Architecture and data model](architecture.md).
+This document is for developers and system administrators. It describes how to set up the portal of the **Florentine Catasto of 1427/30** (*catasto*: the Florentine tax survey) for local development (§2) and for production with Docker (§3) and on Vercel (§4), how the Docker image is published automatically (§5) and how to solve the most frequent problems (§6). Environment variables are described in detail in [Backend and API](backend.md), section "Environment variables"; the procedure corresponds to use case UC-8 "Install and update the portal" in [Use cases](use-cases.md). For the overall structure see [Architecture and data model](architecture.md).
 
 The portal database holds data at three levels of provenance (standard `CAT-DOC-00`, §5.6):
 
@@ -131,7 +131,7 @@ mkdir -p init && cp /path/to/Catasto.sql init/Catasto.sql
 docker compose up -d
 ```
 
-On first start MySQL imports `init/Catasto.sql` (this may take several minutes); the backend starts once the database is healthy.
+On first start MySQL imports `init/Catasto.sql` (this may take several minutes); the `app` container starts once the database is healthy.
 
 Variables to set in `.env` (the example file comments all of them):
 
@@ -142,14 +142,14 @@ Variables to set in `.env` (the example file comments all of them):
 | `ADMIN_TOKEN` | recommended | enables the moderation API |
 | `MODERAZIONE_SECRET` | recommended | enables the Accept/Reject links in the emails |
 | `FORMSUBMIT_EMAIL`, `FORMSUBMIT_ORIGIN` | recommended | email forwarding of user reports |
-| `TRUST_PROXY` | already `1` | number of proxies in front of the backend: use a number (`true` would make the IP spoofable) |
+| `TRUST_PROXY` | depends | empty if port 1427 is exposed directly; `1` if a reverse proxy sits in front and the port cannot be reached without going through it. Use a number (`true` would make the IP spoofable) |
 | `CORS_ORIGIN`, `PUBLIC_API_URL` | no | only if frontend or API are on another domain |
 
 ### 3.3 Migrations
 
-The backend container applies the migrations **by itself at every start**, before launching the server: the runner executes only the files in `backend-catasto/migrations/` not yet recorded. The logs (`docker compose logs app`) show the lines `✅ …` or `↩️ … (già applicata)` ("already applied").
+The `app` container applies the migrations **by itself at every start**, before launching the server: the runner executes only the files in `backend-catasto/migrations/` not yet recorded. The logs (`docker compose logs app`) show the lines `✅ …` or `↩️ … (già applicata)` ("already applied").
 
-If a migration fails, the backend does not start and compose restarts it. To run the migrations manually:
+If a migration fails, the server does not start and compose restarts it. To run the migrations manually:
 
 ```bash
 docker compose exec app node backend-catasto/dist/scripts/migrate.js
@@ -158,9 +158,9 @@ docker compose exec app node backend-catasto/dist/scripts/migrate.js
 ### 3.4 Verification
 
 ```bash
-docker compose ps                        # three containers "running", db "healthy"
-curl http://127.0.0.1:3005/health        # {"status":"ok","db":"up"}
-curl -I http://127.0.0.1:1427/           # 200 from the frontend
+docker compose ps                        # catasto-db and catasto-app "healthy"
+curl http://127.0.0.1:1427/health        # {"status":"ok","db":"up"}
+curl -I http://127.0.0.1:1427/           # 200 text/html (the site)
 ```
 
 Finally, send a test user report from the site and confirm the activation email that FormSubmit sends on the first submission.
@@ -187,30 +187,90 @@ docker build -t ipavon/catasto1427:latest .
 docker compose up -d
 ```
 
+### 3.7 Aligning the database from TiDB
+
+If the Vercel production (§4) uses TiDB Cloud, the MySQL on the Docker server is a separate copy: writes on one site do not reach the other. To realign it with TiDB, which is the authoritative source:
+
+1. Save the TiDB credentials (the same as on Vercel) in a `.tidb.env` file with permissions 600: `TIDB_HOST`, `TIDB_PORT` (4000), `TIDB_USER`, `TIDB_PASSWORD`, `TIDB_DB`.
+2. Back up the local MySQL:
+   ```bash
+   docker compose exec -T db sh -c 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers "$MYSQL_DATABASE"' > backup-mysql-$(date +%F).sql
+   ```
+3. Compare the two databases (tables, row counts, `schema_migrations`, `segnalazioni`): rows present only in the local MySQL, for example user reports received by the Docker site, must be exported separately and inserted again after the import.
+4. Dump TiDB with the `mysql:8.0` client, over TLS with certificate verification:
+   ```bash
+   docker run --rm --env-file .tidb.env mysql:8.0 sh -c 'mysqldump -h "$TIDB_HOST" -P "$TIDB_PORT" -u "$TIDB_USER" -p"$TIDB_PASSWORD" --ssl-mode=VERIFY_IDENTITY --ssl-ca=/etc/pki/tls/certs/ca-bundle.crt --single-transaction --skip-lock-tables --skip-add-locks --no-tablespaces --set-gtid-purged=OFF --column-statistics=0 --skip-routines --skip-triggers --default-character-set=utf8mb4 "$TIDB_DB"' > dump-tidb-$(date +%F).sql
+   ```
+   The file must end with `-- Dump completed`. TiDB-specific comments (`/*T![...] */`) are ignored by MySQL.
+5. Stop the application and import:
+   ```bash
+   docker compose stop app
+   docker compose exec -T db sh -c 'mysql -u root -p"$MYSQL_ROOT_PASSWORD" --default-character-set=utf8mb4 "$MYSQL_DATABASE"' < dump-tidb-$(date +%F).sql
+   docker compose start app
+   ```
+6. Repeat the row count and the check in §3.4, then delete `.tidb.env`.
+
+Alternatively the container can use TiDB directly (in `.env`: TiDB `DB_HOST` and credentials, `DB_PORT=4000`, `DB_SSL=true` in the `app` service): one database for both sites, with no synchronisation.
+
 ---
 
-## 4. Automatic Docker images
+## 4. Production on Vercel
 
-### 4.1 Publishing
+On Vercel a single project serves site and API: the frontend as a static site, the backend as a Vercel Function (`frontend-catasto/api/index.ts`, which exports the Express app). The database is external, for example TiDB Cloud.
+
+### 4.1 Project settings
+
+| Setting | Value |
+|---|---|
+| Root Directory | `frontend-catasto` |
+| Framework | Vite |
+| Include files outside the Root Directory | enabled (default): the function imports `backend-catasto/` |
+
+`vercel.json` routes `/api/*` and `/health` to the function and everything else to `index.html`.
+
+### 4.2 Environment variables
+
+| Variable | Value |
+|---|---|
+| `VITE_API_URL` | **not set**: site and API share the same domain |
+| `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | database credentials |
+| `DB_PORT` | `4000` for TiDB Cloud |
+| `DB_SSL` | `true` |
+| `TRUST_PROXY` | `1` |
+| `SEGNALAZIONI_SALT`, `ADMIN_TOKEN` | as in Docker (same `SEGNALAZIONI_SALT` if the database is shared) |
+| `FORMSUBMIT_EMAIL`, `FORMSUBMIT_ORIGIN`, `MODERAZIONE_SECRET`, `PUBLIC_API_URL` | optional; `PUBLIC_API_URL` is the site URL |
+| `DB_CONNECTION_LIMIT` | optional; default 5 connections per function instance |
+
+Set the variables for the Production environment and, for working previews, for Preview as well.
+
+### 4.3 Verification and limits
+
+`https://<domain>/health` must answer `{"status":"ok","db":"up"}`. Each request lasts at most 60 seconds (very large exports included); rate limiting is in memory, so it applies per function instance.
+
+---
+
+## 5. Automatic Docker images
+
+### 5.1 Publishing
 
 `.github/workflows/docker.yml` builds and publishes `ipavon/catasto1427` (site and API in a single image) to Docker Hub on every push to `main`, **after** the CI (`ci.yml`) has passed. The image has two tags: `latest` and the short SHA of the commit.
 
-### 4.2 Secrets configuration
+### 5.2 Secrets configuration
 
 One-off configuration, in GitHub → Settings → Secrets and variables → Actions:
 
 - `DOCKERHUB_USERNAME`: Docker Hub user (`ipavon`)
 - `DOCKERHUB_TOKEN`: access token created in Docker Hub → Account settings → Personal access tokens, with *Read & Write* permission
 
-### 4.3 Manual run
+### 5.3 Manual run
 
 The workflow can also be started manually from Actions → Docker images → Run workflow. Caution: when started manually it publishes `:latest` from the chosen branch without going through the CI, so it must be used only on `main`.
 
 ---
 
-## 5. Troubleshooting
+## 6. Troubleshooting
 
-### 5.1 Symptoms, causes and solutions
+### 6.1 Symptoms, causes and solutions
 
 | Symptom | Probable cause | Solution |
 |---|---|---|
@@ -225,7 +285,7 @@ The workflow can also be started manually from Actions → Docker images → Run
 | Too many requests (`429`) | per-IP rate limit | with a proxy in front, check `TRUST_PROXY` |
 | Type errors during build | `@catasto/shared` not rebuilt | `npm run build -w @catasto/shared` |
 
-### 5.2 Starting again from a clean database
+### 6.2 Starting again from a clean database
 
 The MySQL data are in `./mysql_data` (bind mount): `docker compose down -v` does **not** delete them.
 
@@ -239,7 +299,7 @@ docker compose up -d         # reimports init/Catasto.sql, then the backend reap
 
 ---
 
-## 6. References and sources
+## 7. References and sources
 
 - Herlihy, David, and Christiane Klapisch-Zuber. *Les Toscans et leurs familles. Une étude du catasto florentin de 1427*. Paris: Presses de la Fondation nationale des sciences politiques – Éditions de l'EHESS, 1978.
 - Digitised data (origin of the `Catasto.sql` dump): ACRH, <https://journals.openedition.org/acrh/7458>.
@@ -247,9 +307,10 @@ docker compose up -d         # reimports init/Catasto.sql, then the backend reap
 
 ---
 
-## 7. Change log
+## 8. Change log
 
 | Version | Date | Author | Description |
 |---|---|---|---|
 | 1.x | — | — | Previous versions, no change log |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewritten according to CAT-DOC-00 and English translation |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | Single Docker image (`app`), production on Vercel (§4), database alignment from TiDB (§3.7), `TRUST_PROXY` depending on the setup |

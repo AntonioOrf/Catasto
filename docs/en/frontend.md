@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Identifier | `CAT-DOC-04` |
-| Version | 2.0 |
-| Date | 2026-10-29 |
+| Version | 2.1 |
+| Date | 2026-11-01 |
 | Status | Approved |
 | Classification | Public |
 | Owners | Antonio Orfitelli, Pasquale Ruotolo |
@@ -393,3 +393,4 @@ The issues raised by the September 2026 review have been fixed (history in [Code
 |---|---|---|---|
 | 1.x | — | — | Earlier versions, without a change log |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewrite according to CAT-DOC-00 and English translation |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | nginx replaced by the backend in the Docker image; API on Vercel in the same project |

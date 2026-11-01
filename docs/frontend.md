@@ -5,8 +5,8 @@
 | Campo | Valore |
 |---|---|
 | Identificativo | `CAT-DOC-04` |
-| Versione | 2.0 |
-| Data | 2026-10-29 |
+| Versione | 2.1 |
+| Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
 | Responsabili | Antonio Orfitelli, Pasquale Ruotolo |
@@ -393,3 +393,4 @@ I problemi emersi dalla revisione di settembre 2026 sono stati corretti (storico
 |---|---|---|---|
 | 1.x | — | — | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | nginx sostituito dal backend nell'immagine Docker; API su Vercel nello stesso progetto |
