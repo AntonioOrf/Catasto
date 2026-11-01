@@ -22,9 +22,54 @@ export const COLONNE_LUOGHI = [
   "old_piviere",
   "old_popolo",
   "fuochi",
+  "avvisi",
 ] as const;
 
-export type RigaLuogo = Partial<Record<(typeof COLONNE_LUOGHI)[number], unknown>>;
+export type RigaLuogo = Partial<Record<Exclude<(typeof COLONNE_LUOGHI)[number], "avvisi">, unknown>>;
+
+/** Serie della città di Firenze: `id_piviere` contiene il gonfalone, `id_popolo` è sempre NULL. */
+export const SERIE_FIRENZE = [1, 2, 7] as const;
+
+/**
+ * Anomalie note dei dati geografici, gestite dalla mappa senza correggere il
+ * dump (vedi docs/backend.md, "Luoghi e anomalie dei dati geografici"):
+ *
+ * - `quartiere_mancante`: gonfalone di Firenze senza quartiere (serie 1,
+ *   Santo Spirito); la mappa lo colloca tramite il gonfalone.
+ * - `codici_originali_incoerenti`: la serie di `t_mappa_conversione` non è
+ *   quella del luogo (righe slittate ai confini fra serie); i codici
+ *   originali non vanno usati per collegare fonti esterne.
+ * - `codici_originali_assenti`: luogo aggiunto dopo la conversione.
+ * - `luogo_aggregato`: né piviere né popolo (città con un solo record):
+ *   tutti i fuochi cadono su un unico punto.
+ * - `senza_fuochi`: nessun fuoco registrato; la mappa non lo mostra.
+ */
+export type AvvisoLuogo =
+  | "quartiere_mancante"
+  | "codici_originali_incoerenti"
+  | "codici_originali_assenti"
+  | "luogo_aggregato"
+  | "senza_fuochi";
+
+function presente(valore: unknown): boolean {
+  return valore !== null && valore !== undefined && valore !== "";
+}
+
+/** `conversione`: false se `t_mappa_conversione` manca (codici originali non verificabili). */
+export function avvisiLuogo(riga: RigaLuogo, conversione = true): AvvisoLuogo[] {
+  const avvisi: AvvisoLuogo[] = [];
+  const serie = Number(riga.id_serie);
+  if ((SERIE_FIRENZE as readonly number[]).includes(serie) && !presente(riga.id_quartiere)) {
+    avvisi.push("quartiere_mancante");
+  }
+  if (conversione) {
+    if (!presente(riga.old_serie)) avvisi.push("codici_originali_assenti");
+    else if (Number(riga.old_serie) !== serie) avvisi.push("codici_originali_incoerenti");
+  }
+  if (!presente(riga.id_piviere) && !presente(riga.id_popolo)) avvisi.push("luogo_aggregato");
+  if (Number(riga.fuochi) === 0) avvisi.push("senza_fuochi");
+  return avvisi;
+}
 
 /** Colonne dei codici originali, presenti solo se esiste `t_mappa_conversione`. */
 const COLONNE_CONVERSIONE = "m.old_serie, m.old_quartiere, m.old_piviere, m.old_popolo";
@@ -57,9 +102,18 @@ function campo(valore: unknown): string {
   return String(valore).trim();
 }
 
-/** CSV con intestazione; NULL diventa campo vuoto, i nomi restano invariati. */
-export function buildLuoghiCsv(righe: RigaLuogo[]): string {
+/**
+ * CSV con intestazione; NULL diventa campo vuoto, i nomi restano invariati.
+ * L'ultima colonna elenca gli avvisi del luogo separati da punto e virgola.
+ */
+export function buildLuoghiCsv(righe: RigaLuogo[], conversione = true): string {
   const lines = [formatCsvRow([...COLONNE_LUOGHI])];
-  for (const riga of righe) lines.push(formatCsvRow(COLONNE_LUOGHI.map((c) => campo(riga[c]))));
+  for (const riga of righe) {
+    lines.push(
+      formatCsvRow(
+        COLONNE_LUOGHI.map((c) => (c === "avvisi" ? avvisiLuogo(riga, conversione).join(";") : campo(riga[c]))),
+      ),
+    );
+  }
   return `${lines.join("\n")}\n`;
 }

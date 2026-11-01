@@ -30,7 +30,7 @@ async function main(): Promise<void> {
   if (!conversione) console.error("⚠️  t_mappa_conversione assente: colonne old_* vuote");
 
   const [rows]: any = await pool.query(buildLuoghiQuery(conversione));
-  const csv = buildLuoghiCsv(rows);
+  const csv = buildLuoghiCsv(rows, conversione);
   const fuochi = (rows as { fuochi: unknown }[]).reduce((tot, r) => tot + Number(r.fuochi), 0);
   const messaggio = `${rows.length} luoghi, ${fuochi} fuochi`;
 

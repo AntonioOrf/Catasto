@@ -693,7 +693,7 @@ Esempio completo per la produzione, con valori fittizi: [`.env.prod.example`](..
 | `npm run db:migrate:prod` | migrazioni dalla build |
 | `npm run db:export-traduzioni [-- file.csv]` | CSV dei valori di lookup senza traduzione inglese |
 | `npm run db:import-traduzioni -- file.csv` | importa il CSV compilato in `traduzioni_lookup` |
-| `npm run db:export-luoghi [-- file.csv]` | CSV dei luoghi (`id_registrazione`) con nomi non uniti, codici originali di `t_mappa_conversione` e numero di fuochi, per la localizzazione sulla mappa |
+| `npm run db:export-luoghi [-- file.csv]` | CSV dei luoghi (`id_registrazione`) con nomi non uniti, codici originali di `t_mappa_conversione` numero di fuochi e avvisi sulle anomalie (§ 11.1), per la localizzazione sulla mappa |
 | `npm run lint` | ESLint, con la configurazione condivisa `eslint.config.base.mjs` della root |
 | `npm test` | test unitari (`vitest run`, database simulato) |
 | `npm run test:integration` | test di integrazione su un MySQL vero (vedi sotto) |
@@ -728,6 +728,20 @@ I problemi emersi dalla revisione del codice di settembre 2026 sono stati corret
 |---|---|
 | Rate limit | I contatori sono in memoria e per processo: con più istanze del backend i limiti valgono per istanza. |
 
+### 11.1 Luoghi e anomalie dei dati geografici
+
+La mappa usa come luogo l'`id_registrazione` (combinazione completa serie/quartiere/piviere/popolo): in città il gonfalone, che il dump registra in `id_piviere`; nel contado il popolo; nelle città con un solo record la città intera. Le anomalie del dump **non** vengono corrette nei dati storici: le gestisce la mappa, e `db:export-luoghi` le elenca nella colonna `avvisi` (funzione `avvisiLuogo` in `utils/luoghi-csv.ts`, riusabile dall'API). Valori rilevati sul dump di febbraio 2026:
+
+| Avviso | Luoghi | Fuochi | Descrizione e trattamento |
+|---|---|---|---|
+| `quartiere_mancante` | 3 | 1.858 | Serie 1: i gonfaloni di Santo Spirito (Nicchio, Ferza, Drago verde) hanno `id_quartiere` NULL. La mappa li colloca tramite il gonfalone, che determina il quartiere. |
+| `codici_originali_incoerenti` | 15 | 1.679 | In `t_mappa_conversione` la serie originale non è quella del luogo: righe slittate ai confini fra serie. I codici originali di questi luoghi non vanno usati per collegare fonti esterne; la localizzazione usa i nomi. |
+| `codici_originali_assenti` | 5 | 1.271 | Luoghi aggiunti dopo la conversione (id 1749–1753, fra cui la Città di Arezzo). Nessun effetto sulla mappa. |
+| `luogo_aggregato` | 13 | 3.069 | Né piviere né popolo (Cortona, Arezzo, Montepulciano, parte di San Gimignano e Colle): tutti i fuochi cadono su un punto unico, da dichiarare nella scheda del luogo. |
+| `senza_fuochi` | 34 | 0 | Luoghi senza fuochi registrati: la mappa non li mostra. |
+
+Altre anomalie note, senza avviso per riga: nella serie 1 manca il gonfalone **Scala** (presente nelle serie 2 e 7), da dichiarare nella nota metodologica; `t_quartieri` contiene doppioni (4 e 5 Santo Spirito, 2 e 6 Santa Maria Novella), irrilevanti per la mappa perché l'unità è `id_registrazione`.
+
 ---
 
 ## 12. Riferimenti e fonti
@@ -744,3 +758,4 @@ I problemi emersi dalla revisione del codice di settembre 2026 sono stati corret
 |---|---|---|---|
 | 1.x | — | — | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | Luoghi per la mappa: `db:export-luoghi` e anomalie dei dati geografici (§ 11.1) |

@@ -695,7 +695,7 @@ Full production example, with fictitious values: [`.env.prod.example`](../../.en
 | `npm run db:migrate:prod` | migrations from the build |
 | `npm run db:export-traduzioni [-- file.csv]` | CSV of lookup values without an English translation |
 | `npm run db:import-traduzioni -- file.csv` | imports the filled-in CSV into `traduzioni_lookup` |
-| `npm run db:export-luoghi [-- file.csv]` | CSV of places (`id_registrazione`) with unmerged names, original codes from `t_mappa_conversione` and number of households, for locating them on the map |
+| `npm run db:export-luoghi [-- file.csv]` | CSV of places (`id_registrazione`) with unmerged names, original codes from `t_mappa_conversione` number of households and anomaly warnings (§ 11.1), for locating them on the map |
 | `npm run lint` | ESLint, with the shared `eslint.config.base.mjs` configuration at the root |
 | `npm test` | unit tests (`vitest run`, mocked database) |
 | `npm run test:integration` | integration tests on a real MySQL (see below) |
@@ -730,6 +730,20 @@ The issues raised by the September 2026 code review have been fixed; the history
 |---|---|
 | Rate limit | Counters are in memory and per process: with several backend instances, the limits apply per instance. |
 
+### 11.1 Places and anomalies in the geographic data
+
+The map uses `id_registrazione` (the full series/quarter/piviere/parish combination) as its place: in the city the gonfalone, which the dump stores in `id_piviere`; in the countryside the parish; in towns with a single record the whole town. The dump's anomalies are **not** corrected in the historical data: the map handles them, and `db:export-luoghi` lists them in the `avvisi` column (function `avvisiLuogo` in `utils/luoghi-csv.ts`, reusable by the API). Figures from the February 2026 dump:
+
+| Warning | Places | Households | Description and handling |
+|---|---|---|---|
+| `quartiere_mancante` | 3 | 1,858 | Series 1: the Santo Spirito gonfaloni (Nicchio, Ferza, Drago verde) have a NULL `id_quartiere`. The map places them through the gonfalone, which determines the quarter. |
+| `codici_originali_incoerenti` | 15 | 1,679 | In `t_mappa_conversione` the original series is not the place's own: rows shifted at series boundaries. These places' original codes must not be used to link external sources; locating them relies on names. |
+| `codici_originali_assenti` | 5 | 1,271 | Places added after the conversion (ids 1749–1753, including the City of Arezzo). No effect on the map. |
+| `luogo_aggregato` | 13 | 3,069 | Neither piviere nor parish (Cortona, Arezzo, Montepulciano, part of San Gimignano and Colle): all households fall on a single point, to be stated in the place card. |
+| `senza_fuochi` | 34 | 0 | Places with no recorded households: not shown on the map. |
+
+Other known anomalies, without a per-row warning: series 1 lacks the **Scala** gonfalone (present in series 2 and 7), to be stated in the methodological note; `t_quartieri` contains duplicates (4 and 5 Santo Spirito, 2 and 6 Santa Maria Novella), irrelevant to the map since the unit is `id_registrazione`.
+
 ---
 
 ## 12. References and sources
@@ -746,3 +760,4 @@ The issues raised by the September 2026 code review have been fixed; the history
 |---|---|---|---|
 | 1.x | — | — | Earlier versions, no change log |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewritten according to CAT-DOC-00; English translation |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | Places for the map: `db:export-luoghi` and geographic data anomalies (§ 11.1) |
