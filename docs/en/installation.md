@@ -6,7 +6,7 @@
 |---|---|
 | Identifier | `CAT-DOC-01` |
 | Title | Installation and deployment of the Florentine Catasto of 1427/30 portal |
-| Version | 2.3 |
+| Version | 2.4 |
 | Date | 2026-11-01 |
 | Status | Approved |
 | Classification | Public |
@@ -249,6 +249,8 @@ Set the variables for the Production environment and, for working previews, for 
 
 `https://<domain>/health` must answer `{"status":"ok","db":"up"}`. Each request lasts at most 60 seconds (very large exports included); rate limiting is in memory, so it applies per function instance.
 
+The build command is set in `vercel.json` (`"buildCommand": "npm run build"`), so a different value in the project settings cannot skip the backend build. If the backend fails to start (missing bundle, invalid environment variable such as `SHARED_STATE`, missing dependency), `api/index.js` does not let the function crash: every route answers `503` with `{"error": "Avvio del backend non riuscito", "dettaglio": "…"}` and the full error goes to the function logs.
+
 ---
 
 ## 5. Automatic Docker images
@@ -318,3 +320,4 @@ docker compose up -d         # reimports init/Catasto.sql, then the backend reap
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | Single Docker image (`app`), production on Vercel (§4), database alignment from TiDB (§3.7), `TRUST_PROXY` depending on the setup |
 | 2.2 | 2026-11-01 | Pasquale Ruotolo | Reference to CAT-DOC-07 for other platforms |
 | 2.3 | 2026-11-01 | Pasquale Ruotolo | Vercel: the function's backend is compiled into a single file with `@catasto/shared` (§4) |
+| 2.4 | 2026-11-01 | Pasquale Ruotolo | Vercel: build command in `vercel.json`, backend startup error in the response (503) and in the logs (§4.3) |
