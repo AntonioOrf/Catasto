@@ -21,8 +21,8 @@
 | Campo | Valore |
 |---|---|
 | Identificativo | `CAT-README` |
-| Versione | 2.0 |
-| Data | 2026-10-29 |
+| Versione | 2.1 |
+| Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
 | Responsabili | Antonio Orfitelli, Pasquale Ruotolo |
@@ -106,7 +106,7 @@ npm run db:migrate -w catasto-backend                  # tabelle applicative
 npm run dev                                            # frontend :5173, API :3005
 ```
 
-Per la produzione con Docker (porta `1427`) segui la [guida all'installazione](docs/guides.md).
+Per la produzione con Docker (porta `1427`) segui la [guida all'installazione](docs/guides.md). Per Kubernetes, OpenShift, Podman o una macchina senza container, e per il trasferimento sui server di un ateneo, vedi [Portabilità](docs/portabilita.md).
 
 ## 5. Documentazione
 
@@ -121,6 +121,7 @@ Tutti i documenti seguono lo [standard documentale CAT-DOC-00](docs/standard-doc
 | CAT-DOC-04 | [Frontend](docs/frontend.md) | [EN](docs/en/frontend.md) | Pagine, componenti, flusso dei dati, visore, segnalazioni, build |
 | CAT-DOC-05 | [Casi d'uso](docs/casi-d-uso.md) | [EN](docs/en/use-cases.md) | Otto scenari reali con diagrammi di sequenza, di stato e di flusso |
 | CAT-DOC-06 | [Revisione del codice](docs/revisione-codice.md) | [EN](docs/en/code-review.md) | Problemi noti con priorità, stato dei test |
+| CAT-DOC-07 | [Portabilità e trasferimento all'ateneo](docs/portabilita.md) | [EN](docs/en/portability.md) | Requisiti, Kubernetes/OpenShift, Podman, systemd, più istanze, domande per il servizio informatico |
 | — | [Product brief](frontend-catasto/PRODUCT.md) | — | Utenti, principi e vincoli del prodotto |
 
 ## 6. Contribuire
@@ -149,3 +150,4 @@ Progetto di **Antonio Orfitelli** e **Pasquale Ruotolo**. Copyright © 2025-2026
 |---|---|---|---|
 | 1.x | — | Antonio Orfitelli, Pasquale Ruotolo | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00, sezione sulla fonte, traduzione inglese |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | Documento CAT-DOC-07 sulla portabilità |

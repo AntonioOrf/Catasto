@@ -6,20 +6,20 @@
 |---|---|
 | Identificativo | `CAT-DOC-01` |
 | Titolo | Installazione e deployment del portale Catasto fiorentino del 1427/30 |
-| Versione | 2.2 |
+| Versione | 2.3 |
 | Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
 | Responsabili | Antonio Orfitelli, Pasquale Ruotolo |
 | Lingua | Italiano (testo di riferimento) |
 | Traduzione | [English](en/installation.md) |
-| Documenti collegati | [Standard documentale](standard-documentale.md) (`CAT-DOC-00`) · [Architettura e modello dati](architettura.md) (`CAT-DOC-02`) · [Backend e API](backend.md) (`CAT-DOC-03`) · [Frontend](frontend.md) (`CAT-DOC-04`) · [Casi d'uso](casi-d-uso.md) (`CAT-DOC-05`) · [Revisione del codice](revisione-codice.md) (`CAT-DOC-06`) · [Readme del repository](../readme.md) |
+| Documenti collegati | [Standard documentale](standard-documentale.md) (`CAT-DOC-00`) · [Architettura e modello dati](architettura.md) (`CAT-DOC-02`) · [Backend e API](backend.md) (`CAT-DOC-03`) · [Frontend](frontend.md) (`CAT-DOC-04`) · [Casi d'uso](casi-d-uso.md) (`CAT-DOC-05`) · [Revisione del codice](revisione-codice.md) (`CAT-DOC-06`) · [Portabilità](portabilita.md) (`CAT-DOC-07`) · [Readme del repository](../readme.md) |
 
 ---
 
 ## 1. Scopo e destinatari
 
-Il documento è rivolto a sviluppatori e amministratori di sistema. Descrive come configurare il portale del **Catasto fiorentino del 1427/30** in sviluppo locale (§2) e in produzione con Docker (§3) e su Vercel (§4), come viene pubblicata automaticamente l'immagine Docker (§5) e come risolvere i problemi più frequenti (§6). Le variabili d'ambiente sono descritte in dettaglio in [Backend e API](backend.md), sezione «Variabili d'ambiente»; la procedura corrisponde al caso d'uso UC-8 «Installare e aggiornare il portale» di [Casi d'uso](casi-d-uso.md). Per la struttura complessiva si veda [Architettura e modello dati](architettura.md).
+Il documento è rivolto a sviluppatori e amministratori di sistema. Descrive come configurare il portale del **Catasto fiorentino del 1427/30** in sviluppo locale (§2) e in produzione con Docker (§3) e su Vercel (§4), come viene pubblicata automaticamente l'immagine Docker (§5) e come risolvere i problemi più frequenti (§6). Altre piattaforme (Kubernetes, OpenShift, Podman, macchine senza container) e il trasferimento sui server di un ateneo sono trattati in [Portabilità e trasferimento all'ateneo](portabilita.md). Le variabili d'ambiente sono descritte in dettaglio in [Backend e API](backend.md), sezione «Variabili d'ambiente»; la procedura corrisponde al caso d'uso UC-8 «Installare e aggiornare il portale» di [Casi d'uso](casi-d-uso.md). Per la struttura complessiva si veda [Architettura e modello dati](architettura.md).
 
 Il database del portale contiene dati di tre livelli di provenienza (standard `CAT-DOC-00`, §5.6):
 
@@ -316,4 +316,5 @@ docker compose up -d         # reimporta init/Catasto.sql, poi il backend riappl
 | 1.x | — | — | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | Immagine Docker unica (`app`), produzione su Vercel (§4), allineamento del database da TiDB (§3.7), `TRUST_PROXY` secondo il caso |
-| 2.2 | 2026-11-01 | Pasquale Ruotolo | Vercel: il backend della funzione è compilato in un solo file con `@catasto/shared` (§4) |
+| 2.2 | 2026-11-01 | Pasquale Ruotolo | Rimando a CAT-DOC-07 per le altre piattaforme |
+| 2.3 | 2026-11-01 | Pasquale Ruotolo | Vercel: il backend della funzione è compilato in un solo file con `@catasto/shared` (§4) |

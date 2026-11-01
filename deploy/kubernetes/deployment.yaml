@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catasto
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Aggiornamenti senza interruzione: un pod nuovo pronto prima di
+      # spegnerne uno vecchio.
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: web
+    spec:
+      # Il server chiude le connessioni entro 10 s dal SIGTERM (server.ts).
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+        # Niente runAsUser: OpenShift assegna un UID casuale, altrove vale
+        # l'utente numerico dell'immagine (1000).
+      containers:
+        - name: catasto
+          image: ipavon/catasto1427
+          ports:
+            - name: http
+              containerPort: 3005
+          envFrom:
+            - configMapRef:
+                name: catasto-config
+            - secretRef:
+                name: catasto-secrets
+          # L'avvio applica le migrazioni mancanti (con un lock sul DB, quindi
+          # più pod possono partire insieme), poi apre la porta.
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 5
+            failureThreshold: 72 # fino a 6 minuti per le migrazioni
+          livenessProbe:
+            # Non tocca il DB: un database giù non deve far riavviare i pod.
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+          readinessProbe:
+            # Fuori dal bilanciamento finché il DB non risponde.
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              # Gli export Excel più grandi tengono il file in memoria.
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

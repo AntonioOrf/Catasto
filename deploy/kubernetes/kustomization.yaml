@@ -1,0 +1,26 @@
+# Manifest di base per Kubernetes e OpenShift (CAT-DOC-07, docs/portabilita.md).
+# Il database è esterno al cluster (MySQL 8 o TiDB): qui c'è solo il portale.
+#
+#   cp secret.example.yaml secret.yaml   # e compilarlo, senza committarlo
+#   kubectl apply -k deploy/kubernetes   # oppure: oc apply -k deploy/kubernetes
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: catasto
+    includeSelectors: true
+
+resources:
+  - configmap.yaml
+  - secret.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - pdb.yaml
+
+images:
+  # Fissare un tag immutabile (lo SHA breve che la CI pubblica a ogni merge)
+  # invece di :latest, così un rollback è un cambio di tag.
+  - name: ipavon/catasto1427
+    newTag: latest
