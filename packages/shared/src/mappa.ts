@@ -33,6 +33,6 @@ export interface MappaLuoghi {
   fuochi: number;
   /** Fuochi della ricerca in luoghi senza coordinate (non mostrati). */
   non_localizzati: { fuochi: number; luoghi: number };
-  /** false se la tabella delle coordinate manca (migrazioni 005–006 non applicate). */
+  /** false se la tabella delle coordinate manca (migrazioni 006–007 non applicate). */
   disponibile: boolean;
 }

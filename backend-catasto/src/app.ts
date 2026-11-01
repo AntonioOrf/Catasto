@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import compression from "compression";
 import dotenv from "dotenv";
 import { errorHandler, notFoundHandler } from "./middlewares/error.middleware.js";
@@ -14,6 +13,9 @@ import segnalazioneRoutes from "./routes/segnalazione.routes.js";
 import mappaRoutes from "./routes/mappa.routes.js";
 import { parseTrustProxy } from "./utils/trust-proxy.js";
 import { serveFrontend } from "./static.js";
+import { createLimiter } from "./utils/rate-limit.js";
+import { cacheSyncMiddleware } from "./services/cache-sync.service.js";
+import { isSharedStateMysql } from "./config/shared-state.js";
 
 dotenv.config({ quiet: true });
 
@@ -54,13 +56,12 @@ app.use(compression() as any);
 // tenerlo scritto documenta l'intento.
 app.use(express.json({ limit: "64kb" }));
 
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 300,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+const apiLimiter = createLimiter("api", { limit: 300 });
 app.use("/api", apiLimiter);
+
+// Con più istanze (SHARED_STATE=mysql) le cache in memoria si allineano
+// all'invalidazione fatta su un'altra istanza: vedi cache-sync.service.ts.
+if (isSharedStateMysql()) app.use("/api", cacheSyncMiddleware);
 
 // STATIC_DIR = cartella della build del frontend. Impostata nell'immagine
 // Docker unica, dove lo stesso processo serve sito e API; vuota in sviluppo
@@ -74,14 +75,26 @@ if (!staticDir) {
   });
 }
 
-app.get("/health", async (_req, res) => {
+// Due controlli distinti, per gli orchestratori (Kubernetes, OpenShift,
+// systemd, monitoraggi):
+// - /health/live: il processo risponde. Non tocca il DB, così un database
+//   irraggiungibile non fa riavviare in loop tutte le istanze;
+// - /health/ready (e /health, storico, usato dall'HEALTHCHECK del Dockerfile):
+//   il processo può servire richieste, cioè il DB risponde.
+app.get("/health/live", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
+const readiness: express.RequestHandler = async (_req, res) => {
   try {
     await pool.query("SELECT 1");
     res.json({ status: "ok", db: "up" });
   } catch {
     res.status(503).json({ status: "error", db: "down" });
   }
-});
+};
+app.get("/health", readiness);
+app.get("/health/ready", readiness);
 
 app.use("/api/catasto", catastoRoutes);
 app.use("/api/filters", filterRoutes);

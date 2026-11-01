@@ -1,5 +1,5 @@
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
+import { createLimiter } from "../utils/rate-limit.js";
 import { MappaController } from "../controllers/mappa.controller.js";
 import { asyncHandler } from "../middlewares/async-handler.js";
 
@@ -7,11 +7,8 @@ const router = Router();
 
 // Una query aggregata per richiesta (con cache breve): stesso limite delle
 // statistiche, perché la mappa segue i filtri come il pannello.
-const mappaLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+const mappaLimiter = createLimiter("mappa", {
   limit: 150,
-  standardHeaders: true,
-  legacyHeaders: false,
   message: { error: "Troppe richieste della mappa. Riprova tra qualche minuto." },
 });
 

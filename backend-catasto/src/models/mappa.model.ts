@@ -4,7 +4,7 @@ import { num, type StatsFilters } from "./stats.model.js";
 
 /**
  * Aggregati dei fuochi di una ricerca per luogo (`id_registrazione`), e
- * coordinate dei luoghi (`luoghi_geo`, migrazioni 005–006). Le condizioni
+ * coordinate dei luoghi (`luoghi_geo`, migrazioni 006–007). Le condizioni
  * arrivano già compilate da `buildQuery` o `buildQueryFromAst`: la mappa
  * mostra esattamente i fuochi della tabella.
  */

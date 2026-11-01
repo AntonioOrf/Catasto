@@ -44,7 +44,7 @@ export const mappaPageMessages = defineMessages({
     loading: "Caricamento dei luoghi…",
     retry: "Riprova",
     unavailable: "Il server in uso non offre ancora la mappa.",
-    noTable: "Le coordinate dei luoghi non sono ancora caricate nel database (migrazioni 005 e 006).",
+    noTable: "Le coordinate dei luoghi non sono ancora caricate nel database (migrazioni 006 e 007).",
     none: "Nessun valore",
   },
   en: {
@@ -90,7 +90,7 @@ export const mappaPageMessages = defineMessages({
     loading: "Loading places…",
     retry: "Retry",
     unavailable: "The server in use does not offer the map yet.",
-    noTable: "Place coordinates are not loaded in the database yet (migrations 005 and 006).",
+    noTable: "Place coordinates are not loaded in the database yet (migrations 006 and 007).",
     none: "No value",
   },
 });

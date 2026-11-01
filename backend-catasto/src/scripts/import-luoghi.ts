@@ -1,11 +1,11 @@
 /**
- * Importa in `luoghi_geo` (migrazione 005) le coordinate dei luoghi da un CSV
+ * Importa in `luoghi_geo` (migrazione 006) le coordinate dei luoghi da un CSV
  * nel formato di `repetti:abbina`, anche rivisto a mano (colonne lat, lng,
  * certezza, ed eventualmente nome_moderno, fonte, note).
  *
  * npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv            # righe revisionate
  * npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv --automatico
- * npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv --sql > migrations/006_....sql
+ * npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv --sql > migrations/00N_....sql
  *
  * Di default le righe valgono come revisionate (revisionato = 1) e
  * sovrascrivono quelle presenti. Con --automatico non toccano le righe già

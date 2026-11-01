@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Identifier | `CAT-DOC-03` |
-| Version | 2.3 |
+| Version | 2.4 |
 | Date | 2026-11-01 |
 | Status | Approved |
 | Classification | Public |
@@ -48,12 +48,14 @@ backend-catasto/
 │   ├── 002_traduzioni_lookup.sql # translations of lookup labels
 │   ├── 003_traduzioni_lookup_seed.sql # initial English translations
 │   ├── 004_traduzioni_lookup_dump.sql # translations of the dump's actual labels (from db:export-traduzioni)
-│   ├── 005_luoghi_geo.sql        # place coordinates for the map
-│   ├── 006_luoghi_geo_automatici.sql # automatic matches with Repetti (from db:import-luoghi --sql)
-│   └── 007_segnalazioni_luoghi.sql # reports on places: `localizzazione` type, `id_registrazione` column
+│   ├── 005_stato_condiviso.sql   # rate limiting and cache generation with several instances (SHARED_STATE=mysql)
+│   ├── 006_luoghi_geo.sql        # place coordinates for the map
+│   ├── 007_luoghi_geo_automatici.sql # automatic matches with Repetti (from db:import-luoghi --sql)
+│   └── 008_segnalazioni_luoghi.sql # reports on places: `localizzazione` type, `id_registrazione` column
 └── src/
     ├── server.ts                  # Express bootstrap: helmet, CORS, rate limit, routes, /health
     ├── config/db.ts               # mysql2 pool (connectionLimit 50, optional TLS)
+    ├── config/shared-state.ts     # SHARED_STATE: state in memory or on MySQL
     ├── routes/
     │   ├── catasto.routes.ts      # /api/catasto (+ dedicated limiter for the manifest)
     │   ├── filter.routes.ts       # /api/filters (+ admin cache invalidation)
@@ -72,7 +74,8 @@ backend-catasto/
     │   ├── stats.service.ts       # search statistics (with short-lived cache)
     │   ├── mappa.service.ts       # per-place aggregates + coordinates (cached)
     │   ├── segnalazione.service.ts# creation, anti-abuse, transactional state changes
-    │   └── notifica.service.ts    # email forwarding via FormSubmit with signed links
+    │   ├── notifica.service.ts    # email forwarding via FormSubmit with signed links
+    │   └── cache-sync.service.ts  # cache invalidation propagated to the other instances
     ├── models/
     │   ├── fuoco.model.ts         # SELECTs on households, joins, portata shelfmark
     │   ├── common.model.ts        # lookups, filters (TTL cache), family members, occupations
@@ -86,6 +89,8 @@ backend-catasto/
     │   └── error.middleware.ts    # 404 + error handling (masks 5xx in production)
     ├── utils/
     │   ├── validation.ts          # pagination, numeric ids, id lists, HttpError
+    │   ├── rate-limit.ts          # createLimiter: shared options, shared store if SHARED_STATE=mysql
+    │   ├── mysql-rate-limit-store.ts # express-rate-limit store on the rate_limit_hits table
     │   ├── csv.ts, traduzioni-csv.ts # CSV (results export, translations export/import)
     │   ├── luoghi-csv.ts          # query and CSV of places for the map (db:export-luoghi)
     │   ├── repetti.ts             # extraction of places from Repetti's Dictionary
@@ -98,7 +103,7 @@ backend-catasto/
     │   └── moderazione-token.ts   # HMAC tokens for the Accept/Reject links
     ├── views/moderazione.page.ts  # HTML confirmation/outcome pages for moderation
     └── scripts/
-        ├── migrate.ts             # migration runner
+        ├── migrate.ts             # migration runner (with a MySQL lock across instances)
         ├── export-traduzioni.ts   # CSV of lookup values without a translation
         ├── import-traduzioni.ts   # import of the CSV filled in by the editors
         ├── export-luoghi.ts       # CSV of places (id_registrazione) with the number of households
@@ -164,7 +169,8 @@ Economic values (*fortune* (property), credit, credit in the Monte, taxable asse
 
 | Method | Path | Access | Description |
 |---|---|---|---|
-| GET | `/health` | public | Service and database status |
+| GET | `/health`, `/health/ready` | public | Service and database status (readiness) |
+| GET | `/health/live` | public | The process responds, without querying the database (liveness) |
 | GET | `/api/catasto` | public | Simple search, table view (paginated) |
 | GET | `/api/catasto/fuochi?ids=` | public | Up to 50 households by id, for selection and comparison |
 | GET | `/api/catasto/suggest?q=` | public (600/15 min) | Up to 8 households for the workbench's "Find and add" |
@@ -198,10 +204,10 @@ Every read endpoint accepts `?lang=en` (including `POST /api/catasto/query`, in 
 | `statsLimiter` | `GET /api/catasto/stats`, `POST /api/catasto/query/stats` | 150 requests / 15 min / IP |
 | `mappaLimiter` | `GET /api/mappa/luoghi`, `POST /api/mappa/query` | 150 requests / 15 min / IP |
 | `exportLimiter` | `GET /api/catasto/export`, `POST /api/catasto/query/export` | 20 requests / 15 min / IP |
-| `createLimiter` | `POST /api/segnalazioni` | 5 / hour / IP, plus 10 / hour per IP hash stored in the DB |
+| `segnalazioneLimiter` | `POST /api/segnalazioni` | 5 / hour / IP, plus 10 / hour per IP hash stored in the DB |
 | `adminLimiter` | admin and moderation routes | 100 **failed** requests / 15 min / IP |
 
-Counters are kept in memory: they apply per process and reset on restart. Behind a proxy, set `TRUST_PROXY` (see [variables](#9-environment-variables)), otherwise all requests appear to come from the same IP.
+All limiters are created by `createLimiter` (`src/utils/rate-limit.ts`). With `SHARED_STATE` empty, counters are kept in memory: they apply per process and reset on restart. With `SHARED_STATE=mysql` they live in the `rate_limit_hits` table (migration 005) and apply across all backend instances, with time computed by the database; if the database does not respond, the request goes through uncounted. Behind a proxy, set `TRUST_PROXY` (see [variables](#9-environment-variables)), otherwise all requests appear to come from the same IP.
 
 ### 4.4 Pagination and sorting
 
@@ -410,6 +416,8 @@ A non-existent household returns `[]`.
 
 Admin route (header `Authorization: Bearer <ADMIN_TOKEN>`, same `adminLimiter` as the others). Clears the filter options cache and the translations cache: the next request reloads them from the DB. Use it after re-importing the dump or importing translations, so as not to wait for expiry (`FILTERS_CACHE_TTL`, one hour by default) or restart the backend.
 
+With `SHARED_STATE=mysql` the request reaches a single instance, which increments the generation in `cache_generazioni`; the others re-read it at most every 30 seconds, on the first `/api` request, and clear their own caches if it has changed (`src/services/cache-sync.service.ts`). The check is driven by requests rather than a timer, so it also works on Vercel.
+
 ```bash
 curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://catasto.example.org/api/filters/cache/invalidate
 # {"ok":true}
@@ -419,14 +427,19 @@ curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://catasto.example.org
 
 Raw rows of the `mestieri` table, sorted by name (by translated label with `lang=en`). The frontend does not use it (it takes occupations from `/api/filters`): it remains as a **public API** for those extracting the data, with the same shape as the dump's columns. Consider it stable: changing it breaks external clients.
 
-### 4.17 Service status: `GET /health`
+### 4.17 Service status: `GET /health`, `/health/ready`, `/health/live`
 
-`200 {"status":"ok","db":"up"}` or `503 {"status":"error","db":"down"}`. Not subject to rate limiting: use it for health checks and monitoring.
+| Route | Response | Use |
+|---|---|---|
+| `/health`, `/health/ready` | `200 {"status":"ok","db":"up"}` or `503 {"status":"error","db":"down"}` | Readiness: the instance can serve requests. Dockerfile `HEALTHCHECK`, Kubernetes `readinessProbe`, monitoring |
+| `/health/live` | always `200 {"status":"ok"}` | Liveness: the process responds. Kubernetes `livenessProbe` and `startupProbe`. It does not query the database, so an unreachable database does not make every instance restart in a loop |
+
+None of the three is subject to rate limiting.
 
 
 ### 4.18 Map of places: `GET /api/mappa/luoghi`
 
-One point per place (`id_registrazione`) with aggregates of the search's households: it accepts the same filters as the simple search (`GET /api/mappa/luoghi?mestiere=3`); `POST /api/mappa/query` with `{ "ast": … }` does the same on the advanced search AST. Pagination and sorting are ignored. Coordinates come from the `luoghi_geo` table (migrations `005`–`006`, § 11.4).
+One point per place (`id_registrazione`) with aggregates of the search's households: it accepts the same filters as the simple search (`GET /api/mappa/luoghi?mestiere=3`); `POST /api/mappa/query` with `{ "ast": … }` does the same on the advanced search AST. Pagination and sorting are ignored. Coordinates come from the `luoghi_geo` table (migrations `006`–`007`, § 11.4).
 
 ```json
 {
@@ -636,11 +649,11 @@ The list (`GET /api/segnalazioni`) and the detail also return `id_registrazione`
 
 ### 6.5 Location reports
 
-The `localizzazione` type ("Localizzazione errata", wrong location) reports that a map place is in the wrong spot. It concerns a place (`id_registrazione`), not a household: `id_fuoco` stays `NULL`. Migration `007` adds the value to the `tipo` enum, the `id_registrazione` column and the `idx_segnalazioni_luogo` index. There is no foreign key to the dump tables, which a reimport recreates: the service checks that the place exists.
+The `localizzazione` type ("Localizzazione errata", wrong location) reports that a map place is in the wrong spot. It concerns a place (`id_registrazione`), not a household: `id_fuoco` stays `NULL`. Migration `008` adds the value to the `tipo` enum, the `id_registrazione` column and the `idx_segnalazioni_luogo` index. There is no foreign key to the dump tables, which a reimport recreates: the service checks that the place exists.
 
 **Validation.** For `localizzazione`, `id_registrazione` and at least one of `valore_proposto` and `note` are required; `id_fuoco` and `campo` are forbidden. For the other types `id_registrazione` is forbidden. A place that does not exist gives `400` and nothing is written.
 
-**Current position.** The server writes it in `valore_attuale`, reading it from `luoghi_geo`: the client cannot supply it. The format is `43.770100, 11.105200 (approssimata; Lastra a Signa)`: latitude and longitude with six decimals, then certainty (`sicura`, `approssimata`, `solo piviere`, `non trovata`) and modern name, when present. A place without coordinates gives `non localizzato`, with the same details in brackets. If the `luoghi_geo` table does not exist (migrations `005`–`006` not applied) the place counts as not located and the report does not fail. `valore_proposto` is the user's free text.
+**Current position.** The server writes it in `valore_attuale`, reading it from `luoghi_geo`: the client cannot supply it. The format is `43.770100, 11.105200 (approssimata; Lastra a Signa)`: latitude and longitude with six decimals, then certainty (`sicura`, `approssimata`, `solo piviere`, `non trovata`) and modern name, when present. A place without coordinates gives `non localizzato`, with the same details in brackets. If the `luoghi_geo` table does not exist (migrations `006`–`007` not applied) the place counts as not located and the report does not fail. `valore_proposto` is the user's free text.
 
 **Moderation.** The email to the editors and the confirmation page show **Luogo** (name and `id_registrazione`), **Posizione attuale** and **Posizione proposta** instead of Fuoco and Campo. Accepting or rejecting changes only the state. When accepting, the page warns that the coordinates do not change on their own.
 
@@ -702,11 +715,12 @@ The CSV follows RFC 4180 (fields with commas or quotes enclosed in double quotes
 
 ## 8. Migrations
 
-The Archive dump (`init/Catasto.sql`) contains the historical data (source data). The application tables (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`, `schema_migrations`) are created by the runner in `src/scripts/migrate.ts`, which applies, in order, the `migrations/*.sql` files not yet recorded. Migration `007` alters `segnalazioni` (§ 6.5).
+The Archive dump (`init/Catasto.sql`) contains the historical data (source data). The application tables (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`, `schema_migrations`) are created by the runner in `src/scripts/migrate.ts`, which applies, in order, the `migrations/*.sql` files not yet recorded. Migration `008` alters `segnalazioni` (§ 6.5).
 
 The table search reads `fuoco_segnature`: without migrations it responds 500.
 
 - **Docker**: the backend container applies any missing migrations at every start, before launching the server. If a migration fails the container stops (and compose restarts it): the error is in `docker compose logs app`.
+- **Several instances**: the runner takes the MySQL lock `catasto_migrations` (`GET_LOCK`) before reading `schema_migrations`. If several instances start together, one applies the migrations and the others wait, then find them already recorded. The maximum wait is `MIGRATION_LOCK_TIMEOUT` seconds (default 300); beyond that, the runner exits with an error.
 - **Development**: run them by hand.
 
 ```bash
@@ -740,6 +754,8 @@ docker compose exec app node backend-catasto/dist/scripts/migrate.js
 | `PUBLIC_API_URL` | site origin | Base of `/api` in links, if different from the site |
 | `EXPORT_MAX_ROWS` | `100000` | Maximum number of households in an export; above it, `400` with a message |
 | `FILTERS_CACHE_TTL` | `3600` | Lifetime in seconds of the filter options cache; `0` = no expiry. To clear it at once: `POST /api/filters/cache/invalidate` |
+| `SHARED_STATE` | empty = `memory` | `mysql` when several instances serve the portal: rate limiting and cache invalidation go through the database (§4.3, §4.15). Any value other than `memory`/`mysql` stops the startup |
+| `MIGRATION_LOCK_TIMEOUT` | `300` | Seconds to wait for the migration lock (§8) |
 
 Full production example, with fictitious values: [`.env.prod.example`](../../.env.prod.example).
 
@@ -796,7 +812,7 @@ The issues raised by the September 2026 code review have been fixed; the history
 
 | Area | Description |
 |---|---|
-| Rate limit | Counters are in memory and per process: with several backend instances, the limits apply per instance. |
+| Several instances | With `SHARED_STATE` empty, rate limiting and caches are per process: with several instances the limits apply per instance and cache invalidation only reaches the instance that receives it. Set `SHARED_STATE=mysql` (§9). The statistics (60 s) and IIIF manifest caches remain per instance anyway: they expire on their own. |
 
 ### 11.1 Places and anomalies in the geographic data
 
@@ -866,7 +882,7 @@ In the Florentine countryside (series 3–6) `sicura` covers 44% of households a
 
 ### 11.4 Coordinates in the database: `luoghi_geo`
 
-Migration `005` creates `luoghi_geo` (outside the dump, like the other application tables): one row per `id_registrazione` with `lat`, `lng`, `certezza`, `nome_moderno`, `fonte`, `chiave_nomi` (series|quarter|piviere|parish at matching time, to detect renumbering after a reimport), `note` and `revisionato`. Migration `006` fills it with the automatic matches of § 11.3, not reviewed: the map prototype works as soon as the migrations are applied.
+Migration `006` creates `luoghi_geo` (outside the dump, like the other application tables): one row per `id_registrazione` with `lat`, `lng`, `certezza`, `nome_moderno`, `fonte`, `chiave_nomi` (series|quarter|piviere|parish at matching time, to detect renumbering after a reimport), `note` and `revisionato`. Migration `007` fills it with the automatic matches of § 11.3, not reviewed: the map prototype works as soon as the migrations are applied.
 
 Coordinates are also corrected starting from accepted location reports (§ 6.5): the editors check them and import them with the same command.
 
@@ -878,7 +894,7 @@ npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv --automatico  # l
 npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv --sql > migrations/00N_….sql
 ```
 
-The import is transactional and rejects the whole file if a row is inconsistent (unknown certainty, coordinates out of range or missing for a certainty that needs them), naming the row. A later automatic migration (like `006`) never overwrites reviewed rows.
+The import is transactional and rejects the whole file if a row is inconsistent (unknown certainty, coordinates out of range or missing for a certainty that needs them), naming the row. A later automatic migration (like `007`) never overwrites reviewed rows.
 
 ---
 
@@ -897,5 +913,6 @@ The import is transactional and rejects the whole file if a row is inconsistent 
 | 1.x | — | — | Earlier versions, no change log |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewritten according to CAT-DOC-00; English translation |
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | `app.ts` split from `server.ts`, Vercel Function, `static.ts` to serve the frontend, `STATIC_DIR` and `DB_CONNECTION_LIMIT` variables |
-| 2.2 | 2026-11-01 | Pasquale Ruotolo | Places for the map: `db:export-luoghi`, geographic data anomalies (§ 11.1), places from Repetti (§ 11.2) and matching (§ 11.3), `luoghi_geo` table and map API (§ 4.18, § 11.4) |
-| 2.3 | 2026-11-01 | Pasquale Ruotolo | Location reports on map places: `localizzazione` type and `id_registrazione` field (§ 6.1, § 6.5), migration `007`, moderation and correction flow with `db:import-luoghi`, `id_registrazione` in the table view (§ 4.5), tests (§ 10) |
+| 2.2 | 2026-11-01 | Pasquale Ruotolo | Several instances: `SHARED_STATE`, rate limiting and cache invalidation on MySQL, migration lock, `/health/live` and `/health/ready` |
+| 2.3 | 2026-11-01 | Pasquale Ruotolo | Places for the map: `db:export-luoghi`, geographic data anomalies (§ 11.1), places from Repetti (§ 11.2) and matching (§ 11.3), `luoghi_geo` table and map API (§ 4.18, § 11.4) |
+| 2.4 | 2026-11-01 | Pasquale Ruotolo | Location reports on map places: `localizzazione` type and `id_registrazione` field (§ 6.1, § 6.5), migration `008`, moderation and correction flow with `db:import-luoghi`, `id_registrazione` in the table view (§ 4.5), tests (§ 10) |

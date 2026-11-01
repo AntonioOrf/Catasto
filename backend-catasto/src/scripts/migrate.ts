@@ -26,6 +26,29 @@ const splitStatements = (sql: string): string[] =>
     .map((s) => s.replace(/^\s*--.*$/gm, "").trim())
     .filter(Boolean);
 
+// Lock con nome di MySQL: se piu' istanze partono insieme (repliche di
+// Kubernetes/OpenShift, piu' VM, un deploy che si sovrappone al precedente)
+// solo una applica le migrazioni, le altre aspettano e poi trovano tutto fatto.
+const LOCK_NAME = "catasto_migrations";
+const LOCK_TIMEOUT_S = Number(process.env.MIGRATION_LOCK_TIMEOUT) || 300;
+
+async function withMigrationLock(run: () => Promise<void>): Promise<void> {
+  const lockConnection = await pool.getConnection();
+  try {
+    const [rows]: any = await lockConnection.query("SELECT GET_LOCK(?, ?) AS ok", [LOCK_NAME, LOCK_TIMEOUT_S]);
+    if (Number(rows[0]?.ok) !== 1) {
+      throw new Error(`Lock delle migrazioni non ottenuto entro ${LOCK_TIMEOUT_S} s: un'altra istanza le sta applicando?`);
+    }
+    try {
+      await run();
+    } finally {
+      await lockConnection.query("SELECT RELEASE_LOCK(?)", [LOCK_NAME]).catch(() => {});
+    }
+  } finally {
+    lockConnection.release();
+  }
+}
+
 async function migrate(): Promise<void> {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -68,7 +91,7 @@ async function migrate(): Promise<void> {
   }
 }
 
-migrate()
+withMigrationLock(migrate)
   .then(() => pool.end())
   .then(() => process.exit(0))
   .catch(async (error) => {

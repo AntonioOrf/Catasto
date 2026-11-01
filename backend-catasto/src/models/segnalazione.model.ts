@@ -118,7 +118,7 @@ export class SegnalazioneModel {
 
   /**
    * Luogo della mappa con la posizione attuale; null se il luogo non esiste.
-   * Senza la tabella luoghi_geo (migrazioni 005–006 non applicate) il luogo
+   * Senza la tabella luoghi_geo (migrazioni 006–007 non applicate) il luogo
    * risulta non localizzato invece di far fallire la segnalazione.
    */
   static async findLuogoRiepilogo(idRegistrazione: number): Promise<LuogoRiepilogo | null> {

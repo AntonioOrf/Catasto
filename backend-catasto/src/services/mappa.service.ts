@@ -13,7 +13,7 @@ const AGGREGATI_MAX = 200;
 let geoCache: { promise: Promise<{ luoghi: GeoLuogo[]; disponibile: boolean }>; expiresAt: number } | null = null;
 const cache = new Map<string, { promise: Promise<MappaLuoghi>; expiresAt: number }>();
 
-/** Errore di tabella mancante (migrazioni 005–006 non applicate): la mappa resta vuota, non va in 500. */
+/** Errore di tabella mancante (migrazioni 006–007 non applicate): la mappa resta vuota, non va in 500. */
 const tabellaMancante = (error: unknown) =>
   typeof error === "object" && error !== null && (error as { code?: string }).code === "ER_NO_SUCH_TABLE";
 

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { CommonModel } from "../models/common.model.js";
 import { parseLang, translateFilters, TraduzioniModel } from "../models/traduzioni.model.js";
+import { invalidateCaches } from "../services/cache-sync.service.js";
 
 export const FilterController = {
   async getFilters(req: Request, res: Response) {
@@ -13,9 +14,10 @@ export const FilterController = {
     res.json(translateFilters(filters, traduttore));
   },
 
-  invalidateCache(_req: Request, res: Response) {
-    CommonModel.invalidateFilters();
-    TraduzioniModel.clearCache();
+  // Con più istanze (SHARED_STATE=mysql) l'invalidazione arriva anche alle
+  // altre, entro SYNC_INTERVAL_MS: vedi cache-sync.service.ts.
+  async invalidateCache(_req: Request, res: Response) {
+    await invalidateCaches();
     res.json({ ok: true });
   },
 };

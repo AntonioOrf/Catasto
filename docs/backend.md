@@ -5,7 +5,7 @@
 | Campo | Valore |
 |---|---|
 | Identificativo | `CAT-DOC-03` |
-| Versione | 2.3 |
+| Versione | 2.4 |
 | Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
@@ -48,12 +48,14 @@ backend-catasto/
 │   ├── 002_traduzioni_lookup.sql # traduzioni delle etichette di lookup
 │   ├── 003_traduzioni_lookup_seed.sql # traduzioni inglesi iniziali
 │   ├── 004_traduzioni_lookup_dump.sql # traduzioni delle etichette reali del dump (da db:export-traduzioni)
-│   ├── 005_luoghi_geo.sql        # coordinate dei luoghi per la mappa
-│   ├── 006_luoghi_geo_automatici.sql # abbinamenti automatici con il Repetti (da db:import-luoghi --sql)
-│   └── 007_segnalazioni_luoghi.sql # segnalazioni sui luoghi: tipo `localizzazione`, colonna `id_registrazione`
+│   ├── 005_stato_condiviso.sql   # rate limit e generazione delle cache con più istanze (SHARED_STATE=mysql)
+│   ├── 006_luoghi_geo.sql        # coordinate dei luoghi per la mappa
+│   ├── 007_luoghi_geo_automatici.sql # abbinamenti automatici con il Repetti (da db:import-luoghi --sql)
+│   └── 008_segnalazioni_luoghi.sql # segnalazioni sui luoghi: tipo `localizzazione`, colonna `id_registrazione`
 └── src/
     ├── server.ts                  # bootstrap Express: helmet, CORS, rate limit, rotte, /health
     ├── config/db.ts               # pool mysql2 (connectionLimit 50, TLS opzionale)
+    ├── config/shared-state.ts     # SHARED_STATE: stato in memoria o su MySQL
     ├── routes/
     │   ├── catasto.routes.ts      # /api/catasto (+ limiter dedicato al manifest)
     │   ├── filter.routes.ts       # /api/filters (+ invalidazione admin della cache)
@@ -72,7 +74,8 @@ backend-catasto/
     │   ├── stats.service.ts       # statistiche della ricerca (con cache breve)
     │   ├── mappa.service.ts       # aggregati per luogo + coordinate (con cache)
     │   ├── segnalazione.service.ts# creazione, anti-abuso, cambi di stato transazionali
-    │   └── notifica.service.ts    # inoltro email via FormSubmit con link firmati
+    │   ├── notifica.service.ts    # inoltro email via FormSubmit con link firmati
+    │   └── cache-sync.service.ts  # invalidazione delle cache propagata alle altre istanze
     ├── models/
     │   ├── fuoco.model.ts         # SELECT sui fuochi, join, segnatura della portata
     │   ├── common.model.ts        # lookup, filtri (cache con TTL), parenti, mestieri
@@ -86,6 +89,8 @@ backend-catasto/
     │   └── error.middleware.ts    # 404 + gestione errori (maschera i 5xx in produzione)
     ├── utils/
     │   ├── validation.ts          # paginazione, id numerici, liste di id, HttpError
+    │   ├── rate-limit.ts          # createLimiter: opzioni comuni, store condiviso se SHARED_STATE=mysql
+    │   ├── mysql-rate-limit-store.ts # store di express-rate-limit sulla tabella rate_limit_hits
     │   ├── csv.ts, traduzioni-csv.ts # CSV (export dei risultati, export/import delle traduzioni)
     │   ├── luoghi-csv.ts          # query e CSV dei luoghi per la mappa (db:export-luoghi)
     │   ├── repetti.ts             # estrazione dei luoghi dal Dizionario del Repetti
@@ -98,7 +103,7 @@ backend-catasto/
     │   └── moderazione-token.ts   # token HMAC per i link Accetta/Respingi
     ├── views/moderazione.page.ts  # pagine HTML di conferma/esito della moderazione
     └── scripts/
-        ├── migrate.ts             # runner delle migrazioni
+        ├── migrate.ts             # runner delle migrazioni (con lock MySQL fra istanze)
         ├── export-traduzioni.ts   # CSV dei valori di lookup senza traduzione
         ├── import-traduzioni.ts   # import del CSV compilato dalla redazione
         ├── export-luoghi.ts       # CSV dei luoghi (id_registrazione) con il numero di fuochi
@@ -164,7 +169,8 @@ I valori economici (fortune, credito, credito ai Monti, imponibile, deduzioni) s
 
 | Metodo | Percorso | Accesso | Descrizione |
 |---|---|---|---|
-| GET | `/health` | pubblico | Stato del servizio e del database |
+| GET | `/health`, `/health/ready` | pubblico | Stato del servizio e del database (prontezza) |
+| GET | `/health/live` | pubblico | Il processo risponde, senza interrogare il database (vitalità) |
 | GET | `/api/catasto` | pubblico | Ricerca semplice, vista tabella (paginata) |
 | GET | `/api/catasto/fuochi?ids=` | pubblico | Fino a 50 fuochi per id, per la selezione e il confronto |
 | GET | `/api/catasto/suggest?q=` | pubblico (600/15 min) | Fino a 8 fuochi per «Trova e aggiungi» del Banco di lavoro |
@@ -198,10 +204,10 @@ Tutti gli endpoint di lettura accettano `?lang=en` (anche `POST /api/catasto/que
 | `statsLimiter` | `GET /api/catasto/stats`, `POST /api/catasto/query/stats` | 150 richieste / 15 min / IP |
 | `mappaLimiter` | `GET /api/mappa/luoghi`, `POST /api/mappa/query` | 150 richieste / 15 min / IP |
 | `exportLimiter` | `GET /api/catasto/export`, `POST /api/catasto/query/export` | 20 richieste / 15 min / IP |
-| `createLimiter` | `POST /api/segnalazioni` | 5 / ora / IP, più 10 / ora per hash IP salvato nel DB |
+| `segnalazioneLimiter` | `POST /api/segnalazioni` | 5 / ora / IP, più 10 / ora per hash IP salvato nel DB |
 | `adminLimiter` | rotte admin e moderazione | 100 richieste **fallite** / 15 min / IP |
 
-I contatori sono in memoria: valgono per processo e si azzerano al riavvio. Dietro un proxy impostare `TRUST_PROXY` (vedi [variabili](#9-variabili-dambiente)), altrimenti tutte le richieste risultano dallo stesso IP.
+Tutti i limiter sono creati da `createLimiter` (`src/utils/rate-limit.ts`). Con `SHARED_STATE` vuota i contatori sono in memoria: valgono per processo e si azzerano al riavvio. Con `SHARED_STATE=mysql` stanno nella tabella `rate_limit_hits` (migrazione 005) e valgono per tutte le istanze del backend, con l'orario calcolato dal database; se il database non risponde la richiesta passa senza conteggio. Dietro un proxy impostare `TRUST_PROXY` (vedi [variabili](#9-variabili-dambiente)), altrimenti tutte le richieste risultano dallo stesso IP.
 
 ### 4.4 Paginazione e ordinamento
 
@@ -410,6 +416,8 @@ Un fuoco inesistente restituisce `[]`.
 
 Rotta admin (header `Authorization: Bearer <ADMIN_TOKEN>`, stesso `adminLimiter` delle altre). Svuota la cache delle opzioni dei filtri e quella delle traduzioni: la richiesta successiva le rilegge dal DB. Serve dopo un reimport del dump o un import di traduzioni, per non aspettare la scadenza (`FILTERS_CACHE_TTL`, di default un'ora) né riavviare il backend.
 
+Con `SHARED_STATE=mysql` la richiesta arriva a una sola istanza, che incrementa la generazione in `cache_generazioni`; le altre la rileggono al più ogni 30 secondi, alla prima richiesta `/api`, e svuotano le proprie cache se è cambiata (`src/services/cache-sync.service.ts`). Il controllo è legato alle richieste e non a un timer, quindi funziona anche su Vercel.
+
 ```bash
 curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://catasto.example.org/api/filters/cache/invalidate
 # {"ok":true}
@@ -419,13 +427,18 @@ curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://catasto.example.org
 
 Righe grezze della tabella `mestieri`, ordinate per nome (per etichetta tradotta con `lang=en`). Il frontend non la usa (prende i mestieri da `/api/filters`): resta come **API pubblica** per chi estrae i dati, con la stessa forma delle colonne del dump. Va considerata stabile: cambiarla rompe i client esterni.
 
-### 4.17 Stato del servizio: `GET /health`
+### 4.17 Stato del servizio: `GET /health`, `/health/ready`, `/health/live`
 
-`200 {"status":"ok","db":"up"}` oppure `503 {"status":"error","db":"down"}`. Non soggetto al rate limit: usarlo per healthcheck e monitoraggio.
+| Rotta | Risposta | Uso |
+|---|---|---|
+| `/health`, `/health/ready` | `200 {"status":"ok","db":"up"}` oppure `503 {"status":"error","db":"down"}` | Prontezza: l'istanza può servire richieste. `HEALTHCHECK` del Dockerfile, `readinessProbe` di Kubernetes, monitoraggio |
+| `/health/live` | sempre `200 {"status":"ok"}` | Vitalità: il processo risponde. `livenessProbe` e `startupProbe` di Kubernetes. Non interroga il database, così un database irraggiungibile non fa riavviare in ciclo tutte le istanze |
+
+Nessuna delle tre è soggetta al rate limit.
 
 ### 4.18 Mappa dei luoghi: `GET /api/mappa/luoghi`
 
-Un punto per luogo (`id_registrazione`) con gli aggregati dei fuochi della ricerca: accetta gli stessi filtri della ricerca semplice (`GET /api/mappa/luoghi?mestiere=3`); `POST /api/mappa/query` con `{ "ast": … }` fa lo stesso sull'AST della ricerca avanzata. Paginazione e ordinamento sono ignorati. Le coordinate vengono dalla tabella `luoghi_geo` (migrazioni `005`–`006`, § 11.4).
+Un punto per luogo (`id_registrazione`) con gli aggregati dei fuochi della ricerca: accetta gli stessi filtri della ricerca semplice (`GET /api/mappa/luoghi?mestiere=3`); `POST /api/mappa/query` con `{ "ast": … }` fa lo stesso sull'AST della ricerca avanzata. Paginazione e ordinamento sono ignorati. Le coordinate vengono dalla tabella `luoghi_geo` (migrazioni `006`–`007`, § 11.4).
 
 ```json
 {
@@ -633,11 +646,11 @@ L'elenco (`GET /api/segnalazioni`) e il dettaglio restituiscono anche `id_regist
 
 ### 6.5 Segnalazioni di localizzazione
 
-Il tipo `localizzazione` («Localizzazione errata») segnala che un luogo della mappa è nel posto sbagliato. Riguarda un luogo (`id_registrazione`), non un fuoco: `id_fuoco` resta `NULL`. La migrazione `007` aggiunge il valore all'enum `tipo`, la colonna `id_registrazione` e l'indice `idx_segnalazioni_luogo`. Non c'è una chiave esterna verso le tabelle del dump, che un reimport ricrea: l'esistenza del luogo la verifica il service.
+Il tipo `localizzazione` («Localizzazione errata») segnala che un luogo della mappa è nel posto sbagliato. Riguarda un luogo (`id_registrazione`), non un fuoco: `id_fuoco` resta `NULL`. La migrazione `008` aggiunge il valore all'enum `tipo`, la colonna `id_registrazione` e l'indice `idx_segnalazioni_luogo`. Non c'è una chiave esterna verso le tabelle del dump, che un reimport ricrea: l'esistenza del luogo la verifica il service.
 
 **Validazione.** Per `localizzazione` servono `id_registrazione` e almeno uno fra `valore_proposto` e `note`; `id_fuoco` e `campo` sono vietati. Per gli altri tipi `id_registrazione` è vietato. Un luogo inesistente dà `400` e non scrive nulla.
 
-**Posizione attuale.** La scrive il server in `valore_attuale`, leggendola da `luoghi_geo`: il client non può indicarla. Il formato è `43.770100, 11.105200 (approssimata; Lastra a Signa)`, cioè latitudine e longitudine con sei decimali, poi certezza (`sicura`, `approssimata`, `solo piviere`, `non trovata`) e nome moderno, se presenti. Un luogo senza coordinate dà `non localizzato`, con gli stessi dettagli fra parentesi. Se la tabella `luoghi_geo` non esiste (migrazioni `005`–`006` non applicate) il luogo risulta non localizzato e la segnalazione non fallisce. `valore_proposto` è il testo libero dell'utente.
+**Posizione attuale.** La scrive il server in `valore_attuale`, leggendola da `luoghi_geo`: il client non può indicarla. Il formato è `43.770100, 11.105200 (approssimata; Lastra a Signa)`, cioè latitudine e longitudine con sei decimali, poi certezza (`sicura`, `approssimata`, `solo piviere`, `non trovata`) e nome moderno, se presenti. Un luogo senza coordinate dà `non localizzato`, con gli stessi dettagli fra parentesi. Se la tabella `luoghi_geo` non esiste (migrazioni `006`–`007` non applicate) il luogo risulta non localizzato e la segnalazione non fallisce. `valore_proposto` è il testo libero dell'utente.
 
 **Moderazione.** L'email alla redazione e la pagina di conferma mostrano **Luogo** (nome e `id_registrazione`), **Posizione attuale** e **Posizione proposta** al posto di Fuoco e Campo. Accettare o respingere cambia solo lo stato. Accettando, la pagina avverte che le coordinate non cambiano da sole.
 
@@ -699,11 +712,12 @@ Il CSV segue RFC 4180 (campi con virgole o apici fra doppi apici). L'import è t
 
 ## 8. Migrazioni
 
-Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici (dati della fonte). Le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`, `schema_migrations`) sono create dal runner in `src/scripts/migrate.ts`, che applica in ordine i file `migrations/*.sql` non ancora registrati. La migrazione `007` modifica `segnalazioni` (§ 6.5).
+Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici (dati della fonte). Le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`, `schema_migrations`) sono create dal runner in `src/scripts/migrate.ts`, che applica in ordine i file `migrations/*.sql` non ancora registrati. La migrazione `008` modifica `segnalazioni` (§ 6.5).
 
 La ricerca in tabella legge `fuoco_segnature`: senza migrazioni risponde 500.
 
 - **Docker**: il container del backend applica le migrazioni mancanti a ogni avvio, prima di far partire il server. Se una migrazione fallisce il container si ferma (e il compose lo riavvia): l'errore è in `docker compose logs app`.
+- **Più istanze**: il runner prende il lock MySQL `catasto_migrations` (`GET_LOCK`) prima di leggere `schema_migrations`. Se più istanze partono insieme, una applica le migrazioni e le altre aspettano, poi le trovano già registrate. L'attesa massima è `MIGRATION_LOCK_TIMEOUT` secondi (default 300); oltre, il runner esce con errore.
 - **Sviluppo**: vanno eseguite a mano.
 
 ```bash
@@ -737,6 +751,8 @@ docker compose exec app node backend-catasto/dist/scripts/migrate.js
 | `PUBLIC_API_URL` | origin del sito | Base di `/api` nei link, se diversa dal sito |
 | `EXPORT_MAX_ROWS` | `100000` | Numero massimo di fuochi di un export; oltre, `400` con un messaggio |
 | `FILTERS_CACHE_TTL` | `3600` | Durata in secondi della cache delle opzioni dei filtri; `0` = senza scadenza. Per svuotarla subito: `POST /api/filters/cache/invalidate` |
+| `SHARED_STATE` | vuota = `memory` | `mysql` quando più istanze servono il portale: rate limit e invalidazione delle cache passano dal database (§4.3, §4.15). Un valore diverso da `memory`/`mysql` blocca l'avvio |
+| `MIGRATION_LOCK_TIMEOUT` | `300` | Secondi di attesa del lock delle migrazioni (§8) |
 
 Esempio completo per la produzione, con valori fittizi: [`.env.prod.example`](../.env.prod.example).
 
@@ -793,7 +809,7 @@ I problemi emersi dalla revisione del codice di settembre 2026 sono stati corret
 
 | Area | Descrizione |
 |---|---|
-| Rate limit | I contatori sono in memoria e per processo: con più istanze del backend i limiti valgono per istanza. |
+| Più istanze | Con `SHARED_STATE` vuota rate limit e cache sono per processo: con più istanze i limiti valgono per istanza e l'invalidazione delle cache raggiunge solo l'istanza che la riceve. Impostare `SHARED_STATE=mysql` (§9). Le cache delle statistiche (60 s) e dei manifest IIIF restano comunque per istanza: scadono da sole. |
 
 ### 11.1 Luoghi e anomalie dei dati geografici
 
@@ -863,7 +879,7 @@ Nel contado fiorentino (serie 3–6) i fuochi `sicura` sono il 44% e quelli `non
 
 ### 11.4 Coordinate nel database: `luoghi_geo`
 
-La migrazione `005` crea `luoghi_geo` (fuori dal dump, come le altre tabelle applicative): una riga per `id_registrazione` con `lat`, `lng`, `certezza`, `nome_moderno`, `fonte`, `chiave_nomi` (serie|quartiere|piviere|popolo al momento dell'abbinamento, per accorgersi di una rinumerazione dopo un reimport), `note` e `revisionato`. La `006` la riempie con gli abbinamenti automatici del § 11.3, non rivisti: il prototipo della mappa funziona appena applicate le migrazioni.
+La migrazione `006` crea `luoghi_geo` (fuori dal dump, come le altre tabelle applicative): una riga per `id_registrazione` con `lat`, `lng`, `certezza`, `nome_moderno`, `fonte`, `chiave_nomi` (serie|quartiere|piviere|popolo al momento dell'abbinamento, per accorgersi di una rinumerazione dopo un reimport), `note` e `revisionato`. La `007` la riempie con gli abbinamenti automatici del § 11.3, non rivisti: il prototipo della mappa funziona appena applicate le migrazioni.
 
 Le coordinate si correggono anche a partire dalle segnalazioni di localizzazione accettate (§ 6.5): la redazione le verifica e le importa con lo stesso comando.
 
@@ -875,7 +891,7 @@ npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv --automatico   # 
 npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv --sql > migrations/00N_….sql
 ```
 
-L'import è transazionale e rifiuta il file intero se una riga è incoerente (certezza sconosciuta, coordinate fuori dominio o mancanti per una certezza che le richiede), indicando la riga. Una migrazione automatica successiva (come la `006`) non sovrascrive mai le righe revisionate.
+L'import è transazionale e rifiuta il file intero se una riga è incoerente (certezza sconosciuta, coordinate fuori dominio o mancanti per una certezza che le richiede), indicando la riga. Una migrazione automatica successiva (come la `007`) non sovrascrive mai le righe revisionate.
 
 ---
 
@@ -894,5 +910,6 @@ L'import è transazionale e rifiuta il file intero se una riga è incoerente (ce
 | 1.x | — | — | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | `app.ts` separato da `server.ts`, Vercel Function, `static.ts` per servire il frontend, variabili `STATIC_DIR` e `DB_CONNECTION_LIMIT` |
-| 2.2 | 2026-11-01 | Pasquale Ruotolo | Luoghi per la mappa: `db:export-luoghi`, anomalie dei dati geografici (§ 11.1), luoghi del Repetti (§ 11.2) e abbinamento (§ 11.3), tabella `luoghi_geo` e API della mappa (§ 4.18, § 11.4) |
-| 2.3 | 2026-11-01 | Pasquale Ruotolo | Segnalazioni di localizzazione sui luoghi della mappa: tipo `localizzazione` e campo `id_registrazione` (§ 6.1, § 6.5), migrazione `007`, moderazione e flusso di correzione con `db:import-luoghi`, `id_registrazione` nella vista tabella (§ 4.5), test (§ 10) |
+| 2.2 | 2026-11-01 | Pasquale Ruotolo | Più istanze: `SHARED_STATE`, rate limit e invalidazione delle cache su MySQL, lock delle migrazioni, `/health/live` e `/health/ready` |
+| 2.3 | 2026-11-01 | Pasquale Ruotolo | Luoghi per la mappa: `db:export-luoghi`, anomalie dei dati geografici (§ 11.1), luoghi del Repetti (§ 11.2) e abbinamento (§ 11.3), tabella `luoghi_geo` e API della mappa (§ 4.18, § 11.4) |
+| 2.4 | 2026-11-01 | Pasquale Ruotolo | Segnalazioni di localizzazione sui luoghi della mappa: tipo `localizzazione` e campo `id_registrazione` (§ 6.1, § 6.5), migrazione `008`, moderazione e flusso di correzione con `db:import-luoghi`, `id_registrazione` nella vista tabella (§ 4.5), test (§ 10) |

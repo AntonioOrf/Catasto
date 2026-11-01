@@ -1,0 +1,42 @@
+# Portale senza container, su una VM con Node.js 20 (CAT-DOC-07,
+# docs/portabilita.md §3.4). Percorsi e utente sono esempi.
+#
+#   sudo cp deploy/systemd/catasto.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now catasto
+[Unit]
+Description=Catasto Fiorentino 1427/30
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=catasto
+Group=catasto
+WorkingDirectory=/opt/catasto
+EnvironmentFile=/etc/catasto/catasto.env
+Environment=NODE_ENV=production
+Environment=PORT=3005
+Environment=STATIC_DIR=/opt/catasto/frontend-catasto/dist
+# Migrazioni mancanti, poi il server (come nel Dockerfile)
+ExecStartPre=/usr/bin/node backend-catasto/dist/scripts/migrate.js
+ExecStart=/usr/bin/node backend-catasto/dist/server.js
+Restart=on-failure
+RestartSec=5
+# Il server chiude le connessioni entro 10 s dal SIGTERM
+TimeoutStopSec=20
+
+# Il portale non scrive su disco: tutto in sola lettura
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

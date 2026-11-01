@@ -13,7 +13,7 @@
 -- piviere), approssimata (coordinate calcolate o non confermate),
 -- solo_piviere (coordinate della pieve o della citta'), non_trovata.
 -- `revisionato` = 1 per le righe controllate a mano: l'import automatico
--- (006) non le sovrascrive.
+-- (007) non le sovrascrive.
 
 CREATE TABLE IF NOT EXISTS luoghi_geo (
   id_registrazione INT           NOT NULL,

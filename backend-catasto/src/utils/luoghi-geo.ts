@@ -2,7 +2,7 @@ import { CERTEZZE_LUOGO, type CertezzaLuogo } from "@catasto/shared";
 import { parseCsv } from "./csv.js";
 
 /**
- * Righe della tabella `luoghi_geo` (migrazione 005) dal CSV degli
+ * Righe della tabella `luoghi_geo` (migrazione 006) dal CSV degli
  * abbinamenti (`repetti:abbina`) o da una sua copia rivista a mano. Colonne
  * usate: id_registrazione, lat, lng, certezza; facoltative repetti_titolo o
  * nome_moderno, fonte, motivo o note, nome_serie/nome_quartiere/
@@ -99,7 +99,7 @@ export function parametriUpsert(righe: RigaLuogoGeo[], revisionato: boolean): un
   ]);
 }
 
-/** Letterale SQL (per generare la migrazione 006): apici raddoppiati, nessun `;` (il runner divide sui `;`). */
+/** Letterale SQL (per generare la migrazione 007): apici raddoppiati, nessun `;` (il runner divide sui `;`). */
 function letterale(v: unknown): string {
   if (v === null || v === undefined) return "NULL";
   if (typeof v === "number") return String(v);

@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { Request, Response, NextFunction } from "express";
-import rateLimit from "express-rate-limit";
+import { createLimiter } from "../utils/rate-limit.js";
 
 /**
  * Autenticazione della sola area di moderazione. Non c'è un sistema utenti: la
@@ -38,10 +38,7 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction) =>
  * rotte admin, non deve essere indovinabile a forza di richieste. Un'unica
  * istanza per tutte le rotte admin, così i tentativi si sommano.
  */
-export const adminLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+export const adminLimiter = createLimiter("admin", {
   limit: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
   skipSuccessfulRequests: true,
 });
