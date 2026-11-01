@@ -49,6 +49,10 @@ Util
 
 CODEMAP.md
 CLAUDE.md
+# Configurazione locale degli assistenti: resta fuori dal repository,
+# tranne settings.json (attribuzione disattivata).
+.claude/*
+!.claude/settings.json
 codemap.html
 graphify-out/
 graphify-build.py
