@@ -77,8 +77,7 @@ I dati assenti nella fonte restano assenti: il portale non li stima né li ricos
 
 ```mermaid
 flowchart LR
-    B[Browser<br/>React SPA] -->|/ e /api| N[nginx]
-    N -->|proxy /api| A[API Express]
+    B[Browser<br/>React SPA] -->|/ e /api| A[Express<br/>sito + API]
     A --> D[(MySQL)]
     A -->|manifest IIIF| I[Archivio digitale ICAR]
     B -->|immagini| I
@@ -142,7 +141,7 @@ A ogni merge su `main` la CI pubblica automaticamente le immagini Docker.
 
 ## 8. Autori e licenza
 
-Progetto di **Antonio Orfitelli** e **Pasquale Ruotolo**. Codice rilasciato con [licenza MIT](LICENSE). I dati del catasto e le immagini d'archivio restano soggetti ai termini delle rispettive fonti.
+Progetto di **Antonio Orfitelli** e **Pasquale Ruotolo**. Copyright © 2025-2026 Antonio Orfitelli e Pasquale Ruotolo. Codice rilasciato con licenza [GNU GPL v3 o successiva](LICENSE). I dati del catasto e le immagini d'archivio restano soggetti ai termini delle rispettive fonti.
 
 ## 9. Registro delle modifiche
 

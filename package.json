@@ -1,6 +1,7 @@
 {
   "name": "catasto-monorepo",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "workspaces": [
     "frontend-catasto",
     "backend-catasto",

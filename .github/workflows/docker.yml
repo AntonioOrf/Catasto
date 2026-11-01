@@ -1,6 +1,6 @@
 name: Docker images
 
-# Pubblica le immagini su Docker Hub a ogni merge su main, solo se la CI è
+# Pubblica l'immagine su Docker Hub a ogni merge su main, solo se la CI è
 # passata: un'immagine rotta non deve mai diventare "latest". Avviato a mano
 # da un ramo diverso da main pubblica solo il tag :sha, per provare
 # un'immagine senza toccare quella in produzione.
@@ -22,9 +22,6 @@ jobs:
   publish:
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        app: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,7 +44,7 @@ jobs:
       - name: Tags
         id: tags
         env:
-          IMAGE: ipavon/catasto1427-${{ matrix.app }}
+          IMAGE: ipavon/catasto1427
           SHORT: ${{ steps.sha.outputs.short }}
           LATEST: ${{ github.event_name == 'workflow_run' || github.ref == 'refs/heads/main' }}
         run: |
@@ -63,8 +60,8 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: ${{ matrix.app }}-catasto/Dockerfile
+          file: Dockerfile
           push: true
           tags: ${{ steps.tags.outputs.list }}
-          cache-from: type=gha,scope=${{ matrix.app }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app

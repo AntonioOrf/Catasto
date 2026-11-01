@@ -1,0 +1,100 @@
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import compression from "compression";
+import dotenv from "dotenv";
+import { errorHandler, notFoundHandler } from "./middlewares/error.middleware.js";
+import pool from "./config/db.js";
+import catastoRoutes from "./routes/catasto.routes.js";
+import filterRoutes from "./routes/filter.routes.js";
+import parentiRoutes from "./routes/parenti.routes.js";
+import mestieriRoutes from "./routes/mestieri.routes.js";
+import segnalazioneRoutes from "./routes/segnalazione.routes.js";
+import mappaRoutes from "./routes/mappa.routes.js";
+import { parseTrustProxy } from "./utils/trust-proxy.js";
+import { serveFrontend } from "./static.js";
+
+dotenv.config({ quiet: true });
+
+const app = express();
+
+// TRUST_PROXY = numero di proxy davanti al server (1 con il solo nginx del
+// compose). Serve a req.ip: senza, rate limit e hash anti-abuso vedrebbero
+// tutti lo stesso IP del reverse proxy. Non attivarlo "a fiducia": con
+// trust proxy attivo senza un proxy reale il client può falsificare
+// X-Forwarded-For e aggirare i limiti.
+const trustProxy = parseTrustProxy(process.env.TRUST_PROXY);
+if (trustProxy !== undefined) {
+  app.set("trust proxy", trustProxy);
+}
+
+// CORS_ORIGIN: comma-separated list of allowed origins for production.
+// Left unset, CORS stays open (current behavior) so this doesn't silently
+// break an existing deployment - set it to lock the API down to the real
+// frontend origin(s).
+// Stringa vuota = non impostata (docker compose la passa cosi' quando manca).
+const corsOrigin = process.env.CORS_ORIGIN || undefined;
+if (!corsOrigin && process.env.NODE_ENV === "production") {
+  console.warn("⚠️  CORS_ORIGIN is not set - the API accepts requests from any origin.");
+}
+const allowedOrigins = corsOrigin?.split(",").map((o) => o.trim());
+
+// Middlewares
+// crossOriginResourcePolicy defaults to "same-origin", which would make
+// browsers block every response to the frontend (a different origin) even
+// with CORS enabled - "cross-origin" restores that.
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+// Il nome dei file di export sta in Content-Disposition: un frontend su
+// un'altra origine (es. Vercel) lo legge solo se esposto.
+app.use(cors({ origin: allowedOrigins ?? true, exposedHeaders: ["Content-Disposition", "X-Export-Total"] }));
+app.use(compression() as any);
+// Limite esplicito: i body accettati sono un AST di ricerca o una segnalazione,
+// entrambi nell'ordine dei KB. Il default di express (100kb) è già stretto, ma
+// tenerlo scritto documenta l'intento.
+app.use(express.json({ limit: "64kb" }));
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api", apiLimiter);
+
+// STATIC_DIR = cartella della build del frontend. Impostata nell'immagine
+// Docker unica, dove lo stesso processo serve sito e API; vuota in sviluppo
+// e su Vercel (lì il frontend lo serve la piattaforma).
+const staticDir = process.env.STATIC_DIR || undefined;
+
+// Routes
+if (!staticDir) {
+  app.get("/", (_req, res) => {
+    res.send("Catasto API is running! 🚀");
+  });
+}
+
+app.get("/health", async (_req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.json({ status: "ok", db: "up" });
+  } catch {
+    res.status(503).json({ status: "error", db: "down" });
+  }
+});
+
+app.use("/api/catasto", catastoRoutes);
+app.use("/api/filters", filterRoutes);
+app.use("/api/mappa", mappaRoutes);
+app.use("/api/parenti", parentiRoutes);
+app.use("/api/mestieri", mestieriRoutes);
+app.use("/api/segnalazioni", segnalazioneRoutes);
+
+if (staticDir) serveFrontend(app, staticDir);
+
+// Error Handling: 404 in JSON anche per le rotte inesistenti, non la pagina
+// HTML di default di Express.
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+export default app;

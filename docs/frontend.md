@@ -5,7 +5,7 @@
 | Campo | Valore |
 |---|---|
 | Identificativo | `CAT-DOC-04` |
-| Versione | 2.1 |
+| Versione | 2.2 |
 | Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
@@ -63,8 +63,6 @@ Un dato assente nella fonte resta assente anche nell'interfaccia: non diventa 0,
 frontend-catasto/
 ├── index.html                 # lang="it", carica public/theme-init.js prima del paint
 ├── public/theme-init.js       # applica il tema salvato (file separato: la CSP vieta script inline)
-├── nginx.conf                 # SPA + proxy /api → backend:3005
-├── security-headers.conf      # CSP e header di sicurezza
 ├── vercel.json                # alternativa di deploy statico
 └── src/
     ├── main.tsx · App.tsx     # bootstrap, route, lazy loading
@@ -171,7 +169,7 @@ flowchart TD
 | `downloadExport(search, opzioni)` | `GET /api/catasto/export` o `POST /api/catasto/query/export` | pulsante **Esporta** |
 | `fetchMappaLuoghi({ filtri, ast })` | `GET /api/mappa/luoghi` o `POST /api/mappa/query` | pagina **Mappa** |
 
-`api/client.ts` usa `VITE_API_URL`; se manca, in produzione chiama la stessa origine (`/api`, proxato da nginx), in sviluppo `http://localhost:3005`. Gli errori 4xx mostrano il messaggio del backend, gli altri un testo generico in italiano.
+`api/client.ts` usa `VITE_API_URL`; se manca, in produzione chiama la stessa origine (`/api`, servita dallo stesso processo che serve il sito), in sviluppo `http://localhost:3005`. Gli errori 4xx mostrano il messaggio del backend, gli altri un testo generico in italiano.
 
 ---
 
@@ -325,17 +323,19 @@ Il pulsante **EN/IT** nell'header cambia la lingua del sito; la scelta resta in 
 
 Solo `VITE_API_URL` (facoltativa, letta a build time).
 
-### 9.3 nginx
+### 9.3 Docker
 
-Immagine Docker: SPA fallback su `index.html`, `/assets/` con cache immutabile di un anno, `/api` proxato a `http://backend:3005` con `X-Forwarded-For` impostato all'IP del client, gzip, body max 128 kB.
+Immagine unica (`Dockerfile` nella radice): il backend serve anche la build del frontend (`backend-catasto/src/static.ts`, attivo quando `STATIC_DIR` è impostata). Fallback SPA su `index.html` per ogni GET fuori da `/api` e `/health`; `/assets/` con cache immutabile di un anno (un asset mancante è un 404); `index.html` e gli altri file statici con `no-cache`; compressione e limite del body li applica già Express.
 
 ### 9.4 Header di sicurezza
 
-`security-headers.conf`: CSP `default-src 'self'; script-src 'self'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'…`, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP. HSTS va configurato sul terminatore TLS.
+`FRONTEND_SECURITY_HEADERS` in `backend-catasto/src/static.ts` (gli stessi di `vercel.json`): CSP `default-src 'self'; script-src 'self'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'…`, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP. Sulle risposte del frontend sostituiscono quelli di helmet, la cui CSP di default contiene `upgrade-insecure-requests`. HSTS va configurato sul terminatore TLS.
 
 ### 9.5 Vercel
 
-`vercel.json`: stesse intestazioni con `connect-src 'self' https:`; non c'è proxy per `/api`, quindi va impostato `VITE_API_URL` verso il backend.
+`vercel.json`: stesse intestazioni con `connect-src 'self' https:`. Il backend gira nello stesso progetto come Vercel Function (`api/index.ts`, che esporta l'app Express di `backend-catasto/src/app.ts`): i rewrite mandano `/api/*` e `/health` alla funzione, tutto il resto a `index.html`. Frontend e API stanno sullo stesso dominio, quindi `VITE_API_URL` va lasciata vuota (o rimossa) e `CORS_ORIGIN` non serve.
+
+Impostazioni del progetto Vercel: Root Directory `frontend-catasto`, framework Vite, opzione "Include files outside the Root Directory" attiva (è il default). Variabili d'ambiente (Production): `DB_HOST`, `DB_PORT` (4000 per TiDB Cloud), `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL=true`, `TRUST_PROXY=1`, `SEGNALAZIONI_SALT`, `ADMIN_TOKEN` e, se usate, `FORMSUBMIT_EMAIL`, `FORMSUBMIT_ORIGIN`, `MODERAZIONE_SECRET`, `PUBLIC_API_URL` (l'URL del sito). Ogni istanza della funzione apre al massimo 5 connessioni al DB (`DB_CONNECTION_LIMIT` per cambiarlo). Il rate limit è in memoria, quindi su Vercel vale per singola istanza.
 
 ---
 
@@ -399,4 +399,5 @@ I problemi emersi dalla revisione di settembre 2026 sono stati corretti (storico
 |---|---|---|---|
 | 1.x | — | — | Versioni precedenti, senza registro |
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
-| 2.1 | 2026-11-01 | Pasquale Ruotolo | Pagina Mappa nel menu, ricerca avanzata e luogo dall'URL, collegamenti dalla Consultazione e dalla scheda del fuoco, segnalazione di localizzazione errata |
+| 2.1 | 2026-11-01 | Pasquale Ruotolo | nginx sostituito dal backend nell'immagine Docker; API su Vercel nello stesso progetto |
+| 2.2 | 2026-11-01 | Pasquale Ruotolo | Pagina Mappa nel menu, ricerca avanzata e luogo dall'URL, collegamenti dalla Consultazione e dalla scheda del fuoco, segnalazione di localizzazione errata |

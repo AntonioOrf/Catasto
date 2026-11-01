@@ -21,15 +21,13 @@ services:
       retries: 20
       interval: 10s
 
-  backend:
-    image: ipavon/catasto1427-backend:latest
-    container_name: catasto-backend
+  # Immagine unica: sito e API dallo stesso processo Node (niente nginx).
+  app:
+    image: ipavon/catasto1427:latest
+    container_name: catasto-app
     restart: always
-    # Il traffico pubblico passa da nginx (frontend) sulla rete interna. Esposto
-    # direttamente, il backend accetterebbe X-Forwarded-For falsificati: con
-    # TRUST_PROXY=1 basterebbe per aggirare rate limit e anti-abuso.
     ports:
-      - "127.0.0.1:3005:3005"
+      - "1427:3005"
     environment:
       - DB_HOST=db
       - DB_USER=${MYSQL_USER}
@@ -45,19 +43,15 @@ services:
       - FORMSUBMIT_ORIGIN=${FORMSUBMIT_ORIGIN:-}
       - MODERAZIONE_SECRET=${MODERAZIONE_SECRET:-}
       - PUBLIC_API_URL=${PUBLIC_API_URL:-}
-      - TRUST_PROXY=${TRUST_PROXY:-1}
+      # Vuota = la porta 1427 e' esposta direttamente e l'IP del client e'
+      # quello della connessione. Impostala (di solito 1) SOLO se davanti c'e'
+      # un reverse proxy (Caddy, Traefik, nginx dell'host, Cloudflare...) e la
+      # porta non e' raggiungibile da fuori senza passare da li': altrimenti
+      # un client potrebbe falsificare X-Forwarded-For e aggirare i limiti.
+      - TRUST_PROXY=${TRUST_PROXY:-}
       - CORS_ORIGIN=${CORS_ORIGIN:-}
       - FILTERS_CACHE_TTL=${FILTERS_CACHE_TTL:-}
       - EXPORT_MAX_ROWS=${EXPORT_MAX_ROWS:-}
     depends_on:
       db:
         condition: service_healthy
-
-  frontend:
-    image: ipavon/catasto1427-frontend:latest
-    container_name: catasto-frontend
-    restart: always
-    ports:
-      - "1427:80"
-    depends_on:
-      - backend
