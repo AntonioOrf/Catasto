@@ -5,10 +5,12 @@ export const homePageMessages = defineMessages({
     views: "Vista dei risultati",
     table: "Tabella",
     stats: "Statistiche",
+    seeOnMap: "Vedi sulla mappa",
   },
   en: {
     views: "Results view",
     table: "Table",
     stats: "Statistics",
+    seeOnMap: "See on the map",
   },
 });

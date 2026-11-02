@@ -143,4 +143,15 @@ describe("scheda del fuoco", () => {
     fireEvent.click(screen.getByRole("button", { name: "Segnala un errore" }));
     expect(onSegnala).toHaveBeenCalledWith(fuoco, "dato_errato");
   });
+
+  it("«Luogo sulla mappa» c'è solo con un id_registrazione valido", () => {
+    const { unmount } = renderOpen({ ...fuoco, id_registrazione: 42 });
+    expect(screen.getByRole("link", { name: "Luogo sulla mappa" }).getAttribute("href")).toBe("/mappa?luogo=42");
+    unmount();
+    for (const id of [undefined, null, 0]) {
+      const view = renderOpen({ ...fuoco, id_registrazione: id });
+      expect(screen.queryByRole("link", { name: "Luogo sulla mappa" })).toBeNull();
+      view.unmount();
+    }
+  });
 });

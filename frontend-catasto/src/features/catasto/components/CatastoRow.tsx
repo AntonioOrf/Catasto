@@ -1,4 +1,5 @@
 import React, { forwardRef } from "react";
+import { Link } from "react-router-dom";
 import { BookOpen, ChevronDown, ChevronRight } from "lucide-react";
 import { SELECTION_MAX_FUOCHI, type Fuoco, type Parenti, type TipoSegnalazione } from "@catasto/shared";
 import type { RiferimentoArchivio } from "../lib/archivio";
@@ -7,6 +8,7 @@ import { cifra, eta, nonIndicato, piviereEPopolo } from "../lib/formato";
 import { useLanguage, useT } from "../../../i18n";
 import { catastoRowMessages } from "./CatastoRow.messages";
 import { useOptionalCompare } from "../../compare/compare-context";
+import { urlLuogo } from "../../mappa/lib/ricerca";
 import GlossaryTerm from "../../glossary/GlossaryTerm";
 import { compareMessages } from "../../compare/compare.messages";
 
@@ -332,6 +334,11 @@ const Actions = ({ row, onViewArchivio, onSegnala }: Pick<CatastoRowProps, "row"
           <BookOpen className="h-4 w-4" aria-hidden="true" />
           {t("openCarta", { carta: row.foglio || "?" })}
         </button>
+      )}
+      {typeof row.id_registrazione === "number" && row.id_registrazione > 0 && (
+        <Link to={urlLuogo(row.id_registrazione)} onClick={(e) => e.stopPropagation()} className={`${link} text-primary`}>
+          {t("placeOnMap")}
+        </Link>
       )}
       {!row.segnatura_portata && onSegnala && (
         <button type="button" onClick={stop(() => onSegnala(row, "segnatura"))} className={`${link} text-text-accent hover:text-primary`}>

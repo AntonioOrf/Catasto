@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { fetchFilterOptions } from "../api/catastoService";
 import { EMPTY_FILTER_OPTIONS } from "../features/catasto/lib/filter-options";
@@ -20,6 +21,7 @@ import StatsPanel from "../features/catasto/components/stats/StatsPanel";
 import { homePageMessages } from "./HomePage.messages";
 import CompareBar from "../features/compare/components/CompareBar";
 import { useTour } from "../features/tour/tour-context";
+import { urlMappa } from "../features/mappa/lib/ricerca";
 
 type ResultsView = "table" | "stats";
 
@@ -159,16 +161,29 @@ export default function HomePage() {
           <div className="p-3 sm:p-4 md:p-8 flex-1">
             <FilterPanel loading={fetching} onRefresh={retry} filterOptions={filterOptions} />
 
-            <Tabs
-              idPrefix="results"
-              label={t("views")}
-              tabs={[
-                { key: "table", label: t("table") },
-                { key: "stats", label: t("stats") },
-              ]}
-              selected={view}
-              onSelect={setView}
-            />
+            {/* Schede e link alla mappa sulla stessa riga; a capo se non ci stanno. */}
+            <div className="flex items-start gap-x-4">
+              <div className="flex-1 min-w-0">
+                <Tabs
+                  idPrefix="results"
+                  label={t("views")}
+                  tabs={[
+                    { key: "table", label: t("table") },
+                    { key: "stats", label: t("stats") },
+                  ]}
+                  selected={view}
+                  onSelect={setView}
+                />
+              </div>
+              <div className="flex-shrink-0 border-b border-border-base mb-4">
+                <Link
+                  to={urlMappa(search)}
+                  className="min-h-11 inline-flex items-center px-1 text-sm font-bold text-primary underline underline-offset-[3px] hover:decoration-2"
+                >
+                  {t("seeOnMap")}
+                </Link>
+              </div>
+            </div>
 
             <div
               role="tabpanel"

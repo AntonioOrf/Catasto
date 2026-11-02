@@ -5,7 +5,7 @@
 | Campo | Valore |
 |---|---|
 | Identificativo | `CAT-DOC-03` |
-| Versione | 2.2 |
+| Versione | 2.4 |
 | Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
@@ -48,7 +48,10 @@ backend-catasto/
 │   ├── 002_traduzioni_lookup.sql # traduzioni delle etichette di lookup
 │   ├── 003_traduzioni_lookup_seed.sql # traduzioni inglesi iniziali
 │   ├── 004_traduzioni_lookup_dump.sql # traduzioni delle etichette reali del dump (da db:export-traduzioni)
-│   └── 005_stato_condiviso.sql   # rate limit e generazione delle cache con più istanze (SHARED_STATE=mysql)
+│   ├── 005_stato_condiviso.sql   # rate limit e generazione delle cache con più istanze (SHARED_STATE=mysql)
+│   ├── 006_luoghi_geo.sql        # coordinate dei luoghi per la mappa
+│   ├── 007_luoghi_geo_automatici.sql # abbinamenti automatici con il Repetti (da db:import-luoghi --sql)
+│   └── 008_segnalazioni_luoghi.sql # segnalazioni sui luoghi: tipo `localizzazione`, colonna `id_registrazione`
 └── src/
     ├── server.ts                  # bootstrap Express: helmet, CORS, rate limit, rotte, /health
     ├── config/db.ts               # pool mysql2 (connectionLimit 50, TLS opzionale)
@@ -58,15 +61,18 @@ backend-catasto/
     │   ├── filter.routes.ts       # /api/filters (+ invalidazione admin della cache)
     │   ├── parenti.routes.ts      # /api/parenti/:id
     │   ├── mestieri.routes.ts     # /api/mestieri (API pubblica, non usata dal frontend)
-    │   └── segnalazione.routes.ts # /api/segnalazioni (pubblica, admin, moderazione)
+    │   ├── segnalazione.routes.ts # /api/segnalazioni (pubblica, admin, moderazione)
+    │   └── mappa.routes.ts        # /api/mappa
     ├── controllers/
     │   ├── catasto.controller.ts  # fuochi, ricerca avanzata, manifest, parenti, mestieri
     │   ├── filter.controller.ts   # opzioni dei filtri
-    │   └── segnalazione.controller.ts
+    │   ├── segnalazione.controller.ts
+    │   └── mappa.controller.ts    # luoghi della mappa (ricerca semplice e avanzata)
     ├── services/
     │   ├── catasto.service.ts     # orchestrazione query + proxy/caching manifest IIIF
     │   ├── export.service.ts      # export CSV/XLSX in streaming, tetto di righe, metadati
     │   ├── stats.service.ts       # statistiche della ricerca (con cache breve)
+    │   ├── mappa.service.ts       # aggregati per luogo + coordinate (con cache)
     │   ├── segnalazione.service.ts# creazione, anti-abuso, cambi di stato transazionali
     │   ├── notifica.service.ts    # inoltro email via FormSubmit con link firmati
     │   └── cache-sync.service.ts  # invalidazione delle cache propagata alle altre istanze
@@ -75,6 +81,7 @@ backend-catasto/
     │   ├── common.model.ts        # lookup, filtri (cache con TTL), parenti, mestieri
     │   ├── traduzioni.model.ts    # lingua (`lang`), traduzioni delle etichette (con cache)
     │   ├── stats.model.ts         # aggregati SQL: somme, quantili con window function, distribuzioni
+    │   ├── mappa.model.ts         # aggregati per id_registrazione, luoghi con coordinate
     │   └── segnalazione.model.ts
     ├── middlewares/
     │   ├── admin.middleware.ts    # Bearer ADMIN_TOKEN, confronto timing-safe, adminLimiter
@@ -85,6 +92,9 @@ backend-catasto/
     │   ├── rate-limit.ts          # createLimiter: opzioni comuni, store condiviso se SHARED_STATE=mysql
     │   ├── mysql-rate-limit-store.ts # store di express-rate-limit sulla tabella rate_limit_hits
     │   ├── csv.ts, traduzioni-csv.ts # CSV (export dei risultati, export/import delle traduzioni)
+    │   ├── luoghi-csv.ts          # query e CSV dei luoghi per la mappa (db:export-luoghi)
+    │   ├── repetti.ts             # estrazione dei luoghi dal Dizionario del Repetti
+    │   ├── abbina-luoghi.ts       # abbinamento fra luoghi del catasto e voci del Repetti
     │   ├── export-columns.ts      # colonne e celle dei file esportati
     │   ├── export-writers.ts      # scrittura in streaming di CSV e XLSX
     │   ├── describe-filters.ts    # descrizione leggibile della ricerca semplice
@@ -95,7 +105,10 @@ backend-catasto/
     └── scripts/
         ├── migrate.ts             # runner delle migrazioni (con lock MySQL fra istanze)
         ├── export-traduzioni.ts   # CSV dei valori di lookup senza traduzione
-        └── import-traduzioni.ts   # import del CSV compilato dalla redazione
+        ├── import-traduzioni.ts   # import del CSV compilato dalla redazione
+        ├── export-luoghi.ts       # CSV dei luoghi (id_registrazione) con il numero di fuochi
+        ├── repetti-luoghi.ts      # luoghi del Dizionario del Repetti (repetti:luoghi)
+        └── repetti-abbina.ts      # abbinamento catasto-Repetti (repetti:abbina)
 ```
 
 ### 2.2 Pacchetto condiviso
@@ -108,7 +121,7 @@ Il pacchetto **`packages/shared`** contiene ciò che frontend e backend devono v
 | `query-ast.ts` | Tipi `QueryGroup` / `QueryCondition` e limiti (`AST_MAX_DEPTH`, `AST_MAX_CONDITIONS`, …) |
 | `index.ts` | Tipi delle risposte (`Fuoco`, `FilterOptions`, `CatastoStats`, …) |
 | `labels.ts` | Etichette inglesi di campi e operatori, `describeQuery` (descrizione leggibile di una query, usata dall'anteprima e dagli export) |
-| `segnalazioni.ts` | Tipi e stati delle segnalazioni |
+| `segnalazioni.ts` | Tipi e stati delle segnalazioni (`TIPI_SEGNALAZIONE`; `TIPI_SEGNALAZIONE_FUOCO` per quelli della scheda del fuoco) |
 | `segnatura.ts` | Parser della segnatura della portata (`ASFi, Catasto 81, c. 245r`) |
 
 ---
@@ -172,6 +185,8 @@ I valori economici (fortune, credito, credito ai Monti, imponibile, deduzioni) s
 | POST | `/api/filters/cache/invalidate` | admin | Svuota la cache delle opzioni dei filtri e delle traduzioni |
 | GET | `/api/parenti/:id` | pubblico | Membri del fuoco |
 | GET | `/api/mestieri` | pubblico (API) | Elenco grezzo dei mestieri, per chi usa l'API |
+| GET | `/api/mappa/luoghi` | pubblico, 150 req/15 min | Luoghi della mappa con gli aggregati della ricerca semplice |
+| POST | `/api/mappa/query` | pubblico, 150 req/15 min | Luoghi della mappa sulla ricerca avanzata |
 | POST | `/api/segnalazioni` | pubblico, 5 req/ora | Invia una segnalazione |
 | GET | `/api/segnalazioni` | admin | Elenco segnalazioni |
 | PATCH | `/api/segnalazioni/:id` | admin | Cambia lo stato di una segnalazione |
@@ -187,6 +202,7 @@ Tutti gli endpoint di lettura accettano `?lang=en` (anche `POST /api/catasto/que
 | `apiLimiter` | tutto `/api` | 300 richieste / 15 min / IP |
 | manifest | `/api/catasto/manifest/:id` | 30 richieste / 15 min / IP |
 | `statsLimiter` | `GET /api/catasto/stats`, `POST /api/catasto/query/stats` | 150 richieste / 15 min / IP |
+| `mappaLimiter` | `GET /api/mappa/luoghi`, `POST /api/mappa/query` | 150 richieste / 15 min / IP |
 | `exportLimiter` | `GET /api/catasto/export`, `POST /api/catasto/query/export` | 20 richieste / 15 min / IP |
 | `segnalazioneLimiter` | `POST /api/segnalazioni` | 5 / ora / IP, più 10 / ora per hash IP salvato nel DB |
 | `adminLimiter` | rotte admin e moderazione | 100 richieste **fallite** / 15 min / IP |
@@ -230,7 +246,7 @@ GET /api/catasto?q_persona=nardo&quartiere=3,7&fortune_min=500&sort_by=fortune&o
   "data": [
     {
       "id": 1234,
-      "nome": "NUTO NARDO",
+      "nome": "NUTO NARDO", "id_registrazione": 969,
       "imponibile": 120, "credito": 45, "credito_m": 0, "fortune": 800, "deduzioni": 200,
       "volume": "81", "foglio": "245",
       "particolarita_fuoco": null, "bestiame": "Bue", "immigrazione": null,
@@ -245,6 +261,7 @@ GET /api/catasto?q_persona=nardo&quartiere=3,7&fortune_min=500&sort_by=fortune&o
 }
 ```
 
+- `id_registrazione` è il luogo del fuoco, lo stesso identificativo dei luoghi della mappa (§ 4.18). Compare nella vista tabella (`GET /api/catasto`, `POST /api/catasto/query`) e il frontend lo usa per il link «Luogo sulla mappa». Le colonne dell'export non cambiano: sono un elenco esplicito in `src/utils/export-columns.ts`.
 - `volume` e `foglio` sono l'unità (volume) e la componente (carta) del **campione** in cui è registrato il fuoco (dato della fonte).
 - `codice_archivio` identifica il volume digitalizzato del **campione** (da `t_archivio_volumi`): se presente, il visore delle carte può aprire la carta.
 - `segnatura_portata` è la segnatura della **portata** pubblicata dalla redazione (da `fuoco_segnature`, dato contribuito); `codice_archivio_portata` è il volume corrispondente, se digitalizzato. La segnatura è restituita come è stata registrata: la forma di citazione normalizzata è `ASFi, Catasto, <volume>, c. <n><r|v>` (vedi lo [standard documentale](standard-documentale.md#53-segnature--shelfmarks)).
@@ -419,6 +436,30 @@ Righe grezze della tabella `mestieri`, ordinate per nome (per etichetta tradotta
 
 Nessuna delle tre è soggetta al rate limit.
 
+### 4.18 Mappa dei luoghi: `GET /api/mappa/luoghi`
+
+Un punto per luogo (`id_registrazione`) con gli aggregati dei fuochi della ricerca: accetta gli stessi filtri della ricerca semplice (`GET /api/mappa/luoghi?mestiere=3`); `POST /api/mappa/query` con `{ "ast": … }` fa lo stesso sull'AST della ricerca avanzata. Paginazione e ordinamento sono ignorati. Le coordinate vengono dalla tabella `luoghi_geo` (migrazioni `006`–`007`, § 11.4).
+
+```json
+{
+  "luoghi": [
+    { "id": 969, "lat": 43.59933, "lng": 11.572767, "certezza": "sicura",
+      "nome": "Pop. S. Lorenzo a Persignano", "piviere": "Piv. di Gropina (I)",
+      "serie": "Contado Fiorentino", "nome_moderno": "PERSIGNANO",
+      "fuochi": 21, "imponibile_medio": 18.4286, "quota_mestiere": 0.2381,
+      "quota_migrazione": 0.1429, "ampiezza_media": 4 }
+  ],
+  "fuochi": 60976,
+  "non_localizzati": { "fuochi": 13534, "luoghi": 208 },
+  "disponibile": true
+}
+```
+
+- `quota_mestiere`: fuochi con mestiere diverso da «non specificato»; `quota_migrazione`: fuochi con un codice di immigrazione diverso da «Non specificato» (provenienza o residenza altrove); `ampiezza_media`: membri registrati per fuoco, compresi i fuochi senza membri.
+- I luoghi senza coordinate (`non_trovata`, o assenti da `luoghi_geo`) non compaiono in `luoghi` ma sono contati in `non_localizzati`.
+- Senza la tabella `luoghi_geo` la risposta ha `disponibile: false` e nessun luogo, invece di un errore.
+- Cache: coordinate 10 minuti, aggregati per ricerca 60 secondi. Limite: 150 richieste / 15 min / IP, come le statistiche.
+
 ---
 
 ## 5. Ricerca avanzata: formato dell'AST
@@ -515,15 +556,18 @@ Le segnalazioni sono il canale dei **dati contribuiti**: una proposta dell'utent
 
 | Campo | Regole |
 |---|---|
-| `id_fuoco` | intero > 0 o `null` (obbligatorio per `segnatura`); se presente deve esistere |
-| `tipo` | `dato_errato` · `segnatura` · `altro` |
-| `campo` | chiave di un campo segnalabile (obbligatorio per `dato_errato`) |
-| `valore_attuale`, `valore_proposto` | max 500 caratteri (`valore_proposto` obbligatorio per `segnatura`) |
-| `note` | max 2000 caratteri (per `altro` serve `valore_proposto` o `note`) |
+| `id_fuoco` | intero > 0 o `null` (obbligatorio per `segnatura`, vietato per `localizzazione`); se presente deve esistere |
+| `id_registrazione` | intero > 0 o `null`: il luogo della mappa. Obbligatorio per `localizzazione`, vietato per gli altri tipi; il luogo deve esistere (altrimenti `400`) |
+| `tipo` | `dato_errato` · `segnatura` · `altro` · `localizzazione` |
+| `campo` | chiave di un campo segnalabile (obbligatorio per `dato_errato`, vietato per `localizzazione`) |
+| `valore_attuale`, `valore_proposto` | max 500 caratteri (`valore_proposto` obbligatorio per `segnatura`); per `localizzazione` il `valore_attuale` inviato dal client è ignorato (§ 6.5) |
+| `note` | max 2000 caratteri (per `altro` e `localizzazione` serve `valore_proposto` o `note`) |
 | `email` | email valida o `null` (non stringa vuota) |
 | `website` | honeypot: se compilato la richiesta viene scartata in silenzio |
 
 Risposta: `201 {"id": 57, "stato": "nuova"}`. L'IP non viene salvato in chiaro ma come hash con `SEGNALAZIONI_SALT`.
+
+Le regole sono nello schema zod di `segnalazione.controller.ts`. Per i tipi `dato_errato` e `altro` anche `id_registrazione` è vietato: il luogo si indica solo con `localizzazione`.
 
 ### 6.2 Ciclo di vita
 
@@ -545,6 +589,7 @@ stateDiagram-v2
 - La **PATCH admin** accetta qualunque transizione.
 - Effetti per `tipo = segnatura`: diventando `accettata` la segnatura della portata è pubblicata in `fuoco_segnature`. Lasciando `accettata`, se era quella pubblicata, torna visibile l'ultima altra segnatura ancora accettata per lo stesso fuoco; se non ce ne sono, il fuoco resta senza. Tutto in transazione con `SELECT … FOR UPDATE`.
 - Per `dato_errato` e `altro` cambia solo lo stato: la correzione del dato resta manuale.
+- Per `localizzazione` cambia solo lo stato: le coordinate in `luoghi_geo` non si modificano (§ 6.5).
 
 ### 6.3 Flusso email (FormSubmit)
 
@@ -596,6 +641,24 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" \
 curl -X PATCH -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
   -d '{"stato":"accettata"}' https://catasto.example.org/api/segnalazioni/57
 ```
+
+L'elenco (`GET /api/segnalazioni`) e il dettaglio restituiscono anche `id_registrazione` e `nome_luogo` (serie › quartiere › piviere › popolo, ricavato da `t_struttura_catastale`).
+
+### 6.5 Segnalazioni di localizzazione
+
+Il tipo `localizzazione` («Localizzazione errata») segnala che un luogo della mappa è nel posto sbagliato. Riguarda un luogo (`id_registrazione`), non un fuoco: `id_fuoco` resta `NULL`. La migrazione `008` aggiunge il valore all'enum `tipo`, la colonna `id_registrazione` e l'indice `idx_segnalazioni_luogo`. Non c'è una chiave esterna verso le tabelle del dump, che un reimport ricrea: l'esistenza del luogo la verifica il service.
+
+**Validazione.** Per `localizzazione` servono `id_registrazione` e almeno uno fra `valore_proposto` e `note`; `id_fuoco` e `campo` sono vietati. Per gli altri tipi `id_registrazione` è vietato. Un luogo inesistente dà `400` e non scrive nulla.
+
+**Posizione attuale.** La scrive il server in `valore_attuale`, leggendola da `luoghi_geo`: il client non può indicarla. Il formato è `43.770100, 11.105200 (approssimata; Lastra a Signa)`, cioè latitudine e longitudine con sei decimali, poi certezza (`sicura`, `approssimata`, `solo piviere`, `non trovata`) e nome moderno, se presenti. Un luogo senza coordinate dà `non localizzato`, con gli stessi dettagli fra parentesi. Se la tabella `luoghi_geo` non esiste (migrazioni `006`–`007` non applicate) il luogo risulta non localizzato e la segnalazione non fallisce. `valore_proposto` è il testo libero dell'utente.
+
+**Moderazione.** L'email alla redazione e la pagina di conferma mostrano **Luogo** (nome e `id_registrazione`), **Posizione attuale** e **Posizione proposta** al posto di Fuoco e Campo. Accettare o respingere cambia solo lo stato. Accettando, la pagina avverte che le coordinate non cambiano da sole.
+
+**Correzione.** Il flusso completo:
+
+1. L'utente segnala il luogo dalla mappa.
+2. La redazione riceve l'email e decide con i link, o con la PATCH admin.
+3. Se la proposta è corretta, la redazione porta la correzione in `luoghi_geo` con `db:import-luoghi` (§ 11.4): la riga diventa `revisionato = 1` e una migrazione automatica successiva non la sovrascrive.
 
 ---
 
@@ -649,7 +712,7 @@ Il CSV segue RFC 4180 (campi con virgole o apici fra doppi apici). L'import è t
 
 ## 8. Migrazioni
 
-Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici (dati della fonte). Le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `schema_migrations`) sono create dal runner in `src/scripts/migrate.ts`, che applica in ordine i file `migrations/*.sql` non ancora registrati.
+Il dump dell'Archivio (`init/Catasto.sql`) contiene i dati storici (dati della fonte). Le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`, `schema_migrations`) sono create dal runner in `src/scripts/migrate.ts`, che applica in ordine i file `migrations/*.sql` non ancora registrati. La migrazione `008` modifica `segnalazioni` (§ 6.5).
 
 La ricerca in tabella legge `fuoco_segnature`: senza migrazioni risponde 500.
 
@@ -702,19 +765,23 @@ Esempio completo per la produzione, con valori fittizi: [`.env.prod.example`](..
 | Comando (in `backend-catasto/`) | Effetto |
 |---|---|
 | `npm run dev` | `tsx watch src/server.ts` |
-| `npm run build` | `tsup` → `dist/server.js` e `dist/scripts/*.js` (migrazioni, export/import traduzioni) |
+| `npm run build` | `tsup` → `dist/server.js` e `dist/scripts/*.js` (migrazioni, export/import traduzioni, export luoghi) |
 | `npm start` | avvia `dist/server.js` |
 | `npm run db:migrate` | migrazioni da sorgente (`tsx`) |
 | `npm run db:migrate:prod` | migrazioni dalla build |
 | `npm run db:export-traduzioni [-- file.csv]` | CSV dei valori di lookup senza traduzione inglese |
 | `npm run db:import-traduzioni -- file.csv` | importa il CSV compilato in `traduzioni_lookup` |
+| `npm run db:export-luoghi [-- file.csv]` | CSV dei luoghi (`id_registrazione`) con nomi non uniti, codici originali di `t_mappa_conversione`, numero di fuochi e avvisi sulle anomalie (§ 11.1), per la localizzazione sulla mappa |
+| `npm run db:import-luoghi -- file.csv [--automatico] [--sql]` | Importa in `luoghi_geo` le coordinate dei luoghi (§ 11.4) |
+| `npm run repetti:luoghi -- <cartella repetti_data> [file.csv]` | CSV dei luoghi del Dizionario del Repetti con attributi e coordinate, note o calcolate dalla distanza (§ 11.2); non usa il database |
+| `npm run repetti:abbina -- luoghi.csv repetti-luoghi.csv [file.csv]` | Abbinamento fra luoghi del catasto e voci del Repetti, con coordinate proposte e certezza (§ 11.3); non usa il database |
 | `npm run lint` | ESLint, con la configurazione condivisa `eslint.config.base.mjs` della root |
 | `npm test` | test unitari (`vitest run`, database simulato) |
 | `npm run test:integration` | test di integrazione su un MySQL vero (vedi sotto) |
 
 ### 10.2 Test unitari
 
-I **test unitari** (vitest, database sempre simulato) coprono query builder semplice e AST (compresi liste geografiche, ordinamento stabile e AST troppo annidati), controller di ricerca, middleware (admin, errori), `validation.ts`, cache delle opzioni dei filtri, token di moderazione, servizio di notifica, cambi di stato delle segnalazioni (con il ripristino della segnatura precedente), validazione della creazione, rotte di moderazione, `TRUST_PROXY`, `toPages` del manifest, l'associazione portata→volume e le traduzioni (parsing di `lang`, normalizzazione, fallback, cache, CSV di export/import).
+I **test unitari** (vitest, database sempre simulato) coprono query builder semplice e AST (compresi liste geografiche, ordinamento stabile e AST troppo annidati), controller di ricerca, middleware (admin, errori), `validation.ts`, cache delle opzioni dei filtri, token di moderazione, servizio di notifica, cambi di stato delle segnalazioni (con il ripristino della segnatura precedente), validazione della creazione (comprese le regole di `localizzazione`), creazione di una segnalazione di localizzazione con la posizione attuale (`segnalazione.create.test.ts`), pagina di moderazione (`moderazione.page.test.ts`), rotte di moderazione, `TRUST_PROXY`, `toPages` del manifest, l'associazione portata→volume e le traduzioni (parsing di `lang`, normalizzazione, fallback, cache, CSV di export/import).
 
 ### 10.3 Test di integrazione
 
@@ -730,6 +797,8 @@ TEST_DB_NAME=catasto_test
 npm run test:integration -w catasto-backend
 ```
 
+I test di `segnalazioni.test.ts` creano una segnalazione di localizzazione su un luogo del dump di prova, controllano la posizione attuale salvata e che accettarla non cambi `luoghi_geo`, e che un luogo inesistente dia `400`.
+
 In CI girano in un job dedicato con il servizio `mysql:8.0` di GitHub Actions.
 
 ---
@@ -741,6 +810,88 @@ I problemi emersi dalla revisione del codice di settembre 2026 sono stati corret
 | Area | Descrizione |
 |---|---|
 | Più istanze | Con `SHARED_STATE` vuota rate limit e cache sono per processo: con più istanze i limiti valgono per istanza e l'invalidazione delle cache raggiunge solo l'istanza che la riceve. Impostare `SHARED_STATE=mysql` (§9). Le cache delle statistiche (60 s) e dei manifest IIIF restano comunque per istanza: scadono da sole. |
+
+### 11.1 Luoghi e anomalie dei dati geografici
+
+La mappa usa come luogo l'`id_registrazione` (combinazione completa serie/quartiere/piviere/popolo): in città il gonfalone, che il dump registra in `id_piviere`; nel contado il popolo; nelle città con un solo record la città intera. Le anomalie del dump **non** vengono corrette nei dati storici: le gestisce la mappa, e `db:export-luoghi` le elenca nella colonna `avvisi` (funzione `avvisiLuogo` in `utils/luoghi-csv.ts`, riusabile dall'API). Valori rilevati sul dump di febbraio 2026:
+
+| Avviso | Luoghi | Fuochi | Descrizione e trattamento |
+|---|---|---|---|
+| `quartiere_mancante` | 3 | 1.858 | Serie 1: i gonfaloni di Santo Spirito (Nicchio, Ferza, Drago verde) hanno `id_quartiere` NULL. La mappa li colloca tramite il gonfalone, che determina il quartiere. |
+| `codici_originali_incoerenti` | 15 | 1.679 | In `t_mappa_conversione` la serie originale non è quella del luogo: righe slittate ai confini fra serie. I codici originali di questi luoghi non vanno usati per collegare fonti esterne; la localizzazione usa i nomi. |
+| `codici_originali_assenti` | 5 | 1.271 | Luoghi aggiunti dopo la conversione (id 1749–1753, fra cui la Città di Arezzo). Nessun effetto sulla mappa. |
+| `luogo_aggregato` | 13 | 3.069 | Né piviere né popolo (Cortona, Arezzo, Montepulciano, parte di San Gimignano e Colle): tutti i fuochi cadono su un punto unico, da dichiarare nella scheda del luogo. |
+| `senza_fuochi` | 34 | 0 | Luoghi senza fuochi registrati: la mappa non li mostra. |
+
+Altre anomalie note, senza avviso per riga: nella serie 1 manca il gonfalone **Scala** (presente nelle serie 2 e 7), da dichiarare nella nota metodologica; `t_quartieri` contiene doppioni (4 e 5 Santo Spirito, 2 e 6 Santa Maria Novella), irrilevanti per la mappa perché l'unità è `id_registrazione`.
+
+### 11.2 Luoghi del Dizionario del Repetti
+
+Per localizzare i luoghi del contado e del dominio si parte dal *Dizionario geografico fisico storico della Toscana* di Emanuele Repetti (1833–1846), nei dati CC0 di [joeyates/repetti_data](https://github.com/joeyates/repetti_data): cinque volumi di voci e `coordinates.json` con le coordinate di circa 2.000 luoghi, in gran parte inserite a mano.
+
+```bash
+git clone --depth 1 https://github.com/joeyates/repetti_data.git
+npm run repetti:luoghi -w catasto-backend -- repetti_data repetti-luoghi.csv
+```
+
+Lo script non usa il database (`utils/repetti.ts`, con test). Dall'intestazione di ogni voce ("Villata [...] nel piviere di S. Pietro in Bossolo, Comunità e circa 4 miglia toscane a grecale di Certaldo, Giurisdizione di Castel Fiorentino, Diocesi e Compartimento di Firenze") ricava tipo, dedicazione, piviere, comunità, giurisdizione, diocesi, compartimento e la distanza da un luogo di riferimento; esclude i rinvii ("Vedere ..."), che usa però come nomi alternativi della voce di destinazione.
+
+**Coordinate.** Quelle di `coordinates.json` (`fonte_coordinate` = `manual`, `text`), oppure, se mancano, calcolate dalla distanza (`distanza`): un miglio toscano = 1,6537 km, direzioni dalla rosa dei venti a otto punte, anche composte ("grecale-levante"). Fra omonimi del riferimento si sceglie per valle (contesto della voce), poi titolo identico, diocesi e lunghezza della voce; i nomi comuni ("del Borgo", "di questa città") non si risolvono.
+
+Risultati sui dati del 2026 (5.663 voci di luogo su 9.370):
+
+| | Voci |
+|---|---|
+| Con coordinate | 3.708 (1.940 da `coordinates.json`, 1.768 calcolate dalla distanza) |
+| Riferimento non trovato / ambiguo | 331 / 10 |
+| `coordinate_incoerenti` (coordinate note a più di 10 km dalla posizione calcolata dal testo) | 127 |
+
+**Precisione.** Dove le coordinate sono note, la posizione calcolata dal testo dista in mediana 2,4 km (75° percentile 4,8 km, 90° percentile 12 km). Le voci `coordinate_incoerenti` hanno un errore nelle coordinate di partenza (omonimo sbagliato, longitudine del testo convertita male) o nel testo: vanno riviste prima dell'uso. Le posizioni calcolate sono approssimate all'ordine del chilometro e vanno dichiarate come tali sulla mappa.
+
+### 11.3 Abbinamento fra catasto e Repetti
+
+```bash
+npm run db:export-luoghi -w catasto-backend -- luoghi.csv
+npm run repetti:abbina -w catasto-backend -- luoghi.csv repetti-luoghi.csv abbinamenti.csv
+```
+
+Lo script (`utils/abbina-luoghi.ts`, con test; non usa il database) propone per ogni luogo del catasto una voce del Repetti e le sue coordinate, con un livello di **certezza**:
+
+| Certezza | Significato |
+|---|---|
+| `sicura` | Voce con coordinate note (`coordinates.json`), confermata dal piviere o dalla vicinanza alla pieve (15 km; 30 km per comuni e podesterie), senza candidati a pari merito |
+| `approssimata` | Voce trovata ma con coordinate calcolate dalla distanza, senza conferma del piviere, a pari merito con altre, con coordinate incoerenti o lontana dalla pieve (fino a 40 km) |
+| `solo_piviere` | Luogo non localizzato: coordinate della pieve, dell'unità superiore o della città (cappelle e contrade) |
+| `non_trovata` | Né il luogo né l'unità superiore; i gonfaloni di Firenze (`gonfalone_firenze`) aspettano i poligoni |
+
+**Metodo.** Il nome del popolo si scompone in dedicazione e località ("Pop. S. Donato a Legnone e Bagnolo" → S. Donato; Legnone, Bagnolo); i candidati sono le voci con quel nome nel titolo, nelle varianti, nei rinvii o come popolo citato. Il confronto ignora maiuscole, accenti, `J`/`I`, spazi interni e preposizioni articolate e rende equivalenti le grafie dei santi (Piero/Pietro, Agnolo/Angelo, Iacopo/Giacomo...). La pieve del catasto fa da vincolo; a parità contano piviere, dedicazione, nome della serie (es. "Val di Nievole"), coordinate note. Le cappelle delle città si cercano solo entro 4 km dalla città.
+
+Risultati sul dump di febbraio 2026 (60.976 fuochi):
+
+| Certezza | Luoghi | Fuochi | Fuochi esclusa Firenze città |
+|---|---|---|---|
+| `sicura` | 467 | 20.484 | 40% |
+| `approssimata` | 546 | 12.427 | 24% |
+| `solo_piviere` | 524 | 14.531 | 29% |
+| `non_trovata` | 216 (di cui 47 gonfaloni) | 13.534 (di cui 10.004 di Firenze) | 7% |
+
+Nel contado fiorentino (serie 3–6) i fuochi `sicura` sono il 44% e quelli `non_trovata` il 2%. Il CSV elenca per ogni luogo la voce scelta, la pieve, la distanza dalla pieve, i candidati alternativi con punteggio e il motivo della certezza: va rivisto a mano (passo 5) prima dell'import.
+
+### 11.4 Coordinate nel database: `luoghi_geo`
+
+La migrazione `006` crea `luoghi_geo` (fuori dal dump, come le altre tabelle applicative): una riga per `id_registrazione` con `lat`, `lng`, `certezza`, `nome_moderno`, `fonte`, `chiave_nomi` (serie|quartiere|piviere|popolo al momento dell'abbinamento, per accorgersi di una rinumerazione dopo un reimport), `note` e `revisionato`. La `007` la riempie con gli abbinamenti automatici del § 11.3, non rivisti: il prototipo della mappa funziona appena applicate le migrazioni.
+
+Le coordinate si correggono anche a partire dalle segnalazioni di localizzazione accettate (§ 6.5): la redazione le verifica e le importa con lo stesso comando.
+
+Le revisioni si importano dal CSV degli abbinamenti corretto a mano (colonne `id_registrazione`, `lat`, `lng`, `certezza`, facoltative `nome_moderno`, `fonte`, `note`):
+
+```bash
+npm run db:import-luoghi -w catasto-backend -- abbinamenti-rivisti.csv        # revisionato = 1, sovrascrive
+npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv --automatico   # non tocca le righe revisionate
+npm run db:import-luoghi -w catasto-backend -- abbinamenti.csv --sql > migrations/00N_….sql
+```
+
+L'import è transazionale e rifiuta il file intero se una riga è incoerente (certezza sconosciuta, coordinate fuori dominio o mancanti per una certezza che le richiede), indicando la riga. Una migrazione automatica successiva (come la `007`) non sovrascrive mai le righe revisionate.
 
 ---
 
@@ -760,3 +911,5 @@ I problemi emersi dalla revisione del codice di settembre 2026 sono stati corret
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | `app.ts` separato da `server.ts`, Vercel Function, `static.ts` per servire il frontend, variabili `STATIC_DIR` e `DB_CONNECTION_LIMIT` |
 | 2.2 | 2026-11-01 | Pasquale Ruotolo | Più istanze: `SHARED_STATE`, rate limit e invalidazione delle cache su MySQL, lock delle migrazioni, `/health/live` e `/health/ready` |
+| 2.3 | 2026-11-01 | Pasquale Ruotolo | Luoghi per la mappa: `db:export-luoghi`, anomalie dei dati geografici (§ 11.1), luoghi del Repetti (§ 11.2) e abbinamento (§ 11.3), tabella `luoghi_geo` e API della mappa (§ 4.18, § 11.4) |
+| 2.4 | 2026-11-01 | Pasquale Ruotolo | Segnalazioni di localizzazione sui luoghi della mappa: tipo `localizzazione` e campo `id_registrazione` (§ 6.1, § 6.5), migrazione `008`, moderazione e flusso di correzione con `db:import-luoghi`, `id_registrazione` nella vista tabella (§ 4.5), test (§ 10) |

@@ -37,13 +37,25 @@ const layout = (title: string, body: string) => `<!doctype html>
 
 const VERBO: Record<AzioneLink, string> = { accettata: "Accetta", respinta: "Respingi" };
 
+const ETICHETTA_PROPOSTA: Record<Segnalazione["tipo"], string> = {
+  dato_errato: "Valore proposto",
+  segnatura: "Segnatura",
+  altro: "Valore proposto",
+  localizzazione: "Posizione proposta",
+};
+
 const dettagli = (s: Segnalazione) => `<dl>
   <dt>Segnalazione</dt><dd>#${escape(s.id)}</dd>
-  <dt>Fuoco</dt><dd>${s.id_fuoco ? `${escape(s.nome_fuoco ?? "")} (id ${escape(s.id_fuoco)})` : "non indicato"}</dd>
+  ${
+    s.tipo === "localizzazione"
+      ? `<dt>Luogo</dt><dd>${escape(s.nome_luogo || "senza nome")} (luogo ${escape(s.id_registrazione)})</dd>`
+      : `<dt>Fuoco</dt><dd>${s.id_fuoco ? `${escape(s.nome_fuoco ?? "")} (id ${escape(s.id_fuoco)})` : "non indicato"}</dd>`
+  }
   <dt>Tipo</dt><dd>${escape(TIPO_SEGNALAZIONE_LABELS[s.tipo])}</dd>
   ${s.campo ? `<dt>Campo</dt><dd>${escape(getField(s.campo)?.label ?? s.campo)}</dd>` : ""}
   ${s.tipo === "dato_errato" ? `<dt>Valore attuale</dt><dd>${escape(s.valore_attuale ?? "vuoto")}</dd>` : ""}
-  ${s.valore_proposto ? `<dt>${s.tipo === "segnatura" ? "Segnatura" : "Valore proposto"}</dt><dd class="mono">${escape(s.valore_proposto)}</dd>` : ""}
+  ${s.tipo === "localizzazione" ? `<dt>Posizione attuale</dt><dd class="mono">${escape(s.valore_attuale ?? "non indicata")}</dd>` : ""}
+  ${s.valore_proposto ? `<dt>${ETICHETTA_PROPOSTA[s.tipo]}</dt><dd class="mono">${escape(s.valore_proposto)}</dd>` : ""}
   ${s.note ? `<dt>Note</dt><dd>${escape(s.note)}</dd>` : ""}
   ${s.email ? `<dt>Email</dt><dd>${escape(s.email)}</dd>` : ""}
   <dt>Stato</dt><dd>${escape(STATO_SEGNALAZIONE_LABELS[s.stato])}</dd>
@@ -55,6 +67,11 @@ const effetto = (s: Segnalazione, azione: AzioneLink): string => {
     return azione === "accettata"
       ? "Accettando, la segnatura viene pubblicata sulla scheda del fuoco."
       : "Respingendo, la segnatura non viene pubblicata.";
+  }
+  if (s.tipo === "localizzazione") {
+    return azione === "accettata"
+      ? "Accettando, la segnalazione viene segnata come accettata. Le coordinate sulla mappa non cambiano da sole: la correzione va importata in luoghi_geo con db:import-luoghi."
+      : "Respingendo, la segnalazione viene archiviata come respinta e la posizione resta quella attuale.";
   }
   return azione === "accettata"
     ? "Accettando, la segnalazione viene segnata come accettata. La correzione del dato non è automatica: va applicata a mano nella base dati."

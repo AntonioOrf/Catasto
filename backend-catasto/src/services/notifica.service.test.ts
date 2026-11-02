@@ -3,8 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("../config/db.js", () => ({ default: {} }));
 
 const findFuocoRiepilogo = vi.fn();
+const findLuogoRiepilogo = vi.fn();
 vi.mock("../models/segnalazione.model.js", () => ({
-  SegnalazioneModel: { findFuocoRiepilogo: (id: number) => findFuocoRiepilogo(id) },
+  SegnalazioneModel: {
+    findFuocoRiepilogo: (id: number) => findFuocoRiepilogo(id),
+    findLuogoRiepilogo: (id: number) => findLuogoRiepilogo(id),
+  },
 }));
 
 const { NotificaService } = await import("./notifica.service.js");
@@ -27,6 +31,29 @@ describe("NotificaService.invia", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     fetchMock.mockReset();
     findFuocoRiepilogo.mockReset().mockResolvedValue(null);
+    findLuogoRiepilogo.mockReset().mockResolvedValue(null);
+  });
+
+  it("localizzazione: luogo, posizione attuale e proposta, senza fuoco", async () => {
+    vi.stubEnv("FORMSUBMIT_EMAIL", "abc123");
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: "true" }) });
+    findLuogoRiepilogo.mockResolvedValue({ serie: "Contado", quartiere: null, piviere: "S. Giovanni in Gangalandi", popolo: "S. Martino a Gangalandi" });
+
+    await NotificaService.invia(8, {
+      id_fuoco: null,
+      id_registrazione: 12,
+      tipo: "localizzazione",
+      valore_attuale: "43.770100, 11.105200 (approssimata)",
+      valore_proposto: "Ginestra Fiorentina",
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(findLuogoRiepilogo).toHaveBeenCalledWith(12);
+    expect(findFuocoRiepilogo).not.toHaveBeenCalled();
+    expect(body.Luogo).toBe("Contado › S. Giovanni in Gangalandi › S. Martino a Gangalandi (luogo 12)");
+    expect(body.Fuoco).toBeUndefined();
+    expect(body["Posizione attuale"]).toBe("43.770100, 11.105200 (approssimata)");
+    expect(body["Posizione proposta"]).toBe("Ginestra Fiorentina");
   });
 
   afterEach(() => {

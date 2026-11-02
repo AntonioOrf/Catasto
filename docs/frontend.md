@@ -5,7 +5,7 @@
 | Campo | Valore |
 |---|---|
 | Identificativo | `CAT-DOC-04` |
-| Versione | 2.2 |
+| Versione | 2.3 |
 | Data | 2026-11-01 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
@@ -51,7 +51,7 @@ Un dato assente nella fonte resta assente anche nell'interfaccia: non diventa 0,
 | `/informazioni` | `pages/InfoPage.tsx` | Descrizione del progetto e crediti (caricata in lazy) |
 | `/glossario` | `pages/GlossarioPage.tsx` | Termini del catasto con le definizioni, un'ancora per voce (lazy) |
 | `/contatti` | `pages/ContattiPage.tsx` | Indirizzi email e link al repository (lazy) |
-| `/mappa` | `pages/MappaPage.tsx` | Segnaposto "in fase di sviluppo", non collegato dal menu (lazy) |
+| `/mappa` | `pages/MappaPage.tsx` | Prototipo della mappa dei fuochi: un cerchio per luogo (Leaflet, fondo OpenStreetMap o Carta dell'Inghirami dal WMS della Regione Toscana), colore per certezza della posizione o per indicatore (imponibile medio, mestiere, migrazione, membri per fuoco), soglia di fuochi, scheda del luogo, elenco accessibile da tastiera dei luoghi principali. La ricerca arriva dall'URL (`features/mappa/lib/ricerca.ts`): filtri della ricerca semplice nella query string (`/mappa?mestiere=3`), ricerca avanzata nel fragment (`/mappa#q=…`, stessa codifica dei link condivisi); dati da `GET /api/mappa/luoghi` o `POST /api/mappa/query`. `?luogo=<id_registrazione>` apre la scheda del luogo e centra la mappa (se il luogo non è localizzato compare una nota). Dalla scheda si segnala una localizzazione errata (§ 6.11). Voce **Mappa** nel menu (lazy) |
 
 `FilterProvider` avvolge il router: i filtri restano impostati anche passando da una pagina all'altra. `CompareProvider` (la selezione dei fuochi) e la vista di confronto stanno in `App.tsx` sopra le route: la selezione fatta in Consultazione vale anche nel Banco di lavoro.
 
@@ -95,6 +95,7 @@ frontend-catasto/
     │   │       └── segnatura.ts        # parser della segnatura (da @catasto/shared)
     │   └── segnalazioni/
     │       ├── components/SegnalazioneModal.tsx
+    │       ├── components/SegnalazioneLuogoModal.tsx
     │       └── api/create-segnalazione.ts
     └── pages/
 ```
@@ -166,6 +167,7 @@ flowchart TD
 | `fetchSuggest(q)` | `GET /api/catasto/suggest?q=` | «Trova e aggiungi» del Banco |
 | `fetchStats(search)` | `GET /api/catasto/stats` o `POST /api/catasto/query/stats` | scheda **Statistiche** aperta |
 | `downloadExport(search, opzioni)` | `GET /api/catasto/export` o `POST /api/catasto/query/export` | pulsante **Esporta** |
+| `fetchMappaLuoghi({ filtri, ast })` | `GET /api/mappa/luoghi` o `POST /api/mappa/query` | pagina **Mappa** |
 
 `api/client.ts` usa `VITE_API_URL`; se manca, in produzione chiama la stessa origine (`/api`, servita dallo stesso processo che serve il sito), in sviluppo `http://localhost:3005`. Gli errori 4xx mostrano il messaggio del backend, gli altri un testo generico in italiano.
 
@@ -278,6 +280,10 @@ flowchart LR
 | *tutti* | note (max 2000), email facoltativa | campo nascosto `website` come honeypot |
 
 Dopo l'invio compare la conferma "verificata dalla redazione": nulla viene pubblicato senza moderazione. Una segnatura proposta diventa dato contribuito solo dopo questa verifica; fino ad allora non si cita come certa.
+
+**Localizzazione errata** (`SegnalazioneLuogoModal`). Si apre dalla scheda del luogo nella pagina **Mappa**, non da quella del fuoco: la finestra dei fuochi propone solo i tipi di `TIPI_SEGNALAZIONE_FUOCO`. Mostra il luogo e la posizione attuale con la certezza, e chiede dove si trova il luogo (max 300 caratteri), le coordinate facoltative (due numeri separati da virgola, punto e virgola o spazio; latitudine 42–45, longitudine 9–13), fonte o note, email facoltativa. Serve almeno uno fra luogo, coordinate e note. Il testo e le coordinate formano `valore_proposto` («Ginestra Fiorentina — 43.7412, 11.1534»); la posizione attuale la registra il server. Accettare la segnalazione non sposta il punto sulla mappa: la redazione importa la correzione con `db:import-luoghi` (vedi `backend.md`).
+
+**Collegamenti alla mappa.** Nella Consultazione il link **Vedi sulla mappa**, accanto alle schede Tabella e Statistiche, apre la mappa con la ricerca corrente (`urlMappa`: filtri semplici o AST; ordinamento e raccolta esclusi). Nella scheda del fuoco il link **Luogo sulla mappa** apre `/mappa?luogo=<id_registrazione>` (`urlLuogo`), se il fuoco ha un luogo.
 
 ---
 
@@ -395,3 +401,4 @@ I problemi emersi dalla revisione di settembre 2026 sono stati corretti (storico
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Riscrittura secondo CAT-DOC-00 e traduzione inglese |
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | nginx sostituito dal backend nell'immagine Docker; API su Vercel nello stesso progetto |
 | 2.2 | 2026-11-01 | Pasquale Ruotolo | Vercel Function: backend compilato in `server/app.mjs` (`build:api`) |
+| 2.3 | 2026-11-01 | Pasquale Ruotolo | Pagina Mappa nel menu, ricerca avanzata e luogo dall'URL, collegamenti dalla Consultazione e dalla scheda del fuoco, segnalazione di localizzazione errata |

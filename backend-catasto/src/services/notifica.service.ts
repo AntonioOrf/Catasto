@@ -1,5 +1,5 @@
 import { getField, TIPO_SEGNALAZIONE_LABELS, type SegnalazioneInput } from "@catasto/shared";
-import { SegnalazioneModel, type FuocoRiepilogo } from "../models/segnalazione.model.js";
+import { SegnalazioneModel, type FuocoRiepilogo, type LuogoRiepilogo } from "../models/segnalazione.model.js";
 import { ModerazioneToken, type AzioneLink } from "../utils/moderazione-token.js";
 
 const FORMSUBMIT_URL = "https://formsubmit.co/ajax";
@@ -15,6 +15,21 @@ const descriviFuoco = (id: number, f: FuocoRiepilogo | null) => {
     Fuoco: `${fuoco || "senza nome"} (id ${id})`,
     ...(localita ? { "Località": localita } : {}),
   };
+};
+
+/** "Contado › S. Giovanni in Gangalandi › S. Martino a Gangalandi (luogo 12)". */
+const descriviLuogo = (id: number, l: LuogoRiepilogo | null) => {
+  const nome = l ? [l.serie, l.quartiere, l.piviere, l.popolo].filter(Boolean).join(" › ") : "";
+  return { Luogo: `${nome || "senza nome"} (luogo ${id})` };
+};
+
+const riepilogoLuogo = async (id: number) => {
+  try {
+    return await SegnalazioneModel.findLuogoRiepilogo(id);
+  } catch (err) {
+    console.warn(`⚠️  Riepilogo del luogo ${id} non disponibile: ${(err as Error).message}`);
+    return null;
+  }
 };
 
 /** Il riepilogo arricchisce l'email ma non è indispensabile: un errore del DB non blocca l'invio. */
@@ -70,11 +85,16 @@ export class NotificaService {
       _template: "table",
       Segnalazione: `#${id}`,
       Tipo: tipo,
-      ...(input.id_fuoco !== null
-        ? descriviFuoco(input.id_fuoco, await riepilogoFuoco(input.id_fuoco))
-        : { Fuoco: "non indicato" }),
+      ...(input.tipo === "localizzazione" && input.id_registrazione
+        ? descriviLuogo(input.id_registrazione, await riepilogoLuogo(input.id_registrazione))
+        : input.id_fuoco !== null
+          ? descriviFuoco(input.id_fuoco, await riepilogoFuoco(input.id_fuoco))
+          : { Fuoco: "non indicato" }),
     };
-    if (input.tipo === "segnatura") {
+    if (input.tipo === "localizzazione") {
+      body["Posizione attuale"] = input.valore_attuale ?? "non indicata";
+      body["Posizione proposta"] = input.valore_proposto ?? "non indicata";
+    } else if (input.tipo === "segnatura") {
       body["Segnatura proposta"] = input.valore_proposto ?? "";
     } else {
       if (input.campo) body.Campo = getField(input.campo)?.label ?? input.campo;

@@ -3,6 +3,7 @@ export * from "./query-ast.js";
 export * from "./segnalazioni.js";
 export * from "./segnatura.js";
 export * from "./labels.js";
+export * from "./mappa.js";
 
 export interface Fuoco {
   id: number;
@@ -24,6 +25,8 @@ export interface Fuoco {
   popolo?: string;
   piviere?: string;
   serie?: string;
+  /** Luogo del fuoco (t_struttura_catastale): chiave dei punti della mappa. */
+  id_registrazione?: number | null;
   codice_archivio?: string;
   /**
    * Dato redazionale assente nel dump dell'Archivio: valorizzato solo dalle

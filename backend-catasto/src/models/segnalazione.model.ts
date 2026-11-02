@@ -4,6 +4,7 @@ import type { Segnalazione, StatoSegnalazione } from "@catasto/shared";
 
 export interface SegnalazioneRow {
   id_fuoco: number | null;
+  id_registrazione: number | null;
   tipo: string;
   campo: string | null;
   valore_attuale: string | null;
@@ -23,14 +24,36 @@ export interface FuocoRiepilogo {
   popolo: string | null;
 }
 
+/** Luogo della mappa con la posizione attuale (null se non localizzato o senza luoghi_geo). */
+export interface LuogoRiepilogo {
+  serie: string | null;
+  quartiere: string | null;
+  piviere: string | null;
+  popolo: string | null;
+  lat: number | null;
+  lng: number | null;
+  certezza: string | null;
+  nome_moderno: string | null;
+}
+
+/** Nome del luogo per elenchi e moderazione: "serie › quartiere › piviere › popolo". */
+const NOME_LUOGO = `CONCAT_WS(' › ', lser.nome_serie, lq.nome_quartiere, lpi.nome_piviere, lpo.nome_popolo)`;
+const JOIN_LUOGO = `
+       LEFT JOIN t_struttura_catastale lts ON lts.id_registrazione = s.id_registrazione
+       LEFT JOIN t_serie lser ON lser.id_serie = lts.id_serie
+       LEFT JOIN t_quartieri lq ON lq.id_quartiere = lts.id_quartiere
+       LEFT JOIN t_pivieri lpi ON lpi.id_piviere = lts.id_piviere
+       LEFT JOIN t_popoli lpo ON lpo.id_popolo = lts.id_popolo`;
+
 export class SegnalazioneModel {
   static async create(row: SegnalazioneRow): Promise<number> {
     const [result]: any = await pool.query(
       `INSERT INTO segnalazioni
-        (id_fuoco, tipo, campo, valore_attuale, valore_proposto, note, email, ip_hash)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id_fuoco, id_registrazione, tipo, campo, valore_attuale, valore_proposto, note, email, ip_hash)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         row.id_fuoco,
+        row.id_registrazione,
         row.tipo,
         row.campo,
         row.valore_attuale,
@@ -67,10 +90,11 @@ export class SegnalazioneModel {
     const params = stato ? [stato, limit, offset] : [limit, offset];
 
     const [rows]: any = await pool.query(
-      `SELECT s.id, s.id_fuoco, f.Nome_Fuoco as nome_fuoco, s.tipo, s.campo,
+      `SELECT s.id, s.id_fuoco, f.Nome_Fuoco as nome_fuoco,
+              s.id_registrazione, ${NOME_LUOGO} as nome_luogo, s.tipo, s.campo,
               s.valore_attuale, s.valore_proposto, s.note, s.email, s.stato, s.created_at
        FROM segnalazioni s
-       LEFT JOIN fuochi f ON f.ID_Fuochi = s.id_fuoco
+       LEFT JOIN fuochi f ON f.ID_Fuochi = s.id_fuoco${JOIN_LUOGO}
        ${where}
        ORDER BY s.created_at DESC
        LIMIT ? OFFSET ?`,
@@ -81,14 +105,55 @@ export class SegnalazioneModel {
 
   static async findById(id: number): Promise<Segnalazione | null> {
     const [rows]: any = await pool.query(
-      `SELECT s.id, s.id_fuoco, f.Nome_Fuoco as nome_fuoco, s.tipo, s.campo,
+      `SELECT s.id, s.id_fuoco, f.Nome_Fuoco as nome_fuoco,
+              s.id_registrazione, ${NOME_LUOGO} as nome_luogo, s.tipo, s.campo,
               s.valore_attuale, s.valore_proposto, s.note, s.email, s.stato, s.created_at
        FROM segnalazioni s
-       LEFT JOIN fuochi f ON f.ID_Fuochi = s.id_fuoco
+       LEFT JOIN fuochi f ON f.ID_Fuochi = s.id_fuoco${JOIN_LUOGO}
        WHERE s.id = ?`,
       [id],
     );
     return (rows[0] as Segnalazione) ?? null;
+  }
+
+  /**
+   * Luogo della mappa con la posizione attuale; null se il luogo non esiste.
+   * Senza la tabella luoghi_geo (migrazioni 006–007 non applicate) il luogo
+   * risulta non localizzato invece di far fallire la segnalazione.
+   */
+  static async findLuogoRiepilogo(idRegistrazione: number): Promise<LuogoRiepilogo | null> {
+    const select = (conGeo: boolean) => `
+      SELECT tser.nome_serie as serie, tq.nome_quartiere as quartiere,
+             tpi.nome_piviere as piviere, tp.nome_popolo as popolo,
+             ${conGeo ? "lg.lat, lg.lng, lg.certezza, lg.nome_moderno" : "NULL as lat, NULL as lng, NULL as certezza, NULL as nome_moderno"}
+      FROM t_struttura_catastale ts
+      ${conGeo ? "LEFT JOIN luoghi_geo lg ON lg.id_registrazione = ts.id_registrazione" : ""}
+      LEFT JOIN t_serie tser ON ts.id_serie = tser.id_serie
+      LEFT JOIN t_quartieri tq ON ts.id_quartiere = tq.id_quartiere
+      LEFT JOIN t_pivieri tpi ON ts.id_piviere = tpi.id_piviere
+      LEFT JOIN t_popoli tp ON ts.id_popolo = tp.id_popolo
+      WHERE ts.id_registrazione = ?
+      LIMIT 1`;
+
+    let rows: any;
+    try {
+      [rows] = await pool.query(select(true), [idRegistrazione]);
+    } catch (err) {
+      if ((err as { code?: string })?.code !== "ER_NO_SUCH_TABLE") throw err;
+      [rows] = await pool.query(select(false), [idRegistrazione]);
+    }
+    const r = rows[0];
+    if (!r) return null;
+    return {
+      serie: r.serie ?? null,
+      quartiere: r.quartiere ?? null,
+      piviere: r.piviere ?? null,
+      popolo: r.popolo ?? null,
+      lat: r.lat === null || r.lat === undefined ? null : Number(r.lat),
+      lng: r.lng === null || r.lng === undefined ? null : Number(r.lng),
+      certezza: r.certezza ?? null,
+      nome_moderno: r.nome_moderno ?? null,
+    };
   }
 
   /** Dati del fuoco da mostrare nell'email alla redazione: nome, carta e località. */
@@ -134,7 +199,7 @@ export class SegnalazioneTx {
   /** FOR UPDATE: due moderatori sulla stessa segnalazione non si sovrascrivono a metà. */
   async findByIdForUpdate(id: number): Promise<Segnalazione | null> {
     const [rows]: any = await this.db.query(
-      `SELECT id, id_fuoco, tipo, campo, valore_attuale, valore_proposto, note, email, stato, created_at
+      `SELECT id, id_fuoco, id_registrazione, tipo, campo, valore_attuale, valore_proposto, note, email, stato, created_at
        FROM segnalazioni WHERE id = ? FOR UPDATE`,
       [id],
     );

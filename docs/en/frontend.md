@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Identifier | `CAT-DOC-04` |
-| Version | 2.2 |
+| Version | 2.3 |
 | Date | 2026-11-01 |
 | Status | Approved |
 | Classification | Public |
@@ -51,7 +51,7 @@ A datum missing from the source stays missing in the interface too: it does not 
 | `/informazioni` | `pages/InfoPage.tsx` | Project description and credits (lazy-loaded) |
 | `/glossario` | `pages/GlossarioPage.tsx` | Terms of the *catasto* with their definitions, one anchor per entry (lazy) |
 | `/contatti` | `pages/ContattiPage.tsx` | Email addresses and link to the repository (lazy) |
-| `/mappa` | `pages/MappaPage.tsx` | "Under development" placeholder, not linked from the menu (lazy) |
+| `/mappa` | `pages/MappaPage.tsx` | Prototype of the household map: one circle per place (Leaflet, OpenStreetMap or Inghirami's map from the Regione Toscana WMS as background), coloured by position certainty or by indicator (average taxable assets, trade, migration, members per household), household threshold, place card, keyboard-accessible list of the main places. The search comes from the URL (`features/mappa/lib/ricerca.ts`): simple search filters in the query string (`/mappa?mestiere=3`), advanced search in the fragment (`/mappa#q=…`, same encoding as shared links); data from `GET /api/mappa/luoghi` or `POST /api/mappa/query`. `?luogo=<id_registrazione>` opens the place card and centres the map (a note appears if the place is not located). The card lets users report a wrong location (§ 6.11). **Map** entry in the menu (lazy) |
 
 `FilterProvider` wraps the router: filters stay set when moving from one page to another. `CompareProvider` (the selection of *fuochi*) and the comparison view sit in `App.tsx` above the routes: a selection made in Browse also applies in the Workbench.
 
@@ -95,6 +95,7 @@ frontend-catasto/
     │   │       └── segnatura.ts        # shelfmark parser (from @catasto/shared)
     │   └── segnalazioni/
     │       ├── components/SegnalazioneModal.tsx
+    │       ├── components/SegnalazioneLuogoModal.tsx
     │       └── api/create-segnalazione.ts
     └── pages/
 ```
@@ -166,6 +167,7 @@ flowchart TD
 | `fetchSuggest(q)` | `GET /api/catasto/suggest?q=` | "Find and add" in the Workbench |
 | `fetchStats(search)` | `GET /api/catasto/stats` or `POST /api/catasto/query/stats` | **Statistics** tab open |
 | `downloadExport(search, opzioni)` | `GET /api/catasto/export` or `POST /api/catasto/query/export` | **Export** button |
+| `fetchMappaLuoghi({ filtri, ast })` | `GET /api/mappa/luoghi` or `POST /api/mappa/query` | **Map** page |
 
 `api/client.ts` uses `VITE_API_URL`; if it is missing, in production it calls the same origin (`/api`, served by the same process as the site), in development `http://localhost:3005`. 4xx errors show the backend's message, all others a generic message in Italian.
 
@@ -278,6 +280,10 @@ flowchart LR
 | *all* | notes (max 2000), optional email | hidden `website` field as a honeypot |
 
 After sending, the confirmation "checked by the editorial team" appears: nothing is published without moderation. A proposed shelfmark becomes a contributed datum only after this verification; until then it is not cited as certain.
+
+**Wrong location** (`SegnalazioneLuogoModal`). It opens from the place card on the **Map** page, not from the household card: the household dialog offers only the types in `TIPI_SEGNALAZIONE_FUOCO`. It shows the place and its current position with the certainty, and asks where the place is (max 300 characters), optional coordinates (two numbers separated by a comma, semicolon or space; latitude 42–45, longitude 9–13), source or notes, optional email. At least one of place, coordinates and notes is required. The text and the coordinates form `valore_proposto` ("Ginestra Fiorentina — 43.7412, 11.1534"); the server records the current position. Accepting the report does not move the point on the map: the editorial team imports the correction with `db:import-luoghi` (see `backend.md`).
+
+**Links to the map.** In Browse, the **See on the map** link next to the Table and Statistics tabs opens the map with the current search (`urlMappa`: simple filters or AST; sorting and collection excluded). In the household card, the **Place on the map** link opens `/mappa?luogo=<id_registrazione>` (`urlLuogo`) when the household has a place.
 
 ---
 
@@ -395,3 +401,4 @@ The issues raised by the September 2026 review have been fixed (history in [Code
 | 2.0 | 2026-10-29 | Pasquale Ruotolo | Rewrite according to CAT-DOC-00 and English translation |
 | 2.1 | 2026-11-01 | Pasquale Ruotolo | nginx replaced by the backend in the Docker image; API on Vercel in the same project |
 | 2.2 | 2026-11-01 | Pasquale Ruotolo | Vercel Function: backend compiled into `server/app.mjs` (`build:api`) |
+| 2.3 | 2026-11-01 | Pasquale Ruotolo | Map page in the menu, advanced search and place from the URL, links from Browse and the household card, wrong-location report |
