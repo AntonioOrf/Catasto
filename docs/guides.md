@@ -6,8 +6,8 @@
 |---|---|
 | Identificativo | `CAT-DOC-01` |
 | Titolo | Installazione e deployment del portale Catasto fiorentino del 1427/30 |
-| Versione | 2.4 |
-| Data | 2026-11-01 |
+| Versione | 2.5 |
+| Data | 2026-11-02 |
 | Stato | Approvato |
 | Classificazione | Pubblico |
 | Responsabili | Antonio Orfitelli, Pasquale Ruotolo |
@@ -218,7 +218,7 @@ In alternativa il container può usare direttamente TiDB (in `.env`: `DB_HOST` e
 
 Su Vercel un solo progetto serve sito e API: il frontend come sito statico, il backend come Vercel Function (`frontend-catasto/api/index.js`, che esporta l'app Express). Il database è esterno, per esempio TiDB Cloud.
 
-La funzione non importa i sorgenti del backend: `npm run build` del frontend, dopo `vite build`, compila `backend-catasto/src/app.ts` in un solo file, `frontend-catasto/server/app.mjs` (`scripts/build-api.mjs`, esbuild), con dentro il pacchetto condiviso `@catasto/shared`. Le altre dipendenze restano esterne e Vercel le copia da `node_modules`. Senza questo passo la funzione non trova `@catasto/shared`, perché Vercel non copia il collegamento che npm crea per i workspace, e ogni rotta risponde `500 FUNCTION_INVOCATION_FAILED`.
+La funzione non importa i sorgenti del backend: `npm run build` del frontend, dopo `vite build`, compila `backend-catasto/src/app.ts` in un solo file, `frontend-catasto/server/app.mjs` (`scripts/build-api.mjs`, esbuild), con dentro il pacchetto condiviso `@catasto/shared` e tutte le dipendenze npm del backend (express, mysql2, exceljs...): il file usa solo i moduli di Node. Su Vercel la radice del progetto è `frontend-catasto`, e la funzione non riceve né il collegamento dei workspace a `@catasto/shared` né le dipendenze del backend: con import esterni ogni rotta falliva con `ERR_MODULE_NOT_FOUND`.
 
 ### 4.1 Impostazioni del progetto
 
@@ -249,7 +249,7 @@ Le variabili vanno impostate per l'ambiente Production e, se si vogliono antepri
 
 `https://<dominio>/health` deve rispondere `{"status":"ok","db":"up"}`. Ogni richiesta dura al massimo 60 secondi (export molto grandi compresi); il rate limit è in memoria, quindi vale per singola istanza della funzione.
 
-Il comando di build è fissato in `vercel.json` (`"buildCommand": "npm run build"`), così un valore diverso nelle impostazioni del progetto non salta la compilazione del backend. Se il backend non si avvia (bundle mancante, variabile d'ambiente non valida come `SHARED_STATE`, dipendenza assente), `api/index.js` non lascia andare in crash la funzione: ogni rotta risponde `503` con `{"error": "Avvio del backend non riuscito", "dettaglio": "…"}` e l'errore completo finisce nei log della funzione.
+Installazione e build sono fissate in `vercel.json`: `"installCommand": "cd .. && npm ci"` installa dalla radice del monorepo le dipendenze di tutti i workspace (con la sola radice `frontend-catasto` mancherebbero quelle del backend, e il bundle non si compilerebbe), `"buildCommand": "npm run build"` compila sito e backend. Un valore diverso nelle impostazioni del progetto non li sostituisce. Se il backend non si avvia (bundle mancante, variabile d'ambiente non valida come `SHARED_STATE`, dipendenza assente), `api/index.js` non lascia andare in crash la funzione: ogni rotta risponde `503` con `{"error": "Avvio del backend non riuscito", "dettaglio": "…"}` e l'errore completo finisce nei log della funzione.
 
 ---
 
@@ -321,3 +321,4 @@ docker compose up -d         # reimporta init/Catasto.sql, poi il backend riappl
 | 2.2 | 2026-11-01 | Pasquale Ruotolo | Rimando a CAT-DOC-07 per le altre piattaforme |
 | 2.3 | 2026-11-01 | Pasquale Ruotolo | Vercel: il backend della funzione è compilato in un solo file con `@catasto/shared` (§4) |
 | 2.4 | 2026-11-01 | Pasquale Ruotolo | Vercel: comando di build in `vercel.json`, errore di avvio del backend in risposta (503) e nei log (§4.3) |
+| 2.5 | 2026-11-02 | Pasquale Ruotolo | Vercel: dipendenze npm del backend nel bundle della funzione, installazione dalla radice del monorepo (§4) |
