@@ -135,7 +135,7 @@ No additional services are needed (Redis or similar): shared state uses the port
 
 ## 6. Data transfer
 
-1. On the current server, dump the database, with the application tables (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `schema_migrations`) and their content:
+1. On the current server, dump the database, with the application tables (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`, `schema_migrations`) and their content:
    ```bash
    docker compose exec -T db sh -c 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" --single-transaction --no-tablespaces --default-character-set=utf8mb4 "$MYSQL_DATABASE"' > catasto-$(date +%F).sql
    ```
