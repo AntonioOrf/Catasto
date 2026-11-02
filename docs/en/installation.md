@@ -7,7 +7,7 @@
 | Identifier | `CAT-DOC-01` |
 | Title | Installation and deployment of the Florentine Catasto of 1427/30 portal |
 | Version | 2.5 |
-| Date | 2026-11-01 |
+| Date | 2026-11-02 |
 | Status | Approved |
 | Classification | Public |
 | Owners | Antonio Orfitelli, Pasquale Ruotolo |
@@ -249,7 +249,7 @@ Set the variables for the Production environment and, for working previews, for 
 
 `https://<domain>/health` must answer `{"status":"ok","db":"up"}`. Each request lasts at most 60 seconds (very large exports included); rate limiting is in memory, so it applies per function instance.
 
-The build command is set in `vercel.json` (`"buildCommand": "npm run build"`), so a different value in the project settings cannot skip the backend build. If the backend fails to start (missing bundle, invalid environment variable such as `SHARED_STATE`, missing dependency), `api/index.js` does not let the function crash: every route answers `503` with `{"error": "Avvio del backend non riuscito", "dettaglio": "…"}` and the full error goes to the function logs.
+Install and build are set in `vercel.json`: `"installCommand": "cd .. && npm ci"` installs the dependencies of every workspace from the monorepo root (with `frontend-catasto` alone as root the backend's would be missing and the bundle would not compile), `"buildCommand": "npm run build"` builds site and backend. A different value in the project settings does not replace them. If the backend fails to start (missing bundle, invalid environment variable such as `SHARED_STATE`, missing dependency), `api/index.js` does not let the function crash: every route answers `503` with `{"error": "Avvio del backend non riuscito", "dettaglio": "…"}` and the full error goes to the function logs.
 
 ---
 
@@ -321,4 +321,4 @@ docker compose up -d         # reimports init/Catasto.sql, then the backend reap
 | 2.2 | 2026-11-01 | Pasquale Ruotolo | Reference to CAT-DOC-07 for other platforms |
 | 2.3 | 2026-11-01 | Pasquale Ruotolo | Vercel: the function's backend is compiled into a single file with `@catasto/shared` (§4) |
 | 2.4 | 2026-11-01 | Pasquale Ruotolo | Vercel: build command in `vercel.json`, backend startup error in the response (503) and in the logs (§4.3) |
-| 2.5 | 2026-11-01 | Pasquale Ruotolo | Vercel: the backend's npm dependencies also in the function bundle (§4) |
+| 2.5 | 2026-11-02 | Pasquale Ruotolo | Vercel: the backend's npm dependencies in the function bundle, install from the monorepo root (§4) |
