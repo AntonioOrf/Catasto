@@ -80,7 +80,7 @@ export const astSchema: z.ZodType<QueryGroup> = z
   .superRefine((input, ctx) => {
     if (exceedsAstDepth(input)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: `Query troppo annidata (max ${AST_MAX_DEPTH} livelli)`,
       });
     }
