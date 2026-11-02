@@ -10,7 +10,17 @@
 -- Accettare la segnalazione non cambia le coordinate: la redazione le porta
 -- in luoghi_geo con db:import-luoghi (riga revisionata).
 
+--
+-- Tre ALTER separati e non uno solo: TiDB non accetta un indice su una colonna
+-- aggiunta nello stesso ALTER ("column does not exist: id_registrazione").
+-- Sui database MySQL dove la versione in un solo ALTER e' gia' applicata il
+-- runner non la riesegue (la riconosce dal nome del file).
+
 ALTER TABLE segnalazioni
-  MODIFY COLUMN tipo ENUM('dato_errato','segnatura','altro','localizzazione') NOT NULL,
-  ADD COLUMN id_registrazione INT NULL AFTER id_fuoco,
+  MODIFY COLUMN tipo ENUM('dato_errato','segnatura','altro','localizzazione') NOT NULL;
+
+ALTER TABLE segnalazioni
+  ADD COLUMN id_registrazione INT NULL AFTER id_fuoco;
+
+ALTER TABLE segnalazioni
   ADD KEY idx_segnalazioni_luogo (id_registrazione);

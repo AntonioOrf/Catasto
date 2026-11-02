@@ -81,7 +81,7 @@ VITE_API_URL=http://localhost:3005
 
 ### 2.5 Migrazioni
 
-Le migrazioni creano le tabelle applicative (`segnalazioni`, `fuoco_segnature`). **Sono obbligatorie**: senza di esse la ricerca risponde con un errore 500.
+Le migrazioni creano le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`). **Sono obbligatorie**: senza di esse la ricerca risponde con un errore 500 e la mappa resta vuota. Vanno rilanciate dopo ogni `git pull` che aggiunge un file in `backend-catasto/migrations/`.
 
 ```bash
 npm run db:migrate -w catasto-backend
@@ -245,7 +245,17 @@ La funzione non importa i sorgenti del backend: `npm run build` del frontend, do
 
 Le variabili vanno impostate per l'ambiente Production e, se si vogliono anteprime funzionanti, anche per Preview.
 
-### 4.3 Verifica e limiti
+### 4.3 Migrazioni
+
+Su Vercel **le migrazioni non partono da sole**: una Vercel Function non ha un avvio in cui eseguire il runner, come invece fanno il container Docker (§3.3) e il servizio systemd. Dopo ogni rilascio che aggiunge un file in `backend-catasto/migrations/` vanno applicate a mano, da una macchina con il repository, puntando al database di produzione (le stesse credenziali di §4.2):
+
+```bash
+DB_HOST=<host> DB_PORT=4000 DB_USER=<utente> DB_PASSWORD=<password> DB_NAME=<database> DB_SSL=true npm run db:migrate -w catasto-backend
+```
+
+Il runner applica solo i file non ancora registrati in `schema_migrations` e prende un lock MySQL, quindi rilanciarlo non fa danni. Finché non si applicano, le funzioni che usano le tabelle nuove restano vuote: per esempio senza `luoghi_geo` (migrazioni 006–007) la mappa mostra «Le coordinate dei luoghi non sono ancora caricate nel database».
+
+### 4.4 Verifica e limiti
 
 `https://<dominio>/health` deve rispondere `{"status":"ok","db":"up"}`. Ogni richiesta dura al massimo 60 secondi (export molto grandi compresi); il rate limit è in memoria, quindi vale per singola istanza della funzione.
 
@@ -279,6 +289,8 @@ Il workflow si può lanciare anche a mano da Actions → Docker images → Run w
 | Sintomo | Causa probabile | Soluzione |
 |---|---|---|
 | La ricerca risponde "Internal Server Error" (sviluppo) | migrazioni non eseguite (`fuoco_segnature` mancante) | `npm run db:migrate -w catasto-backend` |
+| La mappa dice «Le coordinate dei luoghi non sono ancora caricate nel database (migrazioni 006 e 007)» | la tabella `luoghi_geo` non esiste nel database a cui si collega il backend: migrazioni non applicate (sviluppo, Vercel) o tabella persa in un trasferimento del database | sviluppo: `npm run db:migrate -w catasto-backend`; Docker: `docker compose exec app node backend-catasto/dist/scripts/migrate.js`; Vercel: §4.3. Se il runner risponde `↩️ 006_luoghi_geo.sql (già applicata)` ma la tabella manca, vedi sotto |
+| Il runner dice «già applicata» ma la tabella della migrazione non esiste | `schema_migrations` è stata copiata senza la tabella (dump parziale) | cancellare le righe delle migrazioni interessate, per esempio `DELETE FROM schema_migrations WHERE name IN ('006_luoghi_geo.sql','007_luoghi_geo_automatici.sql');`, e rilanciare le migrazioni |
 | Il container del backend si riavvia di continuo | una migrazione fallisce all'avvio | `docker compose logs app`, riga `❌ … fallita` |
 | `/health` risponde `503` | il backend non raggiunge MySQL | controllare le variabili `DB_*` / `MYSQL_*` e `docker compose logs db` |
 | Porta già occupata | un altro servizio usa 1427, 3005 o 3306 | liberare la porta o cambiarla in `docker-compose.yml` |
@@ -322,3 +334,4 @@ docker compose up -d         # reimporta init/Catasto.sql, poi il backend riappl
 | 2.3 | 2026-11-01 | Pasquale Ruotolo | Vercel: il backend della funzione è compilato in un solo file con `@catasto/shared` (§4) |
 | 2.4 | 2026-11-01 | Pasquale Ruotolo | Vercel: comando di build in `vercel.json`, errore di avvio del backend in risposta (503) e nei log (§4.3) |
 | 2.5 | 2026-11-02 | Pasquale Ruotolo | Vercel: dipendenze npm del backend nel bundle della funzione, installazione dalla radice del monorepo (§4) |
+| 2.6 | 2026-11-02 | Pasquale Ruotolo | Vercel: migrazioni da applicare a mano (§4.3, la verifica passa a §4.4); mappa senza coordinate e `schema_migrations` senza tabelle in §6.1 |

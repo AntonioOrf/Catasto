@@ -135,7 +135,7 @@ Non servono servizi aggiuntivi (Redis o simili): lo stato condiviso usa il datab
 
 ## 6. Trasferimento dei dati
 
-1. Sul server attuale fare il dump del database, con le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `schema_migrations`) e il loro contenuto:
+1. Sul server attuale fare il dump del database, con le tabelle applicative (`segnalazioni`, `fuoco_segnature`, `traduzioni_lookup`, `luoghi_geo`, `schema_migrations`) e il loro contenuto:
    ```bash
    docker compose exec -T db sh -c 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" --single-transaction --no-tablespaces --default-character-set=utf8mb4 "$MYSQL_DATABASE"' > catasto-$(date +%F).sql
    ```
