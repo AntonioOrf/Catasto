@@ -69,7 +69,7 @@ export async function apiRequest<T>(
   } catch (error) {
     // l'annullamento della richiesta resta tale: lo gestisce TanStack Query
     if (error instanceof DOMException && error.name === "AbortError") throw error;
-    throw new Error(translate(messages, "invalidResponse", { message: fallbackError }, lang));
+    throw new Error(translate(messages, "invalidResponse", { message: fallbackError }, lang), { cause: error });
   }
 }
 

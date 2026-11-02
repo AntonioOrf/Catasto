@@ -40,7 +40,7 @@ const createSchema = z
   .superRefine((data, ctx) => {
     if (data.tipo === "dato_errato" && !data.campo) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["campo"],
         message: "Indica quale campo è errato",
       });
@@ -48,7 +48,7 @@ const createSchema = z
     // Senza fuoco una segnatura accettata non avrebbe dove essere pubblicata.
     if (data.tipo === "segnatura" && data.id_fuoco === null) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["id_fuoco"],
         message: "Indica il fuoco a cui si riferisce la segnatura",
       });
@@ -57,35 +57,35 @@ const createSchema = z
     if (data.tipo === "localizzazione") {
       if (data.id_registrazione === null) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["id_registrazione"],
           message: "Indica il luogo a cui si riferisce la segnalazione",
         });
       }
       if (data.id_fuoco !== null || data.campo) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["id_fuoco"],
           message: "Una segnalazione di localizzazione riguarda un luogo, non un fuoco",
         });
       }
     } else if (data.id_registrazione !== null) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["id_registrazione"],
         message: "Il luogo si indica solo nelle segnalazioni di localizzazione",
       });
     }
     if (data.tipo === "segnatura" && !data.valore_proposto) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["valore_proposto"],
         message: "Indica la segnatura corretta",
       });
     }
     if (data.tipo !== "segnatura" && !data.valore_proposto && !data.note) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["note"],
         message: "Descrivi il problema o proponi un valore corretto",
       });
