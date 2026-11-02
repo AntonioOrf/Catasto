@@ -5,7 +5,7 @@ import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import { useLanguage, useT } from "../i18n";
 import { useMappaLuoghi } from "../hooks/useMappaLuoghi";
-import MappaLeaflet, { type Sfondo } from "../features/mappa/MappaLeaflet";
+import MappaLeaflet, { type Sfondo, type StatoSfondo } from "../features/mappa/MappaLeaflet";
 import SegnalazioneLuogoModal from "../features/segnalazioni/components/SegnalazioneLuogoModal";
 import {
   CERTEZZE_MAPPA,
@@ -56,6 +56,7 @@ export default function MappaPage() {
   const [indicatore, setIndicatore] = useState<Indicatore>("certezza");
   const [certezze, setCertezze] = useState<Set<CertezzaMappa>>(() => new Set(CERTEZZE_MAPPA));
   const [sfondo, setSfondo] = useState<Sfondo>("osm");
+  const [statoSfondo, setStatoSfondo] = useState<StatoSfondo | null>(null);
   const [soglia, setSoglia] = useState(1);
   const [selezionato, setSelezionato] = useState<number | null>(null);
   const [centra, setCentra] = useState<{ lat: number; lng: number } | null>(null);
@@ -229,6 +230,11 @@ export default function MappaPage() {
                 {t(`bg_${s}`)}
               </label>
             ))}
+            {sfondo === "inghirami" && (statoSfondo === "caricamento" || statoSfondo === "errore") && (
+              <p role="status" className="text-xs opacity-80">
+                {t(statoSfondo === "caricamento" ? "bg_loading" : "bg_error")}
+              </p>
+            )}
           </fieldset>
 
           <div className="flex flex-col gap-1">
@@ -360,6 +366,7 @@ export default function MappaPage() {
               coloreSelezione={colori.testo}
               etichetta={t("mapLabel")}
               centraSu={centra}
+              onStatoSfondo={setStatoSfondo}
             />
           </div>
         </div>
