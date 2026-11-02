@@ -4,8 +4,13 @@ import "leaflet/dist/leaflet.css";
 import type { LuogoMappa } from "@catasto/shared";
 import { raggio } from "./lib/mappa";
 
-/** Fondo storico: Carta geometrica della Toscana di G. Inghirami (1830), WMS CASTORE della Regione Toscana. */
-const WMS_CASTORE = "https://www502.regione.toscana.it/wmsraster/com.rt.wms.RTmap/wms?map=wmscastore";
+/**
+ * Fondo storico: Carta geometrica della Toscana di G. Inghirami (1830), WMS CASTORE
+ * della Regione Toscana. Il servizio in cache è quello usato dal visore Geoscopio;
+ * il vecchio `wmsraster/…?map=wmscastore` non risponde più.
+ */
+const WMS_CASTORE = "https://www502.regione.toscana.it/castore_cached/wms?map_mnt=castore";
+const STRATO_INGHIRAMI = "r_toscan_cst_inghirami_riempimento_fogli_sviluppi@96dpi";
 const TOSCANA: L.LatLngBoundsExpression = [
   [42.9, 10.2],
   [44.25, 12.2],
@@ -51,7 +56,7 @@ export default function MappaLeaflet({ luoghi, colore, sfondo, selezionato, onSe
       attribution: "© OpenStreetMap contributors",
     });
     const inghirami = L.tileLayer.wms(WMS_CASTORE, {
-      layers: "r_toscan_cst_inghirami",
+      layers: STRATO_INGHIRAMI,
       format: "image/png",
       transparent: false,
       // Server lento: tile da 512 px dimezzano le richieste.
