@@ -4,14 +4,43 @@ import "leaflet/dist/leaflet.css";
 import type { LuogoMappa } from "@catasto/shared";
 import { raggio } from "./lib/mappa";
 
-/** Fondo storico: Carta geometrica della Toscana di G. Inghirami (1830), WMS CASTORE della Regione Toscana. */
-const WMS_CASTORE = "https://www502.regione.toscana.it/wmsraster/com.rt.wms.RTmap/wms?map=wmscastore";
+/**
+ * Fondo storico: Carta geometrica della Toscana di G. Inghirami (1830), WMS CASTORE
+ * della Regione Toscana. Il servizio in cache è quello usato dal visore Geoscopio;
+ * il vecchio `wmsraster/…?map=wmscastore` non risponde più.
+ */
+const WMS_CASTORE = "https://www502.regione.toscana.it/castore_cached/wms?map_mnt=castore";
+const STRATO_INGHIRAMI = "r_toscan_cst_inghirami_riempimento_fogli_sviluppi@96dpi";
 const TOSCANA: L.LatLngBoundsExpression = [
   [42.9, 10.2],
   [44.25, 12.2],
 ];
 
+/**
+ * Il server della Regione chiude a volte la connessione prima di rispondere e
+ * Leaflet non riprova mai una tile fallita: qui la si richiede ancora qualche
+ * volta, con un parametro in più perché il browser non riusi l'errore.
+ */
+const TENTATIVI_TILE = 4;
+type TileConErrore = (done: L.DoneCallback, tile: HTMLImageElement, e: Event) => void;
+const WmsConRiprova = L.TileLayer.WMS.extend({
+  _tileOnError(this: L.TileLayer.WMS, done: L.DoneCallback, tile: HTMLImageElement, e: Event) {
+    const n = Number(tile.dataset.tentativi ?? 0) + 1;
+    if (n < TENTATIVI_TILE && this._map) {
+      tile.dataset.tentativi = String(n);
+      const url = tile.src.replace(/&riprova=\d+$/, "");
+      setTimeout(() => {
+        tile.src = `${url}&riprova=${n}`;
+      }, 1500 * n);
+      return;
+    }
+    (L.TileLayer.prototype as unknown as { _tileOnError: TileConErrore })._tileOnError.call(this, done, tile, e);
+  },
+}) as unknown as new (url: string, opzioni: L.WMSOptions) => L.TileLayer.WMS;
+
 export type Sfondo = "osm" | "inghirami";
+/** Stato del fondo storico: il server della Regione è lento e a volte non risponde. */
+export type StatoSfondo = "caricamento" | "pronto" | "errore";
 
 interface Props {
   luoghi: LuogoMappa[];
@@ -25,6 +54,8 @@ interface Props {
   etichetta: string;
   /** Se presente, centra la mappa su questo punto (ogni nuovo oggetto è una nuova richiesta). */
   centraSu?: { lat: number; lng: number; zoom?: number } | null;
+  /** Avanzamento del fondo Inghirami (solo quando è attivo). */
+  onStatoSfondo?: (stato: StatoSfondo) => void;
 }
 
 /** Zoom con cui la mappa si centra su un luogo. */
@@ -35,12 +66,14 @@ export const ZOOM_LUOGO = 12;
  * OpenStreetMap o Inghirami. La mappa si crea una volta; luoghi, colori e
  * fondo si aggiornano senza ricrearla.
  */
-export default function MappaLeaflet({ luoghi, colore, sfondo, selezionato, onSeleziona, coloreSelezione, etichetta, centraSu }: Props) {
+export default function MappaLeaflet({ luoghi, colore, sfondo, selezionato, onSeleziona, coloreSelezione, etichetta, centraSu, onStatoSfondo }: Props) {
   const contenitore = useRef<HTMLDivElement>(null);
   const mappa = useRef<L.Map | null>(null);
   const strati = useRef<{ osm: L.TileLayer; inghirami: L.TileLayer.WMS; cerchi: L.LayerGroup } | null>(null);
   const onSelezionaRef = useRef(onSeleziona);
   onSelezionaRef.current = onSeleziona;
+  const onStatoSfondoRef = useRef(onStatoSfondo);
+  onStatoSfondoRef.current = onStatoSfondo;
 
   useEffect(() => {
     if (!contenitore.current) return;
@@ -50,8 +83,8 @@ export default function MappaLeaflet({ luoghi, colore, sfondo, selezionato, onSe
       maxZoom: 19,
       attribution: "© OpenStreetMap contributors",
     });
-    const inghirami = L.tileLayer.wms(WMS_CASTORE, {
-      layers: "r_toscan_cst_inghirami",
+    const inghirami = new WmsConRiprova(WMS_CASTORE, {
+      layers: STRATO_INGHIRAMI,
       format: "image/png",
       transparent: false,
       // Server lento: tile da 512 px dimezzano le richieste.
@@ -60,6 +93,17 @@ export default function MappaLeaflet({ luoghi, colore, sfondo, selezionato, onSe
       opacity: 0.9,
       attribution: "Regione Toscana, Carta dell'Inghirami (1830)",
     });
+    // "load" arriva quando tutte le tile visibili sono finite, anche quelle in errore.
+    let caricate = 0;
+    inghirami
+      .on("loading", () => {
+        caricate = 0;
+        onStatoSfondoRef.current?.("caricamento");
+      })
+      .on("tileload", () => {
+        caricate++;
+      })
+      .on("load", () => onStatoSfondoRef.current?.(caricate > 0 ? "pronto" : "errore"));
     const cerchi = L.layerGroup().addTo(m);
     mappa.current = m;
     strati.current = { osm, inghirami, cerchi };
