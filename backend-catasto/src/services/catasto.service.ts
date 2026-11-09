@@ -86,15 +86,20 @@ export function toPages(manifest: any): IiifPage[] {
 async function fetchManifestPages(id: string): Promise<IiifPage[]> {
   const targetUrl = `https://archiviodigitale-icar.cultura.gov.it/metadata/${encodeURIComponent(id)}/manifest.json?type=archive`;
 
-  const response = await fetch(targetUrl, {
-    headers: {
-      Accept: "application/json",
-      // Il servizio dell'Archivio risponde in modo affidabile solo a user agent da browser.
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    },
-    signal: AbortSignal.timeout(MANIFEST_TIMEOUT_MS),
-  });
+  let response: Response;
+  try {
+    response = await fetch(targetUrl, {
+      headers: {
+        Accept: "application/json",
+        // Il servizio dell'Archivio risponde in modo affidabile solo a user agent da browser.
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      },
+      signal: AbortSignal.timeout(MANIFEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    throw upstreamError(error);
+  }
 
   if (response.status === 404) {
     throw new HttpError(404, "Volume non trovato nell'Archivio digitale");
@@ -106,7 +111,26 @@ async function fetchManifestPages(id: string): Promise<IiifPage[]> {
     throw new HttpError(502, "Manifest dell'Archivio troppo grande");
   }
 
-  return toPages(await response.json());
+  try {
+    return toPages(await response.json());
+  } catch (error) {
+    throw upstreamError(error);
+  }
+}
+
+/**
+ * Un fetch verso l'Archivio che fallisce (rete, DNS, certificato TLS scaduto,
+ * timeout, corpo non JSON) non è un bug nostro: diventa un 502/504 invece di
+ * un 500 generico, con la causa nei log.
+ */
+function upstreamError(error: unknown): HttpError {
+  const name = (error as Error | undefined)?.name;
+  if (name === "TimeoutError" || name === "AbortError") {
+    return new HttpError(504, "L'Archivio digitale non ha risposto in tempo");
+  }
+  const cause = (error as { cause?: { code?: string; message?: string } } | undefined)?.cause;
+  console.warn("⚠️  Manifest dell'Archivio non scaricabile:", cause?.code ?? cause?.message ?? error);
+  return new HttpError(502, "Archivio digitale non raggiungibile");
 }
 
 export class CatastoService {
