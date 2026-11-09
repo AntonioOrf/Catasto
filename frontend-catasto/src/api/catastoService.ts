@@ -1,4 +1,4 @@
-import { apiDownload, apiRequest } from "./client";
+import { ApiError, apiDownload, apiRequest } from "./client";
 import { translate } from "../i18n/messages";
 import { clientMessages as messages } from "./client.messages";
 import type {
@@ -101,7 +101,14 @@ export const fetchManifestPages = (archiveId: string, signal?: AbortSignal) =>
     `/api/catasto/manifest/${encodeURIComponent(archiveId)}`,
     translate(messages, "manifestFailed"),
     { signal },
-  );
+  ).catch((error: unknown) => {
+    // 502/504: è il sito dell'Archivio a non rispondere (es. certificato
+    // scaduto), non il nostro server. Lo diciamo, invece di un "errore 502".
+    if (error instanceof ApiError && (error.status === 502 || error.status === 504)) {
+      throw new ApiError(translate(messages, "archivioUnavailable"), error.status);
+    }
+    throw error;
+  });
 
 export type ExportFormat = "csv" | "xlsx";
 
