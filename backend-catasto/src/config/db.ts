@@ -34,7 +34,15 @@ const pool = mysql.createPool({
     console.log("✅ Connesso al Database (Pool)");
     connection.release();
   } catch (err: any) {
-    console.error("❌ Errore connessione iniziale DB:", err.message);
+    // Host, porta e SSL effettivi (mai utente o password): con un timeout è
+    // l'unico modo di vedere dai log dove la funzione sta provando a
+    // collegarsi, perché su Vercel le variabili sensibili non si rileggono.
+    const host = JSON.stringify(process.env.DB_HOST ?? null);
+    const port = Number(process.env.DB_PORT) || 3306;
+    const ssl = process.env.DB_SSL === "true";
+    console.error(
+      `❌ Errore connessione iniziale DB: ${err.code ?? ""} ${err.message} (host=${host} porta=${port} ssl=${ssl})`,
+    );
   }
 })();
 
